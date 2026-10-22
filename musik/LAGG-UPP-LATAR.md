@@ -38,3 +38,10 @@ För Spotify/SoundCloud krävs 3000×3000 – ladda upp originalbilden där.
 producent, mixning, mastering, år, genre och ISRC (flera namn: skilj med komma).
 Tryck **Spara** – då läggs uppgifterna in i låtfilen (ID3) och visas på hemsidan
 under "Upphovspersoner", på samma sätt som på Spotify.
+
+## 30 s lyssningsklipp (demos)
+Öppna **🎧 30 s lyssningsklipp** på demon i backoffice. Låten visas som en ljudgraf med en
+gul 30-sekundersruta – dra den till den del besökarna ska höra (första gången föreslås den
+starkaste delen). **▶ Lyssna på klippet** spelar exakt det utvalda partiet. Tryck **Spara**.
+På hemsidan spelar radion då bara de 30 sekunderna; hela låten får man genom att ladda ner.
+Bocka ur "Spela bara klippet på hemsidan" för att spela hela låten.

@@ -648,7 +648,7 @@
           <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
             <svg viewBox="0 0 24 24"><path d="${i === nu && spelar() ? PAUS : PLAY}"/></svg>
           </button>
-          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div></div>
+          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : (typeof l.klipp === "number" ? "30 s smakprov · " : "") + esc(l.info)}</small></div></div>
           <div class="hoger">
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
@@ -707,6 +707,7 @@
     const spotifyUri = url => { const m = String(url || "").match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album)\/([A-Za-z0-9]+)/); return m ? `spotify:${m[1]}:${m[2]}` : ""; };
     function tillganglig(i) { const l = latar[i]; return !!l && (l.slappt ? !!spotifyUri(l.spotify) : !l.saknas); }
     const arSpotify = () => !!(latar[nu] && latar[nu].slappt);
+    let klipp = null;   // start (sek) för aktuell demos lyssningsklipp, annars null
     let spTipsTimer = null, raknadFor = -1, raknaLat = () => {};
     function kollaRakna(pos) { if (nu >= 0 && raknadFor !== nu && pos >= 30) { raknadFor = nu; raknaLat(); } }
     function visaSpTips() {
@@ -764,7 +765,9 @@
       } else {
         if (spCtrl && !spPaus) spCtrl.pause();
         $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
-        ljud.src = "musik/" + encodeURI(l.fil);
+        // demo med lyssningsklipp: spela bara de utvalda 30 sekunderna (#t= hoppar direkt dit)
+        klipp = typeof l.klipp === "number" ? l.klipp : null;
+        ljud.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
         startaAnalys();
         ljud.play().catch(() => {});
         uppdatera();
@@ -796,7 +799,7 @@
     function uppdatera() {
       const pa = spelar(), viaSpotify = arSpotify();
       const l = latar[nu];
-      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : "NU SPELAS";
+      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "30 S SMAKPROV – LADDA NER FÖR HELA" : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
@@ -871,13 +874,22 @@
       $("sok").value = p; $("miniFramsteg").style.width = p + "%";
       $("tidNu").textContent = tid(pos); $("tidTot").textContent = tid(lang);
     }
-    ljud.addEventListener("timeupdate", () => { if (!arSpotify()) { visaTid(ljud.currentTime, ljud.duration); kollaRakna(ljud.currentTime); } });
+    ljud.addEventListener("loadedmetadata", () => { if (klipp != null && Math.abs(ljud.currentTime - klipp) > 1) ljud.currentTime = klipp; });
+    ljud.addEventListener("timeupdate", () => {
+      if (arSpotify()) return;
+      if (klipp != null) {
+        const rel = Math.max(0, ljud.currentTime - klipp);
+        visaTid(rel, 30); kollaRakna(rel >= 29 ? 30 : rel);
+        if (ljud.currentTime >= klipp + 30) { ljud.pause(); nasta(1); }   // klippet slut: nästa låt
+      } else { visaTid(ljud.currentTime, ljud.duration); kollaRakna(ljud.currentTime); }
+    });
     ljud.addEventListener("play", uppdatera);
     ljud.addEventListener("pause", uppdatera);
     ljud.addEventListener("ended", () => nasta(1));          // radion rullar vidare
     ljud.addEventListener("error", () => { if (nu >= 0 && !arSpotify()) { latar[nu].saknas = true; nasta(1); } });
     $("sok").addEventListener("input", e => {
       if (arSpotify()) { if (spCtrl && spLang) spCtrl.seek(e.target.value / 100 * spLang); }
+      else if (klipp != null) ljud.currentTime = klipp + e.target.value / 100 * 30;
       else if (ljud.duration) ljud.currentTime = e.target.value / 100 * ljud.duration;
     });
 
