@@ -405,7 +405,7 @@
           </details>
           ${l.slappt ? `
             <label>Spotify-länk till låten (Dela → Kopiera länk till låt)
-              <input type="url" data-falt="spotify" value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/…">
+              <input type="url" data-falt="spotify" value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/… – titel och omslag hämtas om de saknas">
             </label>` : `
             <div class="fil">
               ${filStatus}
@@ -471,6 +471,19 @@
     $("adminVy").addEventListener("input", e => {
       const lank = e.target.dataset.lank;
       if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
+      if (e.target.matches('[data-falt="spotify"]')) {
+        const l = data.latar[+e.target.closest("[data-i]").dataset.i], v = e.target.value.trim();
+        l.spotify = v; andrat();
+        if (SPOTIFY_RE.test(v) && (!l.titel.trim() || !l.omslag) && !hamtar) {
+          hamtar = true;
+          hamtaSpotifyInfo(l, v).then(h => {
+            hamtar = false; if (!l.titel.trim()) l.titel = "Ny låt";
+            rita(); andrat();
+            status(h.length && !h[0].startsWith("men") ? `✓ Hämtade ${h.join(" och ")} från Spotify för ${l.titel}. Tryck Spara.` : `Länken är inlagd${h.length ? " " + h[0] : ""}. Tryck Spara.`, "osparat");
+          });
+        }
+        return;
+      }
       if (e.target.matches("[data-snabb-spotify]")) {
         const v = e.target.value.trim(), l = data.latar[+e.target.closest("[data-i]").dataset.i];
         if (SPOTIFY_RE.test(v)) { e.target.disabled = true; autoSlapp(l, v); }
@@ -556,6 +569,14 @@
     let hamtar = false;
     async function autoSlapp(l, lank) {
       if (hamtar) return; hamtar = true;
+      const hamtat = await hamtaSpotifyInfo(l, lank);
+      hamtar = false;
+      if (!l.titel.trim()) l.titel = "Ny låt";
+      const extra = hamtat.length ? (hamtat[0].startsWith("men") ? " (" + hamtat[0] + ")" : " – hämtade " + hamtat.join(" och ") + " från Spotify") : "";
+      slappLat(l, lank, extra);
+    }
+    // Hämtar titel och omslag från Spotify (oEmbed, ingen nyckel) – bara det som saknas
+    async function hamtaSpotifyInfo(l, lank) {
       status("Hämtar info från Spotify…");
       const hamtat = [];
       try {
@@ -572,10 +593,7 @@
         console.warn("Kunde inte hämta från Spotify", e);
         hamtat.push("men info kunde inte hämtas från Spotify");
       }
-      hamtar = false;
-      if (!l.titel.trim()) l.titel = "Ny låt";
-      const extra = hamtat.length ? (hamtat[0].startsWith("men") ? " (" + hamtat[0] + ")" : " – hämtade " + hamtat.join(" och ") + " från Spotify") : "";
-      slappLat(l, lank, extra);
+      return hamtat;
     }
 
     // ===== Omslag per låt =====

@@ -181,8 +181,8 @@
 
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
     .kredit-lank:hover { color: var(--guld); }
-    .info { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--kant); color: var(--dampad); font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
-    .info:hover { border-color: var(--guld); color: var(--guld); }
+    .info-knapp { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--kant); color: var(--dampad); font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
+    .info-knapp:hover { border-color: var(--guld); color: var(--guld); }
     .kryss-stang { position: absolute; top: 14px; right: 16px; color: var(--dampad); font-size: 1.1rem; }
     .kryss-stang:hover { color: var(--text); }
     .kredit-rad.med-knapp { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
@@ -357,14 +357,14 @@
     <div class="wrap">
       <h2>Evigt Ung Radio</h2>
       <div class="delare">★</div>
-      <p class="ingress">Demos direkt från studion. Tryck play och låt radion rulla – gillar du oss kan du ladda ner dina favoriter.</p>
+      <p class="ingress">Demos direkt från studion och våra släppta låtar. Tryck play och låt radion rulla – gillar du oss kan du ladda ner demos.</p>
       <div class="radio">
         <div class="studio" id="studio">
           <div class="omslag">
             <img src="assets/omslag.jpg" alt="" id="studioBild">
             <div class="live"><i></i>ON AIR</div>
           </div>
-          <div class="etikett">NU SPELAS</div>
+          <div class="etikett" id="nuEtikett">NU SPELAS</div>
           <h3 id="nuTitel">Tryck play</h3>
           <button class="kredit-lank" id="nuKredit" type="button" hidden>Upphovspersoner</button>
           <div class="staplar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
@@ -381,7 +381,10 @@
             <button class="rund" id="ladda" type="button" aria-label="Ladda ner låten" title="Ladda ner"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></button>
           </div>
         </div>
-        <div class="listor" id="lista"></div>
+        <div class="listor">
+          <div class="listor" id="lista"></div>
+          <div class="listor" id="slapptLista"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -468,10 +471,9 @@
 
   <section id="spotify">
     <div class="wrap">
-      <h2>Släppt på Spotify</h2>
+      <h2>Följ oss på Spotify</h2>
       <div class="delare">★</div>
-      <p class="ingress">Det vi redan har släppt spelas via Spotify – då räknas varje lyssning. Följ oss där så missar du inget nytt.</p>
-      <div class="listor slappt-listor" id="slapptLista"></div>
+      <p class="ingress">Följ oss på Spotify så missar du inget nytt. Varje lyssning där räknas!</p>
       <div id="spotifyRam"></div>
       <div class="knappar" id="kanalKnappar"></div>
     </div>
@@ -611,7 +613,7 @@
           </button>
           <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div></div>
           <div class="hoger">
-            ${harKredit(l) ? `<button class="info" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
+            ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${l.ladda && !l.saknas ? ladd(i) : ""}
           </div>
@@ -627,7 +629,7 @@
             : `<a class="rund spela sp" href="${esc(lank)}" target="_blank" rel="noopener" aria-label="Lyssna på ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${PLAY}"/></svg></a>`}
           <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${esc(l.info)}</small></div></div>
           <div class="hoger">
-            ${harKredit(l) ? `<button class="info" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
+            ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
           </div>
@@ -652,8 +654,8 @@
       if (sp) {
         const i = +sp.dataset.spotify;
         oppenSpotify = oppenSpotify === i ? -1 : i;
-        if (oppenSpotify >= 0) ljud.pause();   // pausa radion när Spotify-spelaren öppnas
-        ritaLista();
+        if (oppenSpotify >= 0 && !ljud.paused) ljud.pause();   // pausa radion när Spotify-spelaren öppnas
+        uppdatera();
       }
     };
     $("lista").addEventListener("click", listKlick);
@@ -690,7 +692,9 @@
       }
     }
     function uppdatera() {
-      const l = latar[nu], pa = nu >= 0 && !ljud.paused;
+      const pa = nu >= 0 && !ljud.paused, viaSpotify = oppenSpotify >= 0;
+      const l = viaSpotify ? latar[oppenSpotify] : latar[nu];
+      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
