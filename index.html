@@ -145,7 +145,13 @@
     .staplar span:nth-child(2n) { animation-delay: -.3s; } .staplar span:nth-child(3n) { animation-delay: -.6s; }
     @keyframes hoppa { 50% { height: 24px; } }
 
+    .listor { display: grid; gap: 32px; min-width: 0; }
+    .listrubrik { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--kant); padding-bottom: 8px; }
+    .listrubrik h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--guld); font-size: 1.1rem; }
+    .listrubrik small { color: var(--dampad); }
     .lista { list-style: none; display: grid; gap: 10px; }
+    .spotify-lank { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--spotify); color: var(--spotify); text-decoration: none; white-space: nowrap; }
+    .spotify-lank:hover { background: var(--spotify); color: #000; }
     .spar {
       display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
       padding: 12px 14px; border-radius: 10px; background: var(--yta); border: 1px solid var(--kant);
@@ -297,7 +303,7 @@
             <button class="rund" id="ladda" type="button" aria-label="Ladda ner låten" title="Ladda ner"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></button>
           </div>
         </div>
-        <ol class="lista" id="lista"></ol>
+        <div class="listor" id="lista"></div>
       </div>
     </div>
   </section>
@@ -391,17 +397,26 @@
 
     // --- Spellista ---
     function ritaLista() {
-      $("lista").innerHTML = latar.map((l, i) => `
-        <li class="spar${i === nu ? " aktiv" : ""}${l.saknas ? " saknas" : ""}">
-          <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${l.titel}" ${l.saknas ? "disabled" : ""}>
+      const rad = (l, i) => `
+        <li class="spar${i === nu ? " aktiv" : ""}${l.saknas && !l.slappt ? " saknas" : ""}">
+          <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${l.titel}" ${l.saknas ? `disabled style="visibility:${l.slappt ? "hidden" : "visible"}"` : ""}>
             <svg viewBox="0 0 24 24"><path d="${i === nu && !ljud.paused ? PAUS : PLAY}"/></svg>
           </button>
-          <div class="namn"><b>${l.titel}</b><small>${l.saknas ? "Kommer snart" : (l.info || "")}</small></div>
+          <div class="namn"><b>${l.titel}</b><small>${l.saknas && !l.slappt ? "Kommer snart" : (l.info || "")}</small></div>
           <div class="hoger">
             ${l.typ ? `<span class="tagg">${l.typ}</span>` : ""}
+            ${l.slappt && (l.spotify || L.spotify) ? `<a class="spotify-lank" href="${l.spotify || L.spotify}" target="_blank" rel="noopener">Spotify</a>` : ""}
             ${l.ladda && !l.saknas ? `<button class="ladda" type="button" data-ladda="${i}"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>Ladda ner</button>` : ""}
           </div>
-        </li>`).join("");
+        </li>`;
+      const grupp = (rubrik, under, filter) => {
+        const rader = latar.map((l, i) => [l, i]).filter(([l]) => filter(l));
+        return rader.length ? `<div><div class="listrubrik"><h3>${rubrik}</h3><small>${under}</small></div>
+          <ol class="lista">${rader.map(([l, i]) => rad(l, i)).join("")}</ol></div>` : "";
+      };
+      $("lista").innerHTML =
+        grupp("Släppta låtar", "Finns på Spotify", l => l.slappt) +
+        grupp("Demos", "Direkt från studion", l => !l.slappt);
     }
     $("lista").addEventListener("click", e => {
       const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]");
