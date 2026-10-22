@@ -136,24 +136,6 @@
       }
     },
     {
-      "slappt": false,
-      "titel": "Vart tog den söta lilla flickan vägen",
-      "info": "Frågan alla ställer klockan tre på natten.",
-      "typ": "Demo",
-      "spotify": "",
-      "fil": "vart-tog-flickan-vagen.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026"
-      }
-    },
-    {
       "slappt": true,
       "titel": "Kom och värm dej",
       "info": "",
