@@ -227,6 +227,28 @@
       "datum": "2026-10-22T17:37:24.007Z",
       "slapptDatum": "2026-10-22T17:37:24.007Z",
       "omslag": "omslag-himlen-runt-hornet-vip-mix.jpg"
+    },
+    {
+      "slappt": true,
+      "titel": "Himlen Runt Hörnet ",
+      "info": "",
+      "typ": " Radio Edit",
+      "spotify": "https://open.spotify.com/track/6kxkMcIG3iQbledbxXXtkA",
+      "fil": "",
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-22T17:46:32.866Z",
+      "slapptDatum": "2026-10-22T17:46:32.866Z",
+      "omslag": "omslag-himlen-runt-hornet-radio-edit.jpg"
     }
   ]
 }
