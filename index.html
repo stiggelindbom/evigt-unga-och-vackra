@@ -178,6 +178,9 @@
 
     .sp-ram { margin-top: 14px; border-radius: 12px; overflow: hidden; }
     .sp-ram iframe { display: block; border-radius: 12px; }
+    .sp-ram.blinka { animation: spBlink 1s ease-in-out 3; box-shadow: 0 0 0 2px var(--spotify); }
+    @keyframes spBlink { 50% { box-shadow: 0 0 0 4px var(--spotify), 0 0 24px rgba(30,215,96,.6); } }
+    .sp-tips { margin-top: 8px; font-size: .85rem; color: var(--spotify); }
     .studio.via-spotify .live { color: var(--spotify); }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
     .kredit-lank:hover { color: var(--guld); }
@@ -381,6 +384,7 @@
             <button class="rund" id="ladda" type="button" aria-label="Ladda ner låten" title="Ladda ner"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></button>
           </div>
           <div class="sp-ram" id="spRam" hidden><div id="spMal"></div></div>
+          <p class="sp-tips" id="spTips" hidden>Tryck på <b>▶</b> i Spotify-rutan för att starta låten</p>
         </div>
         <div class="listor">
           <div class="listor" id="lista"></div>
@@ -679,6 +683,11 @@
     const spotifyUri = url => { const m = String(url || "").match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album)\/([A-Za-z0-9]+)/); return m ? `spotify:${m[1]}:${m[2]}` : ""; };
     function tillganglig(i) { const l = latar[i]; return !!l && (l.slappt ? !!spotifyUri(l.spotify) : !l.saknas); }
     const arSpotify = () => !!(latar[nu] && latar[nu].slappt);
+    let spTipsTimer = null;
+    function visaSpTips() {
+      $("spTips").hidden = false; $("spRam").classList.add("blinka");
+      $("spRam").scrollIntoView({ behavior: "smooth", block: "center" });   // på mobil ligger rutan ofta under kanten
+    }
     let spCtrl = null, spLaddar = null, spPaus = true, spPos = 0, spLang = 0, spStartat = false, spSpelaNarRedo = false;
     const spelar = () => nu >= 0 && (arSpotify() ? !spPaus : !ljud.paused);
 
@@ -691,7 +700,7 @@
             c.addListener("ready", () => { if (spSpelaNarRedo) { spSpelaNarRedo = false; c.play(); } });
             c.addListener("playback_update", e => {
               const d = e.data; spPaus = d.isPaused; spPos = d.position / 1000; spLang = d.duration / 1000;
-              if (!d.isPaused && d.position > 0) spStartat = true;
+              if (!d.isPaused && d.position > 0) { spStartat = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka"); }
               // låten slut: spela nästa
               if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return nasta(1); }
               if (arSpotify()) visaTid(spPos, spLang);
@@ -720,12 +729,15 @@
           if (!spCtrl) { spSpelaNarRedo = true; await laddaSpotify(uri); }
           else { spSpelaNarRedo = true; spCtrl.loadUri(uri); }
           spCtrl.play();
+          // iOS (och vissa webbläsare) tillåter bara start med ett tryck direkt i Spotify-rutan
+          clearTimeout(spTipsTimer);
+          spTipsTimer = setTimeout(() => { if (arSpotify() && spPaus) { visaSpTips(); } }, IOS ? 600 : 2000);
         } catch (e) {
           window.open(l.spotify, "_blank", "noopener");   // Spotify gick inte att ladda: öppna låten där i stället
         }
       } else {
         if (spCtrl && !spPaus) spCtrl.pause();
-        $("spRam").hidden = true;
+        $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
         ljud.src = "musik/" + encodeURI(l.fil);
         startaAnalys();
         ljud.play().catch(() => {});
@@ -734,7 +746,12 @@
     }
     function vaxla() {
       if (nu < 0) return nasta(1);
-      if (arSpotify()) { spCtrl ? spCtrl.togglePlay() : spela(nu); return; }
+      if (arSpotify()) {
+        if (!spCtrl) return spela(nu);
+        spCtrl.togglePlay();
+        if (spPaus) { clearTimeout(spTipsTimer); spTipsTimer = setTimeout(() => { if (spPaus) { visaSpTips(); } }, IOS ? 600 : 2000); }
+        return;
+      }
       if (ljud.paused) { startaAnalys(); ljud.play(); } else ljud.pause();
     }
     function nasta(steg = 1, fran = nu) {
@@ -765,7 +782,12 @@
     // --- Spektrumanalysator: lyssnar på demos via Web Audio. Spotify spelar i en skyddad ruta
     // som sidan inte får lyssna på, så då visas en lugn animation i Spotify-grönt. ---
     let ac = null, analys = null, fdata = null;
+    // iPhone/iPad: Web Audio följer ljudlös-knappen. Be Safari behandla sidan som musik (iOS 16.4+);
+    // på äldre iOS kopplas analysatorn bort så att ljudet alltid hörs.
+    const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     function startaAnalys() {
+      if (navigator.audioSession) { try { navigator.audioSession.type = "playback"; } catch {} }
+      if (IOS && !navigator.audioSession) return;
       if (!ac) {
         try {
           ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -775,7 +797,7 @@
           fdata = new Uint8Array(analys.frequencyBinCount);
         } catch (e) { ac = null; analys = null; }
       }
-      if (ac && ac.state === "suspended") ac.resume();
+      if (ac && ac.state !== "running") ac.resume().catch(() => {});
     }
     (() => {
       const cv = $("spektrum"), cx = cv.getContext("2d"), N = 32, h = new Array(N).fill(0);
@@ -786,7 +808,8 @@
         const dpr = window.devicePixelRatio || 1, B = cv.clientWidth, H = cv.clientHeight;
         if (cv.width !== B * dpr) { cv.width = B * dpr; cv.height = H * dpr; }
         cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, B, H);
-        const demoSpelar = !arSpotify() && nu >= 0 && !ljud.paused && analys, viaSp = arSpotify() && spelar();
+        const demoSpelar = !arSpotify() && nu >= 0 && !ljud.paused && analys && ac && ac.state === "running";
+        const viaSp = arSpotify() ? spelar() : (nu >= 0 && !ljud.paused && !demoSpelar);   // animation när analys saknas
         if (demoSpelar) analys.getByteFrequencyData(fdata);
         const farg = cx.createLinearGradient(0, H, 0, 0);
         if (arSpotify()) { farg.addColorStop(0, "#0f7a3a"); farg.addColorStop(1, "#1ed760"); }
