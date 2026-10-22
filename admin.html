@@ -333,6 +333,12 @@
         try { localStorage.setItem("deu-admin-token", token); } catch {}
         $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
         rita(); status("Inloggad. Inga ändringar än.");
+        // Låtar som bara har förval: hämta uppgifter från en annan mix av samma låt
+        const kopierade = data.latar.filter(l => arForval(l.kredit) && kopieraFranSyskon(l));
+        if (kopierade.length) {
+          rita(); andrat();
+          status(`✓ Kopierade uppgifter från andra mixar till: ${kopierade.map(l => l.titel.trim() + (l.typ ? " (" + l.typ.trim() + ")" : "")).join(", ")}. Kontrollera och tryck Spara.`, "osparat");
+        }
         if (fyllda.length) {
           fyllda.forEach(l => taggAndrad.add(l));
           andrat(); status(`Förval (De Evigt Unga å Vackra / Stig Lindbom) ifyllt för ${fyllda.length} låtar. Kontrollera och tryck Spara.`, "osparat");
@@ -479,11 +485,13 @@
     function kopieraFranSyskon(l) {
       const bas = basTitel(l.titel);
       if (!bas) return "";
-      const kalla = data.latar.find(x => x !== l && basTitel(x.titel) === bas);
+      const syskon = data.latar.filter(x => x !== l && basTitel(x.titel) === bas);
+      const kalla = syskon.find(x => !arForval(x.kredit)) || syskon[0];   // helst en mix med riktiga uppgifter
       if (!kalla) return "";
       const kopierat = [];
-      if (kalla.kredit && arForval(l.kredit) && !arForval(kalla.kredit)) { l.kredit = { ...kalla.kredit }; kopierat.push("upphovspersoner"); }
-      else if (kalla.kredit && arForval(l.kredit)) { l.kredit = { ...kalla.kredit }; }
+      // ISRC är unik per inspelning/mix och kopieras aldrig
+      const utanIsrc = k => { const { isrc, ...resten } = k; return { ...resten, ...(l.kredit && l.kredit.isrc ? { isrc: l.kredit.isrc } : {}) }; };
+      if (kalla.kredit && arForval(l.kredit) && !arForval(kalla.kredit)) { l.kredit = utanIsrc(kalla.kredit); kopierat.push("upphovspersoner"); }
       if (!l.omslag && kalla.omslag) { l.omslag = kalla.omslag; kopierat.push("omslag"); }
       if (!l.info && kalla.info) { l.info = kalla.info; kopierat.push("text"); }
       if (!kopierat.length) return "";
