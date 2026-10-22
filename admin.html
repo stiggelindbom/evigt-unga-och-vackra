@@ -191,7 +191,7 @@
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     $("repoNamn").textContent = `${AGARE}/${REPO}`;
 
-    let flodeSha = null;
+    let flodeSha = null, fyllda = [];
     let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1, slappOppen = -1;
 
     // ===== GitHub =====
@@ -277,15 +277,18 @@
       ["mastering", "Mastering", "Produktion och teknik"]
     ];
     const namnLista = t => String(t || "").split(",").map(x => x.trim()).filter(Boolean);
+    // Förval för nya låtar och låtar som saknar upphovspersoner
+    const FORVAL = () => ({ artist: ARTIST, kompositor: "Stig Lindbom", textforfattare: "Stig Lindbom", producent: "Stig Lindbom",
+                            mixning: "Stig Lindbom", mastering: "Stig Lindbom", ar: String(new Date().getFullYear()) });
     const taggar = async l => {
       const k = l.kredit || {};
       const folk = ["producent", "mixning", "mastering"].flatMap(r => namnLista(k[r]).map(n => [KREDIT.find(x => x[0] === r)[1], n]));
       const rader = KREDIT.map(([r, namn]) => namnLista(k[r]).length ? `${namn}: ${namnLista(k[r]).join(", ")}` : "").filter(Boolean);
       return {
-        titel: l.titel, artist: ARTIST, album: l.slappt ? "" : "Demos", bild: await omslagBytes(l),
+        titel: l.titel, artist: k.artist || ARTIST, album: l.slappt ? "" : "Demos", bild: await omslagBytes(l),
         kompositor: namnLista(k.kompositor).join("/"), textforfattare: namnLista(k.textforfattare).join("/"),
         folk, ar: k.ar, genre: k.genre, isrc: k.isrc,
-        copyright: k.ar ? `℗ ${k.ar} ${ARTIST}` : "",
+        copyright: k.ar ? `℗ ${k.ar} ${k.artist || ARTIST}` : "",
         kommentar: rader.join(" · ")
       };
     };
@@ -302,6 +305,7 @@
       sha = f.sha;
       data = JSON.parse(franBase64(f.content));
       data.lankar ||= {}; data.latar ||= [];
+      for (const l of data.latar) if (!l.kredit) { l.kredit = FORVAL(); fyllda.push(l); }
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
       flodeSha = await gh(`/contents/${FLODE}?ref=${GREN}`).then(f => f.sha).catch(() => null);
@@ -325,6 +329,10 @@
         try { localStorage.setItem("deu-admin-token", token); } catch {}
         $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
         rita(); status("Inloggad. Inga ändringar än.");
+        if (fyllda.length) {
+          fyllda.forEach(l => taggAndrad.add(l));
+          andrat(); status(`Förval (De Evigt Unga å Vackra / Stig Lindbom) ifyllt för ${fyllda.length} låtar. Kontrollera och tryck Spara.`, "osparat");
+        }
       } catch (e) {
         token = "";
         $("loginFel").textContent = e.status === 401 ? "GitHub godkände inte nyckeln. Kopiera hela nyckeln igen direkt när den visas (den börjar med github_pat_ och är ca 90 tecken lång), eller skapa en ny." :
@@ -385,6 +393,7 @@
             <summary>Upphovspersoner${harKredit(l) ? ` – ${esc(kreditSammanfattning(l))}` : ""}</summary>
             <p class="hjalp">Flera namn skiljs med komma. Läggs in i låtfilen (ID3) och visas under Upphovspersoner på hemsidan.</p>
             <div class="rutnat">
+              <label>Artist<input type="text" data-kredit="artist" value="${esc((l.kredit || {}).artist)}" placeholder="${ARTIST}"></label>
               ${KREDIT.map(([r, namn]) => `<label>${namn}<input type="text" data-kredit="${r}" value="${esc((l.kredit || {})[r])}" placeholder="${r === "producent" ? "t.ex. DJ Stigge" : ""}"></label>`).join("")}
               <label>År<input type="text" inputmode="numeric" data-kredit="ar" value="${esc((l.kredit || {}).ar)}" placeholder="${new Date().getFullYear()}"></label>
               <label>Genre<input type="text" data-kredit="genre" value="${esc((l.kredit || {}).genre)}" placeholder="t.ex. Dance, Reggae"></label>
@@ -463,7 +472,7 @@
       const ny = e.target.closest("[data-ny]");
       if (ny) {
         const slappt = ny.dataset.ny === "slappt";
-        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt, datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
+        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
         raderaVantar = -1; rita(); andrat();
         const kort = document.querySelector(`[data-i="${data.latar.length - 1}"] input`); kort && kort.focus();
         return;

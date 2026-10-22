@@ -592,9 +592,9 @@
       const rad = (namn, roll) => `<div class="kredit-rad"><b>${esc(namn)}</b><small>${esc(roll)}</small></div>`;
       const folj = L.spotify ? `<a class="folj" href="${esc(L.spotify)}" target="_blank" rel="noopener">Följ</a>` : "";
       $("kreditInnehall").innerHTML = `<p class="kredit-titel">${esc(l.titel)}</p>` +
-        `<h4>Artist</h4><div class="kredit-rad med-knapp"><div><b>De Evigt Unga å Vackra</b><small>Huvudartist</small></div>${folj}</div>` +
+        `<h4>Artist</h4><div class="kredit-rad med-knapp"><div><b>${esc(l.kredit.artist || "De Evigt Unga å Vackra")}</b><small>Huvudartist</small></div>${folj}</div>` +
         Object.entries(grupper).map(([g, folk]) => `<h4>${g}</h4>` + [...folk].map(([n, roller]) => rad(n, roller.join(", "))).join("")).join("") +
-        (l.kredit.ar || l.kredit.genre ? `<p class="kredit-fot">${[l.kredit.genre, l.kredit.ar ? "℗ " + l.kredit.ar + " De Evigt Unga å Vackra" : ""].filter(Boolean).map(esc).join(" · ")}</p>` : "");
+        (l.kredit.ar || l.kredit.genre ? `<p class="kredit-fot">${[l.kredit.genre, l.kredit.ar ? "℗ " + l.kredit.ar + " " + (l.kredit.artist || "De Evigt Unga å Vackra") : ""].filter(Boolean).map(esc).join(" · ")}</p>` : "");
       $("kreditRuta").showModal();
     }
     $("kreditStang").onclick = $("kreditKryss").onclick = () => $("kreditRuta").close();
