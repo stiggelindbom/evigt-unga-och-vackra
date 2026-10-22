@@ -176,12 +176,12 @@
     <div class="kort rutnat" id="lankar"></div>
 
     <div>
-      <h2>Vänner & Co</h2>
+      <h2>Med vänner</h2>
       <p class="hjalp">Visas som en rad med loggor under logon på startsidan. Ladda upp en logga (gärna png med genomskinlig bakgrund).</p>
     </div>
     <div class="kort">
       <div class="listhuvud">
-        <h3>Vänner & Co</h3>
+        <h3>Med vänner</h3>
         <button class="knapp liten" type="button" id="nyVan">+ Ny vän</button>
       </div>
       <div class="latlista" id="vannerLista"></div>
@@ -913,7 +913,7 @@ ${poster.slice(0, 20).map(p => `<item>
     // ===== Spara =====
     $("spara").onclick = async () => {
       for (const l of data.latar.filter(l => !l.titel.trim() && SPOTIFY_RE.test(l.spotify || ""))) await hamtaSpotifyInfo(l, l.spotify);
-      if (data.vanner.some(v => !v.namn)) { return status("Alla under Vänner & Co måste ha ett namn.", "fel"); }
+      if (data.vanner.some(v => !v.namn)) { return status("Alla under Med vänner måste ha ett namn.", "fel"); }
       const tomma = data.latar.filter(l => !l.titel.trim());
       if (tomma.length) { rita(); return status(`${tomma.length === 1 ? "En låt saknar" : tomma.length + " låtar saknar"} titel – skriv den i fältet Titel (Spotify kunde inte hämta den).`, "fel"); }
       $("spara").disabled = true; status("Sparar…");
