@@ -176,13 +176,13 @@
     <div class="kort rutnat" id="lankar"></div>
 
     <div>
-      <h2>Vänner & projekt</h2>
+      <h2>Vänner & Co</h2>
       <p class="hjalp">Visas som en rad med loggor under logon på startsidan. Ladda upp en logga (gärna png med genomskinlig bakgrund).</p>
     </div>
     <div class="kort">
       <div class="listhuvud">
-        <h3>Vänner & projekt</h3>
-        <button class="knapp liten" type="button" id="nyVan">+ Nytt projekt</button>
+        <h3>Vänner & Co</h3>
+        <button class="knapp liten" type="button" id="nyVan">+ Ny vän</button>
       </div>
       <div class="latlista" id="vannerLista"></div>
     </div>
@@ -546,7 +546,7 @@
             <label>Namn<input type="text" data-van-falt="namn" value="${esc(v.namn)}" placeholder="t.ex. DJ Stigge"></label>
             <label>Länk<input type="url" data-van-falt="lank" value="${esc(v.lank)}" placeholder="https://…"></label>
           </div>
-        </div>`).join("") : `<div class="tom">Inga projekt än. Klicka + Nytt projekt.</div>`;
+        </div>`).join("") : `<div class="tom">Inga projekt än. Klicka + Ny vän.</div>`;
     }
     let raderaVan = -1, loggFor = -1;
     $("nyVan").onclick = () => { data.vanner.push({ namn: "", lank: "", logga: "" }); raderaVan = -1; ritaVanner(); andrat(); document.querySelector(`[data-van="${data.vanner.length - 1}"] input`)?.focus(); };
@@ -913,7 +913,7 @@ ${poster.slice(0, 20).map(p => `<item>
     // ===== Spara =====
     $("spara").onclick = async () => {
       for (const l of data.latar.filter(l => !l.titel.trim() && SPOTIFY_RE.test(l.spotify || ""))) await hamtaSpotifyInfo(l, l.spotify);
-      if (data.vanner.some(v => !v.namn)) { return status("Alla projekt under Vänner & projekt måste ha ett namn.", "fel"); }
+      if (data.vanner.some(v => !v.namn)) { return status("Alla under Vänner & Co måste ha ett namn.", "fel"); }
       const tomma = data.latar.filter(l => !l.titel.trim());
       if (tomma.length) { rita(); return status(`${tomma.length === 1 ? "En låt saknar" : tomma.length + " låtar saknar"} titel – skriv den i fältet Titel (Spotify kunde inte hämta den).`, "fel"); }
       $("spara").disabled = true; status("Sparar…");
