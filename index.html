@@ -501,6 +501,15 @@
   </div>
 
   <!-- Gilla-grind före nedladdning -->
+  <dialog id="folj">
+    <div class="grind">
+      <h3>Gillar du det du hör?</h3>
+      <p>Följ oss så missar du inga nya låtar. Gillar du oss kan du dessutom ladda ner demos!</p>
+      <div class="steg" id="foljSteg"></div>
+      <button class="stang" id="foljStang" type="button">Fortsätt lyssna</button>
+    </div>
+  </dialog>
+
   <dialog id="grind">
     <div class="grind">
       <h3>Gilla oss först!</h3>
@@ -685,7 +694,8 @@
     const spotifyUri = url => { const m = String(url || "").match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album)\/([A-Za-z0-9]+)/); return m ? `spotify:${m[1]}:${m[2]}` : ""; };
     function tillganglig(i) { const l = latar[i]; return !!l && (l.slappt ? !!spotifyUri(l.spotify) : !l.saknas); }
     const arSpotify = () => !!(latar[nu] && latar[nu].slappt);
-    let spTipsTimer = null;
+    let spTipsTimer = null, raknadFor = -1, raknaLat = () => {};
+    function kollaRakna(pos) { if (nu >= 0 && raknadFor !== nu && pos >= 30) { raknadFor = nu; raknaLat(); } }
     function visaSpTips() {
       $("spTips").hidden = false; $("spRam").classList.add("blinka");
       $("spRam").scrollIntoView({ behavior: "smooth", block: "center" });   // på mobil ligger rutan ofta under kanten
@@ -705,7 +715,7 @@
               if (!d.isPaused && d.position > 0) { spStartat = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka"); }
               // låten slut: spela nästa
               if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return nasta(1); }
-              if (arSpotify()) visaTid(spPos, spLang);
+              if (arSpotify()) { visaTid(spPos, spLang); kollaRakna(spPos); }
               uppdatera();
             });
             ok(c);
@@ -720,6 +730,7 @@
 
     async function spela(i) {
       if (!tillganglig(i)) return nasta(1, i);
+      if (i !== nu) raknadFor = -1;
       nu = i;
       const l = latar[i];
       if (l.slappt) {
@@ -847,7 +858,7 @@
       $("sok").value = p; $("miniFramsteg").style.width = p + "%";
       $("tidNu").textContent = tid(pos); $("tidTot").textContent = tid(lang);
     }
-    ljud.addEventListener("timeupdate", () => { if (!arSpotify()) visaTid(ljud.currentTime, ljud.duration); });
+    ljud.addEventListener("timeupdate", () => { if (!arSpotify()) { visaTid(ljud.currentTime, ljud.duration); kollaRakna(ljud.currentTime); } });
     ljud.addEventListener("play", uppdatera);
     ljud.addEventListener("pause", uppdatera);
     ljud.addEventListener("ended", () => nasta(1));          // radion rullar vidare
@@ -871,6 +882,30 @@
     ].filter(Boolean);
     const las = k => { try { return localStorage.getItem("deu-" + k) === "1"; } catch { return false; } };
     const spara = k => { try { localStorage.setItem("deu-" + k, "1"); } catch {} };
+
+    // --- Efter 3 lyssnade låtar: be om följ/gilla (räknas i besökarens webbläsare, inga IP-adresser) ---
+    // En låt räknas efter 30 sekunders lyssning. Rutan visas efter 3 låtar och, om man inte följt, en gång till efter 10.
+    const lasTal = k => { try { return +localStorage.getItem("deu-" + k) || 0; } catch { return 0; } };
+    const sparaTal = (k, v) => { try { localStorage.setItem("deu-" + k, String(v)); } catch {} };
+    raknaLat = () => {
+      const antal = lasTal("lyssnade") + 1, visad = lasTal("folj-visad");
+      sparaTal("lyssnade", antal);
+      if (!kravs.length || kravs.every(k => las(k.id))) return;
+      if ((antal >= 3 && visad === 0) || (antal >= 10 && visad === 1)) {
+        sparaTal("folj-visad", visad + 1);
+        ritaFolj(); $("folj").showModal();
+      }
+    };
+    function ritaFolj() {
+      const klara = kravs.every(k => las(k.id));
+      $("foljSteg").innerHTML = klara
+        ? `<p style="color:var(--guld-ljus);font-size:1.2rem;margin:0">Tack för stödet! 💛</p>`
+        : kravs.map(k => `<a class="knapp ${k.klass}${las(k.id) ? " klar" : ""}" href="${esc(k.url)}" target="_blank" rel="noopener" data-krav="${k.id}">${k.text}</a>`).join("");
+      if (klara) setTimeout(() => $("folj").open && $("folj").close(), 1800);
+    }
+    $("foljSteg").addEventListener("click", e => { const k = e.target.closest("[data-krav]"); if (k) { spara(k.dataset.krav); setTimeout(ritaFolj, 300); } });
+    $("foljStang").onclick = () => $("folj").close();
+    $("folj").addEventListener("click", e => { if (e.target === $("folj")) $("folj").close(); });
     let vantar = null;
 
     function laddaNer(i) {
