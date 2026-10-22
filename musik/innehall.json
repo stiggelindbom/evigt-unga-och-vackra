@@ -15,7 +15,16 @@
       "typ": "Singel",
       "spotify": "",
       "fil": "",
-      "ladda": false
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": true,
@@ -24,7 +33,16 @@
       "typ": "Sommarhit",
       "spotify": "",
       "fil": "",
-      "ladda": false
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": true,
@@ -33,7 +51,16 @@
       "typ": "Singel",
       "spotify": "",
       "fil": "",
-      "ladda": false
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -42,7 +69,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "sista-kalla-flaskan.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -51,7 +87,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "sommargodis.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -60,7 +105,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "bollen-ar-rod.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -69,7 +123,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "vi-alskar-siwan.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -78,7 +141,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "ingvar-stahl.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -87,7 +159,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "vart-tog-flickan-vagen.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     },
     {
       "slappt": false,
@@ -96,7 +177,16 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "nar-vi-gar-for-guld.mp3",
-      "ladda": true
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
     }
   ]
 }
