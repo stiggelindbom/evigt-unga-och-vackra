@@ -94,6 +94,7 @@
     .knapp.kontur { background: transparent; color: var(--guld); border: 2px solid var(--guld); box-shadow: none; }
     .knapp.spotify { background: var(--spotify); color: #000; box-shadow: 0 0 20px rgba(30,215,96,.35); }
     .knapp.fb { background: var(--fb); color: #fff; box-shadow: 0 0 20px rgba(24,119,242,.35); }
+    .knapp.ig { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); color: #fff; box-shadow: 0 0 20px rgba(221,42,123,.35); }
 
     /* Sektioner */
     section { padding: 90px 16px; }
@@ -447,7 +448,7 @@
   <dialog id="grind">
     <div class="grind">
       <h3>Gilla oss först!</h3>
-      <p>Följ oss på Spotify och gilla oss på Facebook – sen är låten din. Tack för stödet!</p>
+      <p>Följ och gilla oss – sen är låten din. Tack för stödet!</p>
       <div class="steg" id="grindSteg"></div>
       <button class="stang" id="grindStang" type="button">Inte nu</button>
     </div>
@@ -631,7 +632,8 @@
     // Obs: sidan kan inte kontrollera att man faktiskt följer/gillar – den litar på besökaren.
     const kravs = [
       L.spotify  && { id: "spotify",  text: "Följ oss på Spotify",  url: L.spotify,  klass: "spotify" },
-      L.facebook && { id: "facebook", text: "Gilla oss på Facebook", url: L.facebook, klass: "fb" }
+      L.facebook && { id: "facebook", text: "Gilla oss på Facebook", url: L.facebook, klass: "fb" },
+      L.instagram && { id: "instagram", text: "Följ oss på Instagram", url: L.instagram, klass: "ig" }
     ].filter(Boolean);
     const las = k => { try { return localStorage.getItem("deu-" + k) === "1"; } catch { return false; } };
     const spara = k => { try { localStorage.setItem("deu-" + k, "1"); } catch {} };
@@ -669,7 +671,7 @@
       : `<div class="tomt">Spotify-spelaren visas här när Spotify-länken är inlagd i admin.</div>`;
     const kanaler = [
       ["spotify", "Spotify", "spotify"], ["facebook", "Facebook", "fb"],
-      ["instagram", "Instagram", "kontur"], ["youtube", "YouTube", "kontur"]
+      ["instagram", "Instagram", "ig"], ["youtube", "YouTube", "kontur"]
     ].filter(([k]) => L[k]);
     $("kanalKnappar").innerHTML = kanaler.map(([k, n, c]) => `<a class="knapp ${c}" href="${esc(L[k])}" target="_blank" rel="noopener">${n}</a>`).join("");
     $("sociala").innerHTML = kanaler.map(([k, n]) => `<a href="${esc(L[k])}" target="_blank" rel="noopener">${n}</a>`).join("");
