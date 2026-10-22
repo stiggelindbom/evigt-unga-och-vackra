@@ -668,7 +668,7 @@
           <div class="hoger">
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
-            ${l.ladda && !l.saknas && (!arSmakprov(l) || L.kodHash) ? ladd(i, arSmakprov(l)) : ""}
+            ${l.ladda && !l.saknas && (!arSmakprov(l) || L.kodHash || L.server) ? ladd(i, arSmakprov(l)) : ""}
           </div>
         </li>`;
       // Släppta låtar spelas via Spotify så att lyssningarna räknas där
@@ -826,7 +826,7 @@
       $("heroText").textContent = pa ? "Pausa radion" : nu >= 0 ? "Fortsätt radion" : "Starta radion";
       $("studio").classList.toggle("spelar", pa);
       $("studio").classList.toggle("via-spotify", viaSpotify);
-      $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas && (!arSmakprov(l) || L.kodHash));
+      $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas && (!arSmakprov(l) || L.kodHash || L.server));
       document.title = pa ? `▶︎ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
@@ -954,8 +954,26 @@
     const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
     const kodOk = () => { try { return !!L.kodHash && localStorage.getItem("deu-kod") === L.kodHash; } catch { return false; } };
     let kodFor = null;
+    // Med server (L.server): riktiga engångskoder – servern kontrollerar koden, skickar filen och spärrar koden.
+    const serverUrl = L.server ? L.server.replace(/\/?$/, "/") : "";
+    async function laddaViaServer(l, kod) {
+      const knapp = $("kodForm").querySelector("button"); knapp.disabled = true; knapp.textContent = "Kontrollerar…";
+      try {
+        const namn = `De Evigt Unga å Vackra - ${l.titel}.mp3`;
+        const r = await fetch(serverUrl + "ladda.php", { method: "POST", body: new URLSearchParams({ fil: l.fil, kod, namn }) });
+        if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.fel || "Det gick inte att ladda ner just nu"); }
+        const url = URL.createObjectURL(await r.blob());
+        const a = document.createElement("a"); a.href = url; a.download = namn; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+        $("kodRuta").close();
+      } catch (e) {
+        $("kodFel").textContent = e.message; $("kodFel").hidden = false; $("kodInput").select();
+      } finally { knapp.disabled = false; knapp.textContent = "⬇ Ladda ner"; }
+    }
     $("kodForm").addEventListener("submit", async e => {
       e.preventDefault();
+      if (serverUrl) return laddaViaServer(kodFor, $("kodInput").value.trim());
+      $("kodFel").textContent = "Fel kod – försök igen.";
       const h = await sha256($("kodInput").value.trim().toLowerCase());
       if (h === L.kodHash) { try { localStorage.setItem("deu-kod", h); } catch {} $("kodRuta").close(); starta(kodFor); }
       else { $("kodFel").hidden = false; $("kodInput").select(); }
@@ -966,8 +984,8 @@
       const l = latar[i];
       if (!l || !l.ladda || !l.fil || l.saknas) return;
       if (arSmakprov(l)) {
-        if (!L.kodHash) return;
-        if (kodOk()) return starta(l);
+        if (!L.kodHash && !serverUrl) return;
+        if (!serverUrl && kodOk()) return starta(l);
         kodFor = l; $("kodInput").value = ""; $("kodFel").hidden = true; $("kodRuta").showModal(); $("kodInput").focus();
         return;
       }

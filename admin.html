@@ -82,6 +82,12 @@
     .klipp-laddar { position: absolute; inset: 0; display: grid; place-items: center; color: var(--dampad); font-size: .85rem; }
     .klipp-knappar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     .klipp-tid { font-variant-numeric: tabular-nums; color: var(--guld-ljus); font-size: .9rem; }
+    .ny-kod { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 14px; border: 2px dashed var(--guld); border-radius: 10px; }
+    .ny-kod b { font-family: "Oswald", sans-serif; font-size: 2rem; letter-spacing: .15em; color: var(--guld-ljus); }
+    .ny-kod small { flex-basis: 100%; color: var(--dampad); }
+    .kodtabell { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    .kodtabell th, .kodtabell td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--kant); }
+    .kodtabell th { color: var(--guld-mork); font-weight: 500; }
     .slapp-panel { border: 1px solid rgba(30,215,96,.5); background: #0f1a13; border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
     .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
     .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
@@ -183,6 +189,21 @@
       <p class="hjalp">Tomma fält döljs på hemsidan.</p>
     </div>
     <div class="kort rutnat" id="lankar"></div>
+
+    <div id="engangsDel" hidden>
+      <h2>Engångskoder</h2>
+      <p class="hjalp">Varje kod fungerar en gång för att ladda ner ett smakprov. Koden visas bara när du skapar den – skicka den direkt till personen.</p>
+      <div class="kort" style="display:grid;gap:12px">
+        <div class="rutnat">
+          <label>Admin-nyckel för servern (sparas bara i den här webbläsaren)<input type="password" id="serverNyckel" autocomplete="off"></label>
+          <label>Till vem? (notering)<input type="text" id="kodNotering" placeholder="t.ex. Peter Lindqvist"></label>
+          <label>Bara för låt (valfritt)<select id="kodLat"><option value="">Alla smakprov</option></select></label>
+        </div>
+        <div><button class="knapp" type="button" id="skapaKod">+ Skapa engångskod</button></div>
+        <div id="nyKodVisning" hidden></div>
+        <div id="kodLista" class="hjalp"></div>
+      </div>
+    </div>
 
     <div>
       <h2>Med vänner</h2>
@@ -358,7 +379,7 @@
         await hamta();
         try { localStorage.setItem("deu-admin-token", token); } catch {}
         $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
-        rita(); status("Inloggad. Inga ändringar än.");
+        rita(); status("Inloggad. Inga ändringar än."); hamtaKoder();
         // Låtar som bara har förval: hämta uppgifter från en annan mix av samma låt
         // Ta bort "Radio Edit" (och mellanslag) i titlarna
         const rensade = data.latar.filter(l => { const ny = rensaTitel(l.titel); if (ny !== l.titel) { l.titel = ny; taggAndrad.add(l); return true; } return false; });
@@ -388,7 +409,7 @@
     try { const t = localStorage.getItem("deu-admin-token"); if (t) loggaIn(t); } catch {}
 
     // ===== Rita =====
-    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"]];
+    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"], ["server", "Server för engångskoder (Freddes server, t.ex. https://…/server/)", "url"]];
 
     function rita() {
       const rad = (l, i) => {
@@ -496,6 +517,7 @@
       $("slapptLista").innerHTML = lista(true);
       $("demoLista").innerHTML = lista(false);
       ritaVanner();
+      ritaEngangsDel();
       setTimeout(ritaAllaVagformer);
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
         `<label>${n}<input type="${typ}" data-lank="${k}" value="${esc(data.lankar[k])}"></label>`).join("") +
@@ -666,6 +688,47 @@
     $("adminVy").addEventListener("pointerup", slapp);
     $("adminVy").addEventListener("pointercancel", slapp);
 
+    // ===== Engångskoder (via Freddes server) =====
+    const serverBas = () => (data.lankar.server || "").replace(/\/?$/, "/");
+    const serverNyckel = () => $("serverNyckel").value.trim();
+    try { $("serverNyckel").value = localStorage.getItem("deu-server-nyckel") || ""; } catch {}
+    $("serverNyckel").addEventListener("change", () => { try { localStorage.setItem("deu-server-nyckel", serverNyckel()); } catch {} hamtaKoder(); });
+    async function serverAnrop(metod, kropp) {
+      const r = await fetch(serverBas() + "koder.php", { method: metod, headers: { "X-Admin-Nyckel": serverNyckel(), ...(kropp ? { "Content-Type": "application/json" } : {}) }, body: kropp ? JSON.stringify(kropp) : undefined });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.fel || "Servern svarade " + r.status);
+      return j;
+    }
+    function ritaEngangsDel() {
+      $("engangsDel").hidden = !data.lankar.server;
+      $("kodLat").innerHTML = `<option value="">Alla smakprov</option>` + data.latar.filter(l => !l.slappt && l.fil).map(l => `<option value="${esc(l.fil)}">${esc(l.titel)}</option>`).join("");
+    }
+    async function hamtaKoder() {
+      if (!data.lankar.server || !serverNyckel()) { $("kodLista").textContent = data.lankar.server ? "Fyll i admin-nyckeln för att se och skapa koder." : ""; return; }
+      try {
+        const { koder } = await serverAnrop("GET");
+        $("kodLista").innerHTML = koder.length ? `<table class="kodtabell"><tr><th>Till</th><th>Skapad</th><th>Status</th><th></th></tr>` + koder.map(k => `<tr>
+            <td>${esc(k.notering || "–")}${k.fil ? ` <small>(${esc(k.fil)})</small>` : ""}</td>
+            <td>${new Date(k.skapad).toLocaleDateString("sv-SE")}</td>
+            <td>${k.anvand ? `✓ Använd ${new Date(k.anvand).toLocaleDateString("sv-SE")}` : "Oanvänd"}</td>
+            <td><button class="knapp fara liten" type="button" data-kod-bort="${esc(k.id)}">Ta bort</button></td></tr>`).join("") + `</table>` : "Inga koder skapade än.";
+      } catch (e) { $("kodLista").textContent = "Kunde inte nå servern: " + e.message; }
+    }
+    $("skapaKod").onclick = async () => {
+      if (!serverNyckel()) return status("Fyll i admin-nyckeln för servern först.", "fel");
+      try {
+        const k = await serverAnrop("POST", { notering: $("kodNotering").value.trim(), fil: $("kodLat").value || undefined });
+        $("nyKodVisning").hidden = false;
+        $("nyKodVisning").innerHTML = `<div class="ny-kod"><span>Ny engångskod${k.notering ? " till " + esc(k.notering) : ""}:</span><b>${esc(k.kod)}</b><button class="knapp liten" type="button" id="kopieraKod">Kopiera</button><small>Visas bara nu – skicka den direkt.</small></div>`;
+        $("kopieraKod").onclick = () => navigator.clipboard?.writeText(k.kod).then(() => status("✓ Koden kopierad.", "ok"), () => {});
+        $("kodNotering").value = ""; hamtaKoder();
+      } catch (e) { status("Kunde inte skapa kod: " + e.message, "fel"); }
+    };
+    $("kodLista").addEventListener("click", async e => {
+      const b = e.target.closest("[data-kod-bort]"); if (!b) return;
+      try { await serverAnrop("DELETE", { id: b.dataset.kodBort }); hamtaKoder(); } catch (er) { status("Kunde inte ta bort: " + er.message, "fel"); }
+    });
+
     // ===== Vänner & projekt =====
     const loggUrl = v => !v.logga ? "" : /^https?:/.test(v.logga) ? v.logga : (forhands[v.logga] || "musik/" + encodeURI(v.logga));
     function ritaVanner() {
@@ -732,7 +795,7 @@
     $("adminVy").addEventListener("input", e => {
       if (e.target.matches("[data-kod]")) { nyKod = e.target.value.trim(); return andrat(); }
       const lank = e.target.dataset.lank;
-      if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
+      if (lank) { data.lankar[lank] = e.target.value.trim(); if (lank === "server") { ritaEngangsDel(); hamtaKoder(); } return andrat(); }
       if (e.target.matches('[data-falt="spotify"]')) {
         const l = data.latar[+e.target.closest("[data-i]").dataset.i], v = e.target.value.trim();
         l.spotify = v; andrat();

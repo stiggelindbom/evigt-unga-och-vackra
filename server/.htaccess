@@ -1,0 +1,4 @@
+# Skydda konfiguration och data om mappen ligger i webbroten (Apache)
+<FilesMatch "^(config\.php|config\.exempel\.php|gemensamt\.php|koder\.json)$">
+  Require all denied
+</FilesMatch>
