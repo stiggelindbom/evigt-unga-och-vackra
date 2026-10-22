@@ -101,24 +101,6 @@
     },
     {
       "slappt": false,
-      "titel": "Vi älskar Siwan",
-      "info": "En hyllning.",
-      "typ": "Demo",
-      "spotify": "",
-      "fil": "vi-alskar-siwan.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026"
-      }
-    },
-    {
-      "slappt": false,
       "titel": "En helt jävla värdelös låt som världen egentligen inte behör",
       "info": "En låt om en legend.",
       "typ": "Demo",
