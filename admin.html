@@ -334,6 +334,9 @@
         $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
         rita(); status("Inloggad. Inga ändringar än.");
         // Låtar som bara har förval: hämta uppgifter från en annan mix av samma låt
+        // Ta bort "Radio Edit" (och mellanslag) i titlarna
+        const rensade = data.latar.filter(l => { const ny = rensaTitel(l.titel); if (ny !== l.titel) { l.titel = ny; taggAndrad.add(l); return true; } return false; });
+        if (rensade.length) { rita(); andrat(); status(`✓ Tog bort "Radio Edit" i ${rensade.length} titlar. Tryck Spara.`, "osparat"); }
         const kopierade = data.latar.filter(l => arForval(l.kredit) && kopieraFranSyskon(l));
         if (kopierade.length) {
           rita(); andrat();
@@ -479,6 +482,9 @@
     const harKredit = l => l.kredit && KREDIT.some(([r]) => namnLista(l.kredit[r]).length);
     const kreditSammanfattning = l => [...new Set(KREDIT.flatMap(([r]) => namnLista((l.kredit || {})[r])))].slice(0, 3).join(", ");
     const oppnaKredit = new WeakSet(), taggAndrad = new WeakSet();
+
+    // "Radio Edit" som Spotify lägger till i titeln tas bort
+    const rensaTitel = t => String(t || "").replace(/\s*[-–—]\s*radio edit\s*$/i, "").replace(/\s*[([]\s*radio edit\s*[)\]]\s*$/i, "").trim();
 
     // ===== Samma låt, olika mixar =====
     // "Himlen runt hörnet – Extended Mix" och "Himlen runt hörnet (Radio Edit)" räknas som samma låt.
@@ -639,7 +645,7 @@
           try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.title) { info = j; break; } } } catch (e) { console.warn("Hämtning misslyckades", url, e); }
         }
         if (!info) throw new Error("ingen info");
-        if (!l.titel.trim() && info.title) { l.titel = info.title; hamtat.push("titel"); const m = kopieraFranSyskon(l); if (m) hamtat.push("info från tidigare mix"); }
+        if (!l.titel.trim() && info.title) { l.titel = rensaTitel(info.title); hamtat.push("titel"); const m = kopieraFranSyskon(l); if (m) hamtat.push("info från tidigare mix"); }
         if (!l.omslag && info.thumbnail_url && l.titel) {
           status("Hämtar omslaget från Spotify…");
           try {

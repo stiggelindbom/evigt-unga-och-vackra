@@ -569,7 +569,9 @@
 
   function start(DATA) {
     const L = DATA.lankar || {};
-    const latar = (DATA.latar || []).map(l => ({ ...l, saknas: !l.fil }));
+    // "Radio Edit" som Spotify lägger till i titeln visas inte
+    const rensaTitel = t => String(t || "").replace(/\s*[-–—]\s*radio edit\s*$/i, "").replace(/\s*[([]\s*radio edit\s*[)\]]\s*$/i, "").trim();
+    const latar = (DATA.latar || []).map(l => ({ ...l, titel: rensaTitel(l.titel), saknas: !l.fil }));
     const $ = id => document.getElementById(id);
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const ljud = $("ljud");
