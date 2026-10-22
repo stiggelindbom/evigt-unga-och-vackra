@@ -469,6 +469,28 @@
     const kreditSammanfattning = l => [...new Set(KREDIT.flatMap(([r]) => namnLista((l.kredit || {})[r])))].slice(0, 3).join(", ");
     const oppnaKredit = new WeakSet(), taggAndrad = new WeakSet();
 
+    // ===== Samma låt, olika mixar =====
+    // "Himlen runt hörnet – Extended Mix" och "Himlen runt hörnet (Radio Edit)" räknas som samma låt.
+    const basTitel = t => String(t || "").toLowerCase()
+      .replace(/\s[-–—]\s.*$/, "")
+      .replace(/[([][^)\]]*\b(mix|edit|remix|version|remaster\w*|extended|radio|club|instrumental|akustisk|acoustic|live|dub|demo)\b[^)\]]*[)\]]/g, "")
+      .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const arForval = k => { if (!k) return true; const f = FORVAL(); return ["artist", ...KREDIT.map(x => x[0]), "genre"].every(r => (k[r] || "") === (f[r] || "")); };
+    function kopieraFranSyskon(l) {
+      const bas = basTitel(l.titel);
+      if (!bas) return "";
+      const kalla = data.latar.find(x => x !== l && basTitel(x.titel) === bas);
+      if (!kalla) return "";
+      const kopierat = [];
+      if (kalla.kredit && arForval(l.kredit) && !arForval(kalla.kredit)) { l.kredit = { ...kalla.kredit }; kopierat.push("upphovspersoner"); }
+      else if (kalla.kredit && arForval(l.kredit)) { l.kredit = { ...kalla.kredit }; }
+      if (!l.omslag && kalla.omslag) { l.omslag = kalla.omslag; kopierat.push("omslag"); }
+      if (!l.info && kalla.info) { l.info = kalla.info; kopierat.push("text"); }
+      if (!kopierat.length) return "";
+      taggAndrad.add(l);
+      return `Kopierade ${kopierat.join(", ")} från ”${kalla.titel}”.`;
+    }
+
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
       const lank = e.target.dataset.lank;
@@ -514,6 +536,13 @@
       else if (falt === "slappt") { l.slappt = e.target.value === "1"; if (l.slappt && !l.slapptDatum) l.slapptDatum = new Date().toISOString(); rita(); }
       else { l[falt] = e.target.value; if (falt === "titel") { kort.querySelector(".topp b").textContent = e.target.value || "Ny låt"; taggAndrad.add(l); } }
       andrat();
+    });
+
+    $("adminVy").addEventListener("change", e => {
+      if (e.target.dataset.falt !== "titel") return;
+      const l = data.latar[+e.target.closest("[data-i]").dataset.i];
+      const msg = kopieraFranSyskon(l);
+      if (msg) { rita(); andrat(); status("✓ " + msg + " Tryck Spara.", "osparat"); }
     });
 
     $("adminVy").addEventListener("click", e => {
@@ -597,7 +626,7 @@
           try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.title) { info = j; break; } } } catch (e) { console.warn("Hämtning misslyckades", url, e); }
         }
         if (!info) throw new Error("ingen info");
-        if (!l.titel.trim() && info.title) { l.titel = info.title; hamtat.push("titel"); }
+        if (!l.titel.trim() && info.title) { l.titel = info.title; hamtat.push("titel"); const m = kopieraFranSyskon(l); if (m) hamtat.push("info från tidigare mix"); }
         if (!l.omslag && info.thumbnail_url && l.titel) {
           status("Hämtar omslaget från Spotify…");
           try {
