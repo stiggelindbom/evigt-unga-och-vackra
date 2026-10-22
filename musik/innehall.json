@@ -10,24 +10,6 @@
   "latar": [
     {
       "slappt": true,
-      "titel": "Kom och värm dej",
-      "info": "Låten som startade allt.",
-      "typ": "Singel",
-      "spotify": "https://open.spotify.com/track/66r4DllqMVnMPjl3vGnn6z",
-      "fil": "",
-      "ladda": false,
-      "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026"
-      }
-    },
-    {
-      "slappt": true,
       "titel": "Parapapa (Sommarfest)",
       "info": "PARAPA-PAPAPAPA-RAPA-PA! Put 'em up!",
       "typ": "Sommarhit",
@@ -42,7 +24,8 @@
         "mixning": "Stig Lindbom",
         "mastering": "Stig Lindbom",
         "ar": "2026"
-      }
+      },
+      "omslag": "omslag-parapapa-sommarfest.jpg"
     },
     {
       "slappt": false,
@@ -191,6 +174,72 @@
       "datum": "2026-10-22T17:12:58.869Z",
       "slapptDatum": "2026-10-22T17:12:58.869Z",
       "omslag": "omslag-kom-och-varm-dej.jpg"
+    },
+    {
+      "slappt": true,
+      "titel": "Vi älskar Siwan - Radio Edit",
+      "info": "",
+      "typ": "Singel",
+      "spotify": "https://open.spotify.com/track/6azQbuhnwTOZaukjEQTQG0",
+      "fil": "",
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-22T17:16:08.336Z",
+      "slapptDatum": "2026-10-22T17:16:08.336Z",
+      "omslag": "omslag-vi-alskar-siwan-radio-edit.jpg"
+    },
+    {
+      "slappt": true,
+      "titel": "1987 - Radio Edit",
+      "info": "",
+      "typ": "Singel",
+      "spotify": "https://open.spotify.com/track/6J3w6wL5nbgs3qGATXMF1I",
+      "fil": "",
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-22T17:16:37.506Z",
+      "slapptDatum": "2026-10-22T17:16:37.506Z",
+      "omslag": "omslag-1987-radio-edit.jpg"
+    },
+    {
+      "slappt": true,
+      "titel": "Oops... I did it again... - Radio Edit",
+      "info": "",
+      "typ": "Singel",
+      "spotify": "https://open.spotify.com/track/61E7a8F2uPyJQcDCiNuykw",
+      "fil": "",
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-22T17:17:08.350Z",
+      "slapptDatum": "2026-10-22T17:17:08.350Z",
+      "omslag": "omslag-oops-i-did-it-again-radio-edit.jpg"
     }
   ]
 }
