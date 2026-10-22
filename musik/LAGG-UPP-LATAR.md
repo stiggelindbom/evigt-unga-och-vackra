@@ -17,3 +17,9 @@ Spotify-länk (i Spotify: ··· → Dela → Kopiera länk till låt) och spara
 
 ## Utan backoffice (för Fredde)
 Lägg mp3:an i `musik/` och lägg till låten i `musik/innehall.json` med samma filnamn under `"fil"`.
+
+## Släppa en låt
+Tryck **🚀 Släpp låten** på demon i backoffice och följ checklistan:
+1. Ladda upp på SoundCloud (wav) och välj distribution till Spotify m.fl.
+2. Pitcha i Spotify for Artists minst 7 dagar före släppdatum.
+3. När låten är ute: klistra in Spotify-länken och tryck **Släpp nu**, sedan **Spara**.
