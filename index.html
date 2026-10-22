@@ -641,6 +641,7 @@
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
+            ${l.ladda && l.fil && !l.saknas ? ladd(i) : ""}
           </div>
         </li>`;
       };
@@ -668,7 +669,7 @@
 
     // Kolla vilka demofiler som finns på servern
     latar.forEach(l => {
-      if (l.slappt || !l.fil) return;
+      if (!l.fil) return;
       fetch("musik/" + encodeURI(l.fil), { method: "HEAD" })
         .then(r => { if (!r.ok) throw 0; })
         .catch(() => { l.saknas = true; ritaLista(); });
@@ -757,7 +758,7 @@
       $("miniIkon").setAttribute("d", pa ? PAUS : PLAY);
       $("studio").classList.toggle("spelar", pa);
       $("studio").classList.toggle("via-spotify", viaSpotify);
-      $("ladda").hidden = viaSpotify;
+      $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas);
       document.title = pa ? `▶ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
@@ -843,7 +844,7 @@
 
     function laddaNer(i) {
       const l = latar[i];
-      if (!l || !l.ladda || l.saknas || l.slappt) return;
+      if (!l || !l.ladda || !l.fil || l.saknas) return;
       if (kravs.every(k => las(k.id))) return starta(l);
       vantar = l; ritaGrind(); $("grind").showModal();
     }

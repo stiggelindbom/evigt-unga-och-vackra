@@ -414,7 +414,12 @@
             <label>Spotify-länk till låten (Dela → Kopiera länk till låt)
               <input type="url" data-falt="spotify" value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/… – titel och omslag hämtas om de saknas">
             </label>
-            ${l.spotify && (!l.titel.trim() || !l.omslag) ? `<div><button class="knapp gron liten" type="button" data-hamta-spotify>↻ Hämta titel och omslag från Spotify</button></div>` : ""}` : `
+            ${l.spotify && (!l.titel.trim() || !l.omslag) ? `<div><button class="knapp gron liten" type="button" data-hamta-spotify>↻ Hämta titel och omslag från Spotify</button></div>` : ""}
+            <div class="fil">
+              ${l.fil ? filStatus : `<span class="status">Ingen låtfil – spelas bara via Spotify</span>`}
+              <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav för nedladdning"}</button>
+              ${l.fil ? `<label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>` : ""}
+            </div>` : `
             <div class="fil">
               ${filStatus}
               <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav"}</button>
@@ -601,7 +606,7 @@
     // ===== Släpp: flytta demo till Släppta =====
     const SPOTIFY_RE = /^https?:\/\/open\.spotify\.com\/(intl-[a-z]+\/)?(track|album)\/[A-Za-z0-9]+/;
     function slappLat(l, lank, extra = "") {
-      l.slappt = true; l.slapptDatum = new Date().toISOString(); l.spotify = lank; l.ladda = false;
+      l.slappt = true; l.slapptDatum = new Date().toISOString(); l.spotify = lank;   // låtfil och nedladdning behålls
       if (!l.typ || /demo/i.test(l.typ)) l.typ = "Singel";
       // flytta det nya släppet överst bland de släppta
       data.latar.splice(data.latar.indexOf(l), 1);
@@ -764,6 +769,7 @@
           body: JSON.stringify({ message: `Ladda upp ${l.titel} via backoffice`, content: b64, branch: GREN, ...(gammal ? { sha: gammal } : {}) })
         });
         filer.add(namn);
+        if (l.slappt && !l.fil) l.ladda = true;   // släppt låt som får en fil: gör den nedladdningsbar direkt
         if (l.fil !== namn) { l.fil = namn; andrat(); }
         uppladdning = null; rita();
         status(osparat ? `✓ ${namn} uppladdad. Glöm inte att spara.` : `✓ ${namn} uppladdad.`, osparat ? "osparat" : "ok");
