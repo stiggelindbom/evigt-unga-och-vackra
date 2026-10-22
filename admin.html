@@ -61,6 +61,10 @@
     .knapp.liten { padding: 6px 12px; font-size: .75rem; }
     .knapp.kontur { background: transparent; color: var(--guld); border: 1px solid var(--guld-mork); }
     .knapp.gron { background: var(--spotify); color: #000; }
+    .omslag-rad { display: flex; gap: 14px; align-items: center; }
+    .omslag-tumme { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px var(--kant); flex-shrink: 0; }
+    .omslag-info { display: grid; gap: 6px; font-size: .85rem; color: var(--dampad); }
+    .omslag-knappar { display: flex; gap: 8px; flex-wrap: wrap; }
     .slapp-panel { border: 1px solid rgba(30,215,96,.5); background: #0f1a13; border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
     .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
     .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
@@ -170,6 +174,7 @@
   </div>
 
   <input type="file" id="filval" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,.wav" hidden>
+  <input type="file" id="bildval" accept="image/jpeg,image/png,image/webp" hidden>
 
   <script>
     // ===== Inställningar =====
@@ -268,6 +273,16 @@
               <button class="knapp fara liten${raderaVantar === i ? " saker" : ""}" type="button" data-radera>${raderaVantar === i ? "Säker? Ta bort" : "Ta bort"}</button>
             </div>
           </div>
+          <div class="omslag-rad">
+            <img src="${omslagUrl(l)}" alt="" class="omslag-tumme">
+            <div class="omslag-info">
+              <span>${l.omslag ? "Eget omslag" : "Bandets omslag (standard)"}</span>
+              <div class="omslag-knappar">
+                <button class="knapp kontur liten" type="button" data-omslag ${uppladdning !== null ? "disabled" : ""}>${uppladdning === "bild" + i ? "Laddar upp…" : l.omslag ? "Byt omslag" : "Ladda upp omslag"}</button>
+                ${l.omslag ? `<button class="knapp kontur liten" type="button" data-omslag-bort>Använd bandets</button>` : ""}
+              </div>
+            </div>
+          </div>
           <div class="rutnat">
             <label>Titel<input type="text" data-falt="titel" value="${esc(l.titel)}"></label>
             <label>Kort text<input type="text" data-falt="info" value="${esc(l.info)}"></label>
@@ -363,6 +378,8 @@
         rita(); return;
       }
       if (e.target.closest("[data-ladda-upp]")) { valjFil(i); }
+      if (e.target.closest("[data-omslag]")) { bildFor = i; $("bildval").value = ""; $("bildval").click(); return; }
+      if (e.target.closest("[data-omslag-bort]")) { delete data.latar[i].omslag; rita(); andrat(); return; }
       if (e.target.closest("[data-slapp-oppna]")) { slappOppen = slappOppen === i ? -1 : i; raderaVantar = -1; rita(); return; }
       if (e.target.closest("[data-slapp-stang]")) { slappOppen = -1; rita(); return; }
       if (e.target.closest("[data-slapp-nu]")) {
@@ -378,6 +395,41 @@
         slappOppen = -1; rita(); andrat();
         status(`🚀 ${l.titel} ligger nu under Släppta. Tryck Spara för att publicera.` + (lank ? "" : " (Spotify-knappen går till artistsidan tills du lagt in låtens länk.)"), "osparat");
         document.querySelector(`[data-i="${ny}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    });
+
+    // ===== Omslag per låt =====
+    // Bilden beskärs till kvadrat, skalas till 1000×1000 och sparas som jpg i musik/
+    let bildFor = -1;
+    const forhands = {};   // nyss uppladdade bilder visas direkt, innan hemsidan hunnit uppdateras
+    const omslagUrl = l => l.omslag ? (forhands[l.omslag] || "musik/" + encodeURI(l.omslag)) : "assets/omslag.jpg";
+    async function tillKvadratJpg(fil) {
+      const bild = await createImageBitmap(fil);
+      const sida = Math.min(bild.width, bild.height), mal = Math.min(1000, sida);
+      const c = document.createElement("canvas"); c.width = c.height = mal;
+      c.getContext("2d").drawImage(bild, (bild.width - sida) / 2, (bild.height - sida) / 2, sida, sida, 0, 0, mal, mal);
+      return new Promise(ok => c.toBlob(ok, "image/jpeg", 0.88));
+    }
+    $("bildval").addEventListener("change", async () => {
+      const fil = $("bildval").files[0], i = bildFor, l = data.latar[i];
+      if (!fil || !l) return;
+      if (!l.titel) return status("Skriv en titel på låten innan du laddar upp omslaget.", "fel");
+      const namn = "omslag-" + filnamn(l.titel).replace(/\.mp3$/, ".jpg");
+      uppladdning = "bild" + i; rita(); status("Laddar upp omslaget…");
+      try {
+        const jpg = await tillKvadratJpg(fil);
+        const b64 = await new Promise((ok, fel) => { const r = new FileReader(); r.onload = () => ok(r.result.split(",")[1]); r.onerror = () => fel(new Error("bilden kunde inte läsas")); r.readAsDataURL(jpg); });
+        let gammal = null;
+        if (filer.has(namn)) gammal = (await gh(`/contents/musik/${encodeURIComponent(namn)}?ref=${GREN}`)).sha;
+        await gh(`/contents/musik/${encodeURIComponent(namn)}`, {
+          method: "PUT",
+          body: JSON.stringify({ message: `Omslag för ${l.titel} via backoffice`, content: b64, branch: GREN, ...(gammal ? { sha: gammal } : {}) })
+        });
+        filer.add(namn); forhands[namn] = URL.createObjectURL(jpg);
+        l.omslag = namn; uppladdning = null; rita(); andrat();
+        status("✓ Omslaget är uppladdat. Tryck Spara för att visa det på hemsidan.", "osparat");
+      } catch (e) {
+        uppladdning = null; rita(); status("Omslaget kunde inte laddas upp: " + e.message, "fel");
       }
     });
 
@@ -457,12 +509,12 @@
       const poster = [];
       for (const l of data.latar) {
         if (l.slappt && l.slapptDatum) poster.push({
-          id: "slappt-" + l.titel, datum: l.slapptDatum, titel: `Ute nu på Spotify: ${l.titel}`,
+          id: "slappt-" + l.titel, datum: l.slapptDatum, bild: l.omslag ? SIDA + "musik/" + encodeURI(l.omslag) : null, titel: `Ute nu på Spotify: ${l.titel}`,
           text: `${l.titel} är ute nu! ${l.info || ""} Lyssna på Spotify – varje lyssning räknas.`.replace(/\s+/g, " ").trim(),
           lank: l.spotify || SIDA + "#spotify"
         });
         else if (!l.slappt && l.datum) poster.push({
-          id: "demo-" + l.titel, datum: l.datum, titel: `Ny demo: ${l.titel}`,
+          id: "demo-" + l.titel, datum: l.datum, bild: l.omslag ? SIDA + "musik/" + encodeURI(l.omslag) : null, titel: `Ny demo: ${l.titel}`,
           text: `Ny demo på Evigt Ung Radio: ${l.titel}. ${l.info || ""} Lyssna och ladda ner på vår sida!`.replace(/\s+/g, " ").trim(),
           lank: SIDA + "#radio"
         });
@@ -482,8 +534,8 @@ ${poster.slice(0, 20).map(p => `<item>
   <link>${x(p.lank)}</link>
   <guid isPermaLink="false">${x(p.id)}</guid>
   <pubDate>${new Date(p.datum).toUTCString()}</pubDate>
-  <enclosure url="${bild}" type="image/jpeg" length="0"/>
-  <media:content url="${bild}" medium="image"/>
+  <enclosure url="${x(p.bild || bild)}" type="image/jpeg" length="0"/>
+  <media:content url="${x(p.bild || bild)}" medium="image"/>
 </item>`).join("\n")}
 </channel>
 </rss>

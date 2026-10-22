@@ -168,6 +168,9 @@
     .spar.saknas { opacity: .5; }
     .spar .spela { width: 44px; height: 44px; }
     .spar .namn { min-width: 0; }
+    .spar .namn.med-bild { display: flex; align-items: center; gap: 12px; }
+    .spar .namn.med-bild > div { min-width: 0; }
+    .tumme { width: 44px; height: 44px; border-radius: 6px; object-fit: cover; flex-shrink: 0; box-shadow: 0 0 0 1px var(--kant); }
     .spar .namn b { display: block; font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .03em; color: var(--guld-ljus); font-weight: 500; }
     .spar .namn small { color: var(--dampad); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .spar .hoger { display: flex; gap: 8px; align-items: center; }
@@ -338,7 +341,7 @@
       <div class="radio">
         <div class="studio" id="studio">
           <div class="omslag">
-            <img src="assets/omslag.jpg" alt="">
+            <img src="assets/omslag.jpg" alt="" id="studioBild">
             <div class="live"><i></i>ON AIR</div>
           </div>
           <div class="etikett">NU SPELAS</div>
@@ -461,7 +464,7 @@
   <!-- Fast spelare längst ner -->
   <div class="minispelare" id="mini">
     <div class="framsteg" id="miniFramsteg"></div>
-    <img src="assets/omslag.jpg" alt="">
+    <img src="assets/omslag.jpg" alt="" id="miniBild">
     <div class="info"><small>EVIGT UNG RADIO</small><b id="miniTitel">Tryck play för att starta</b></div>
     <div class="reglage">
       <button class="rund stor" id="miniSpela" type="button" aria-label="Spela"><svg viewBox="0 0 24 24"><path id="miniIkon" d="M8 5v14l11-7z"/></svg></button>
@@ -536,6 +539,9 @@
     const PLAY = "M8 5v14l11-7z", PAUS = "M6 5h4v14H6zm8 0h4v14h-4z";
     let nu = -1, blanda = false, oppenSpotify = -1;
 
+    // Låtens eget omslag, annars bandets
+    const omslagFor = l => l && l.omslag ? "musik/" + encodeURI(l.omslag) : "assets/omslag.jpg";
+
     // Spotify-länk -> inbäddningsadress (track/album/artist)
     const spotifyEmbed = url => {
       const m = String(url || "").match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|artist|playlist)\/([A-Za-z0-9]+)/);
@@ -550,7 +556,7 @@
           <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
             <svg viewBox="0 0 24 24"><path d="${i === nu && !ljud.paused ? PAUS : PLAY}"/></svg>
           </button>
-          <div class="namn"><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div>
+          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div></div>
           <div class="hoger">
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${l.ladda && !l.saknas ? ladd(i) : ""}
@@ -565,7 +571,7 @@
           ${embed
             ? `<button class="rund spela sp" type="button" data-spotify="${i}" aria-label="Spela ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${i === oppenSpotify ? PAUS : PLAY}"/></svg></button>`
             : `<a class="rund spela sp" href="${esc(lank)}" target="_blank" rel="noopener" aria-label="Lyssna på ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${PLAY}"/></svg></a>`}
-          <div class="namn"><b>${esc(l.titel)}</b><small>${esc(l.info)}</small></div>
+          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${esc(l.info)}</small></div></div>
           <div class="hoger">
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
@@ -629,6 +635,7 @@
     function uppdatera() {
       const l = latar[nu], pa = nu >= 0 && !ljud.paused;
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
+      if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
       $("miniTitel").textContent = l ? l.titel : "Tryck play för att starta";
       $("spelaIkon").setAttribute("d", pa ? PAUS : PLAY);
       $("miniIkon").setAttribute("d", pa ? PAUS : PLAY);
