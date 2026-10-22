@@ -179,7 +179,9 @@
     .ladda:hover { background: var(--guld); color: var(--svart); }
     .ladda svg { width: 14px; height: 14px; fill: currentColor; }
 
-    .studio.via-spotify .tidslinje, .studio.via-spotify .staplar { visibility: hidden; }
+    .sp-ram { margin-top: 14px; border-radius: 12px; overflow: hidden; }
+    .sp-ram iframe { display: block; border-radius: 12px; }
+    .studio.via-spotify .staplar span { background: var(--spotify); }
     .studio.via-spotify .live { color: var(--spotify); }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
     .kredit-lank:hover { color: var(--guld); }
@@ -382,6 +384,7 @@
             <button class="rund" id="nasta" type="button" aria-label="Nästa"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
             <button class="rund" id="ladda" type="button" aria-label="Ladda ner låten" title="Ladda ner"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></button>
           </div>
+          <div class="sp-ram" id="spRam" hidden><div id="spMal"></div></div>
         </div>
         <div class="listor">
           <div class="listor" id="lista"></div>
@@ -571,7 +574,7 @@
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const ljud = $("ljud");
     const PLAY = "M8 5v14l11-7z", PAUS = "M6 5h4v14H6zm8 0h4v14h-4z";
-    let nu = -1, blanda = false, oppenSpotify = -1;
+    let nu = -1, blanda = false;
 
     // Låtens eget omslag, annars bandets
     const omslagFor = l => !l ? "assets/omslag.jpg" : !l.omslag ? (l._spotifyBild || "assets/omslag.jpg") : /^https?:/.test(l.omslag) ? l.omslag : "musik/" + encodeURI(l.omslag);
@@ -619,7 +622,7 @@
       const demoRad = (l, i) => `
         <li class="spar${i === nu ? " aktiv" : ""}${l.saknas ? " saknas" : ""}">
           <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
-            <svg viewBox="0 0 24 24"><path d="${i === nu && !ljud.paused ? PAUS : PLAY}"/></svg>
+            <svg viewBox="0 0 24 24"><path d="${i === nu && spelar() ? PAUS : PLAY}"/></svg>
           </button>
           <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div></div>
           <div class="hoger">
@@ -633,9 +636,9 @@
         const embed = spotifyEmbed(l.spotify);
         const lank = l.spotify || L.spotify;
         return `
-        <li class="spar slappt${i === oppenSpotify ? " aktiv" : ""}">
+        <li class="spar slappt${i === nu ? " aktiv" : ""}">
           ${embed
-            ? `<button class="rund spela sp" type="button" data-spotify="${i}" aria-label="Spela ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${i === oppenSpotify ? PAUS : PLAY}"/></svg></button>`
+            ? `<button class="rund spela sp" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)} via Spotify"><svg viewBox="0 0 24 24"><path d="${i === nu && spelar() ? PAUS : PLAY}"/></svg></button>`
             : `<a class="rund spela sp" href="${esc(lank)}" target="_blank" rel="noopener" aria-label="Lyssna på ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${PLAY}"/></svg></a>`}
           <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${esc(l.info)}</small></div></div>
           <div class="hoger">
@@ -643,7 +646,6 @@
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
           </div>
-          ${i === oppenSpotify && embed ? `<iframe class="sp-spelare" src="${embed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="${esc(l.titel)} på Spotify"></iframe>` : ""}
         </li>`;
       };
       const grupp = (rubrik, under, filter, rad) => {
@@ -658,15 +660,9 @@
     const listKlick = e => {
       const kr = e.target.closest("[data-kredit]");
       if (kr) return visaKredit(latar[+kr.dataset.kredit]);
-      const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]"), sp = e.target.closest("[data-spotify]");
+      const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]");
       if (s) { const i = +s.dataset.spela; i === nu ? vaxla() : spela(i); }
       if (d) laddaNer(+d.dataset.ladda);
-      if (sp) {
-        const i = +sp.dataset.spotify;
-        oppenSpotify = oppenSpotify === i ? -1 : i;
-        if (oppenSpotify >= 0 && !ljud.paused) ljud.pause();   // pausa radion när Spotify-spelaren öppnas
-        uppdatera();
-      }
     };
     $("lista").addEventListener("click", listKlick);
     $("slapptLista").addEventListener("click", listKlick);
@@ -682,31 +678,79 @@
         .catch(() => { l.saknas = true; ritaLista(); });
     });
 
-    // --- Radion (spelar demos) ---
-    function tillganglig(i) { return latar[i] && !latar[i].slappt && !latar[i].saknas; }
-    function spela(i) {
+    // --- Radion: demos spelas här, släppta via Spotifys spelare (iFrame API) så att lyssningarna räknas ---
+    const spotifyUri = url => { const m = String(url || "").match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album)\/([A-Za-z0-9]+)/); return m ? `spotify:${m[1]}:${m[2]}` : ""; };
+    function tillganglig(i) { const l = latar[i]; return !!l && (l.slappt ? !!spotifyUri(l.spotify) : !l.saknas); }
+    const arSpotify = () => !!(latar[nu] && latar[nu].slappt);
+    let spCtrl = null, spLaddar = null, spPaus = true, spPos = 0, spLang = 0, spStartat = false, spSpelaNarRedo = false;
+    const spelar = () => nu >= 0 && (arSpotify() ? !spPaus : !ljud.paused);
+
+    function laddaSpotify(uri) {
+      return spLaddar ||= new Promise((ok, fel) => {
+        const tid = setTimeout(() => fel(new Error("Spotify svarade inte")), 12000);
+        window.onSpotifyIframeApiReady = api => {
+          api.createController($("spMal"), { uri, width: "100%", height: 80 }, c => {
+            clearTimeout(tid); spCtrl = c;
+            c.addListener("ready", () => { if (spSpelaNarRedo) { spSpelaNarRedo = false; c.play(); } });
+            c.addListener("playback_update", e => {
+              const d = e.data; spPaus = d.isPaused; spPos = d.position / 1000; spLang = d.duration / 1000;
+              if (!d.isPaused && d.position > 0) spStartat = true;
+              // låten slut: spela nästa
+              if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return nasta(1); }
+              if (arSpotify()) visaTid(spPos, spLang);
+              uppdatera();
+            });
+            ok(c);
+          });
+        };
+        const sc = document.createElement("script");
+        sc.src = "https://open.spotify.com/embed/iframe-api/v1"; sc.async = true;
+        sc.onerror = () => { clearTimeout(tid); fel(new Error("Spotify kunde inte laddas")); };
+        document.head.appendChild(sc);
+      });
+    }
+
+    async function spela(i) {
       if (!tillganglig(i)) return nasta(1, i);
-      nu = i; oppenSpotify = -1;
-      ljud.src = "musik/" + encodeURI(latar[i].fil);
-      ljud.play().catch(() => {});
-      uppdatera();
+      nu = i;
+      const l = latar[i];
+      if (l.slappt) {
+        if (!ljud.paused) ljud.pause();
+        $("spRam").hidden = false; spStartat = false; spPaus = true; visaTid(0, 0);
+        uppdatera();
+        const uri = spotifyUri(l.spotify);
+        try {
+          if (!spCtrl) { spSpelaNarRedo = true; await laddaSpotify(uri); }
+          else { spSpelaNarRedo = true; spCtrl.loadUri(uri); }
+          spCtrl.play();
+        } catch (e) {
+          window.open(l.spotify, "_blank", "noopener");   // Spotify gick inte att ladda: öppna låten där i stället
+        }
+      } else {
+        if (spCtrl && !spPaus) spCtrl.pause();
+        $("spRam").hidden = true;
+        ljud.src = "musik/" + encodeURI(l.fil);
+        ljud.play().catch(() => {});
+        uppdatera();
+      }
     }
     function vaxla() {
       if (nu < 0) return nasta(1);
-      if (ljud.paused) { oppenSpotify = -1; ljud.play(); } else ljud.pause();
+      if (arSpotify()) { spCtrl ? spCtrl.togglePlay() : spela(nu); return; }
+      ljud.paused ? ljud.play() : ljud.pause();
     }
     function nasta(steg = 1, fran = nu) {
-      const n = latar.length;
-      if (!latar.some((_, i) => tillganglig(i))) { $("nuTitel").textContent = "Inga demos uppladdade än"; return; }
+      const n = latar.length, mojliga = latar.map((_, j) => j).filter(tillganglig);
+      if (!mojliga.length) { $("nuTitel").textContent = "Inga låtar att spela än"; return; }
       let i = fran;
       for (let k = 0; k < n; k++) {
-        i = blanda ? Math.floor(Math.random() * n) : (i + steg + n) % n;
-        if (tillganglig(i) && (i !== nu || latar.filter((_, j) => tillganglig(j)).length === 1)) return spela(i);
+        i = blanda ? mojliga[Math.floor(Math.random() * mojliga.length)] : (i + steg + n) % n;
+        if (tillganglig(i) && (i !== nu || mojliga.length === 1)) return spela(i);
       }
     }
     function uppdatera() {
-      const pa = nu >= 0 && !ljud.paused, viaSpotify = oppenSpotify >= 0;
-      const l = viaSpotify ? latar[oppenSpotify] : latar[nu];
+      const pa = spelar(), viaSpotify = arSpotify();
+      const l = latar[nu];
       $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
@@ -716,20 +760,25 @@
       $("miniIkon").setAttribute("d", pa ? PAUS : PLAY);
       $("studio").classList.toggle("spelar", pa);
       $("studio").classList.toggle("via-spotify", viaSpotify);
+      $("ladda").hidden = viaSpotify;
       document.title = pa ? `▶ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
     const tid = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00";
-    ljud.addEventListener("timeupdate", () => {
-      const p = ljud.duration ? ljud.currentTime / ljud.duration * 100 : 0;
+    function visaTid(pos, lang) {
+      const p = lang ? pos / lang * 100 : 0;
       $("sok").value = p; $("miniFramsteg").style.width = p + "%";
-      $("tidNu").textContent = tid(ljud.currentTime); $("tidTot").textContent = tid(ljud.duration);
-    });
+      $("tidNu").textContent = tid(pos); $("tidTot").textContent = tid(lang);
+    }
+    ljud.addEventListener("timeupdate", () => { if (!arSpotify()) visaTid(ljud.currentTime, ljud.duration); });
     ljud.addEventListener("play", uppdatera);
     ljud.addEventListener("pause", uppdatera);
     ljud.addEventListener("ended", () => nasta(1));          // radion rullar vidare
-    ljud.addEventListener("error", () => { if (nu >= 0) { latar[nu].saknas = true; nasta(1); } });
-    $("sok").addEventListener("input", e => { if (ljud.duration) ljud.currentTime = e.target.value / 100 * ljud.duration; });
+    ljud.addEventListener("error", () => { if (nu >= 0 && !arSpotify()) { latar[nu].saknas = true; nasta(1); } });
+    $("sok").addEventListener("input", e => {
+      if (arSpotify()) { if (spCtrl && spLang) spCtrl.seek(e.target.value / 100 * spLang); }
+      else if (ljud.duration) ljud.currentTime = e.target.value / 100 * ljud.duration;
+    });
 
     $("spela").onclick = vaxla; $("miniSpela").onclick = vaxla; $("heroSpela").onclick = () => { vaxla(); $("radio").scrollIntoView(); };
     $("nasta").onclick = () => nasta(1); $("miniNasta").onclick = () => nasta(1); $("forra").onclick = () => nasta(-1);
