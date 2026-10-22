@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>De Evigt Unga å Vackra</title>
-  <meta name="description" content="De Evigt Unga å Vackra – festlåtar, sommarhits och guld. Musik av DJ Stigge.">
+  <meta name="description" content="De Evigt Unga å Vackra – lyssna på vår radio, ladda ner demos och hitta oss på Spotify. Musik av DJ Stigge.">
   <meta property="og:title" content="De Evigt Unga å Vackra">
-  <meta property="og:description" content="Festlåtar, sommarhits och guld.">
+  <meta property="og:description" content="Lyssna på vår radio – festlåtar, sommarhits och rent guld.">
   <meta property="og:image" content="assets/omslag.jpg">
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -16,11 +16,16 @@
     :root {
       --svart: #0b0b0b;
       --kol: #161412;
+      --yta: #1f1b14;
+      --kant: #3a3020;
       --guld: #f5c518;
       --guld-ljus: #ffe27a;
       --guld-mork: #b8860b;
       --text: #f4ecd6;
-      --dämpad: #b9ad8d;
+      --dampad: #b9ad8d;
+      --spotify: #1ed760;
+      --fb: #1877f2;
+      color-scheme: dark;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
@@ -30,16 +35,20 @@
       font-family: "Inter", system-ui, sans-serif;
       line-height: 1.6;
       overflow-x: hidden;
+      padding-bottom: 84px; /* plats för spelaren */
     }
     a { color: var(--guld); }
     img { max-width: 100%; display: block; }
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--guld); outline-offset: 3px; }
+    [hidden] { display: none !important; }
 
     /* Navigering */
     nav {
-      position: fixed; inset: 0 0 auto 0; z-index: 10;
+      position: fixed; inset: 0 0 auto 0; z-index: 20;
       display: flex; justify-content: space-between; align-items: center;
       padding: 12px 16px;
-      background: linear-gradient(to bottom, rgba(0,0,0,.85), rgba(0,0,0,0));
+      background: linear-gradient(to bottom, rgba(0,0,0,.9), rgba(0,0,0,0));
     }
     nav .brand { font-family: "Yellowtail", cursive; font-size: 1.6rem; color: var(--guld); text-decoration: none; }
     nav ul { list-style: none; display: flex; gap: 20px; }
@@ -51,7 +60,7 @@
 
     /* Hero */
     .hero {
-      position: relative; min-height: 100vh;
+      position: relative; min-height: 92vh;
       display: grid; place-items: center; text-align: center;
       padding: 100px 16px 60px;
       background: url("assets/mosaik.jpg") center / cover;
@@ -64,7 +73,7 @@
     }
     .hero-inner { position: relative; max-width: 640px; }
     .hero .logo {
-      width: min(520px, 85vw); margin: 0 auto;
+      width: min(500px, 85vw); margin: 0 auto;
       filter: drop-shadow(0 0 30px rgba(245,197,24,.45)) drop-shadow(0 0 2px #fff6);
       animation: glans 4s ease-in-out infinite;
     }
@@ -73,14 +82,18 @@
       margin-top: 18px; font-family: "Oswald", sans-serif; text-transform: uppercase;
       letter-spacing: .25em; color: var(--guld-ljus); font-size: clamp(.9rem, 2.5vw, 1.15rem);
     }
+    .knappar { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 28px; }
     .knapp {
-      display: inline-block; margin-top: 28px; padding: 14px 32px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 8px; padding: 14px 28px; border-radius: 999px;
       background: linear-gradient(135deg, var(--guld-ljus), var(--guld), var(--guld-mork));
       color: var(--svart); font-family: "Oswald", sans-serif; font-weight: 700;
       text-transform: uppercase; letter-spacing: .1em; text-decoration: none;
       box-shadow: 0 0 25px rgba(245,197,24,.4); transition: transform .2s;
     }
     .knapp:hover { transform: scale(1.05); }
+    .knapp.kontur { background: transparent; color: var(--guld); border: 2px solid var(--guld); box-shadow: none; }
+    .knapp.spotify { background: var(--spotify); color: #000; box-shadow: 0 0 20px rgba(30,215,96,.35); }
+    .knapp.fb { background: var(--fb); color: #fff; box-shadow: 0 0 20px rgba(24,119,242,.35); }
 
     /* Sektioner */
     section { padding: 90px 16px; }
@@ -90,60 +103,147 @@
       font-size: clamp(2.6rem, 7vw, 4rem); text-align: center; margin-bottom: 8px;
       text-shadow: 0 0 20px rgba(245,197,24,.35);
     }
-    .delare { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 40px; color: var(--guld); }
+    .delare { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 20px; color: var(--guld); }
     .delare::before, .delare::after { content: ""; width: 80px; height: 1px; background: linear-gradient(90deg, transparent, var(--guld)); }
     .delare::after { transform: scaleX(-1); }
+    .ingress { text-align: center; max-width: 600px; margin: 0 auto 40px; color: var(--dampad); }
+
+    /* Radio */
+    #radio { background: linear-gradient(180deg, var(--svart), var(--kol)); }
+    .radio {
+      display: grid; grid-template-columns: 340px 1fr; gap: 32px; align-items: start;
+    }
+    .studio {
+      position: sticky; top: 80px;
+      background: linear-gradient(160deg, #241f16, #0e0d0b);
+      border: 1px solid var(--kant); border-radius: 14px; padding: 22px; text-align: center;
+    }
+    .studio .omslag { position: relative; border-radius: 10px; overflow: hidden; }
+    .studio .omslag img { aspect-ratio: 1; object-fit: cover; width: 100%; }
+    .live {
+      position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 6px;
+      background: rgba(0,0,0,.75); padding: 4px 10px; border-radius: 999px;
+      font-family: "Oswald", sans-serif; font-size: .75rem; letter-spacing: .15em; color: var(--guld);
+    }
+    .live i { width: 8px; height: 8px; border-radius: 50%; background: #ff3b3b; }
+    .spelar .live i { animation: blink 1.2s infinite; }
+    @keyframes blink { 50% { opacity: .2; } }
+    .studio .etikett { margin-top: 16px; font-family: "Oswald", sans-serif; letter-spacing: .2em; font-size: .75rem; color: var(--guld-mork); }
+    .studio h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; font-size: 1.4rem; color: var(--guld-ljus); line-height: 1.25; text-wrap: balance; }
+    .studio .reglage { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 14px; }
+    .rund { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--kant); }
+    .rund:hover { border-color: var(--guld); color: var(--guld); }
+    .rund.stor { width: 64px; height: 64px; border: 0; background: linear-gradient(135deg, var(--guld-ljus), var(--guld), var(--guld-mork)); color: var(--svart); box-shadow: 0 0 25px rgba(245,197,24,.4); }
+    .rund.pa { color: var(--guld); border-color: var(--guld); }
+    .rund svg { width: 20px; height: 20px; fill: currentColor; }
+    .rund.stor svg { width: 28px; height: 28px; }
+    .tidslinje { margin-top: 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: .8rem; color: var(--dampad); font-variant-numeric: tabular-nums; }
+    input[type=range] { width: 100%; accent-color: var(--guld); }
+    .staplar { display: flex; justify-content: center; gap: 3px; height: 24px; align-items: end; margin-top: 12px; }
+    .staplar span { width: 4px; height: 4px; background: var(--guld); border-radius: 2px; }
+    .spelar .staplar span { animation: hoppa .9s ease-in-out infinite; }
+    .staplar span:nth-child(2n) { animation-delay: -.3s; } .staplar span:nth-child(3n) { animation-delay: -.6s; }
+    @keyframes hoppa { 50% { height: 24px; } }
+
+    .lista { list-style: none; display: grid; gap: 10px; }
+    .spar {
+      display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
+      padding: 12px 14px; border-radius: 10px; background: var(--yta); border: 1px solid var(--kant);
+      transition: border-color .2s, background .2s;
+    }
+    .spar:hover { border-color: var(--guld-mork); }
+    .spar.aktiv { border-color: var(--guld); background: #2a2315; }
+    .spar.saknas { opacity: .5; }
+    .spar .spela { width: 44px; height: 44px; }
+    .spar .namn { min-width: 0; }
+    .spar .namn b { display: block; font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .03em; color: var(--guld-ljus); font-weight: 500; }
+    .spar .namn small { color: var(--dampad); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .spar .hoger { display: flex; gap: 8px; align-items: center; }
+    .tagg { font-size: .72rem; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--guld-mork); color: var(--guld); white-space: nowrap; }
+    .ladda { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--guld); color: var(--guld); text-decoration: none; }
+    .ladda:hover { background: var(--guld); color: var(--svart); }
+    .ladda svg { width: 14px; height: 14px; fill: currentColor; }
+
+    /* Fast spelare längst ner */
+    .minispelare {
+      position: fixed; inset: auto 0 0 0; z-index: 30;
+      display: grid; grid-template-columns: 52px 1fr auto; gap: 12px; align-items: center;
+      padding: 10px 16px; background: rgba(14,13,11,.96); border-top: 1px solid var(--guld-mork);
+      backdrop-filter: blur(8px);
+    }
+    .minispelare img { width: 52px; height: 52px; border-radius: 6px; object-fit: cover; }
+    .minispelare .info { min-width: 0; }
+    .minispelare .info small { font-family: "Oswald", sans-serif; letter-spacing: .15em; font-size: .7rem; color: var(--guld-mork); }
+    .minispelare .info b { display: block; font-family: "Oswald", sans-serif; text-transform: uppercase; color: var(--guld-ljus); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .minispelare .reglage { display: flex; gap: 8px; }
+    .minispelare .rund.stor { width: 48px; height: 48px; }
+    .minispelare .framsteg { position: absolute; top: -1px; left: 0; height: 2px; background: var(--guld); width: 0; }
+
+    /* Spotify */
+    #spotify { background: var(--kol); text-align: center; }
+    .spotify-ram { max-width: 760px; margin: 0 auto 28px; border-radius: 14px; overflow: hidden; }
+    .spotify-ram iframe { width: 100%; height: 452px; border: 0; display: block; }
+    .tomt { max-width: 560px; margin: 0 auto 28px; padding: 28px; border: 1px dashed var(--kant); border-radius: 14px; color: var(--dampad); }
 
     /* Om oss */
-    #om { background: linear-gradient(180deg, var(--svart), var(--kol)); }
+    #om { background: linear-gradient(180deg, var(--kol), var(--svart)); }
     .om-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
     .om-grid img { border-radius: 8px; box-shadow: 0 0 0 2px var(--guld-mork), 0 20px 50px rgba(0,0,0,.6); }
     .om-grid p { margin-bottom: 16px; font-size: 1.08rem; }
     .om-grid p strong { color: var(--guld); }
 
-    /* Låtar */
-    #latar { background: var(--kol); }
-    .latar { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
-    .lat {
-      position: relative; padding: 24px 22px; border-radius: 10px;
-      background: linear-gradient(160deg, #1f1b14, #0e0d0b);
-      border: 1px solid #3a3020; transition: transform .25s, border-color .25s, box-shadow .25s;
-    }
-    .lat:hover { transform: translateY(-4px); border-color: var(--guld); box-shadow: 0 10px 30px rgba(245,197,24,.15); }
-    .lat .nr { font-family: "Oswald", sans-serif; color: var(--guld-mork); font-size: .85rem; letter-spacing: .15em; }
-    .lat h3 { font-family: "Oswald", sans-serif; font-size: 1.35rem; color: var(--guld-ljus); margin: 4px 0 8px; text-transform: uppercase; letter-spacing: .03em; }
-    .lat p { color: var(--dämpad); font-size: .95rem; }
-    .lat .tagg { display: inline-block; margin-top: 12px; font-size: .75rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--guld-mork); color: var(--guld); }
-
     /* Galleri */
-    #galleri { background: linear-gradient(180deg, var(--kol), var(--svart)); }
+    #galleri { background: var(--svart); }
     .galleri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     .galleri img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; aspect-ratio: 1; cursor: zoom-in; transition: transform .25s, box-shadow .25s; }
     .galleri img:hover { transform: scale(1.02); box-shadow: 0 0 0 2px var(--guld); }
     .galleri .bred { grid-column: span 2; }
     .galleri .bred img { aspect-ratio: auto; }
-    dialog { border: 0; background: transparent; max-width: 95vw; max-height: 95vh; margin: auto; }
-    dialog::backdrop { background: rgba(0,0,0,.9); }
-    dialog img { max-height: 90vh; border-radius: 8px; }
+    .galleri .hel { grid-column: 1 / -1; }
 
     /* Kontakt */
     #kontakt { text-align: center; background: url("assets/guld.jpg") center / cover; position: relative; }
     #kontakt::before { content: ""; position: absolute; inset: 0; background: rgba(0,0,0,.82); }
     #kontakt .wrap { position: relative; }
     #kontakt p { font-size: 1.15rem; max-width: 560px; margin: 0 auto; }
+    .mejltext { margin-top: 14px; font-family: "Oswald", sans-serif; letter-spacing: .05em; color: var(--guld-ljus); user-select: all; }
 
-    footer { text-align: center; padding: 30px 16px; color: var(--dämpad); font-size: .85rem; border-top: 1px solid #2a2418; }
+    footer { text-align: center; padding: 30px 16px; color: var(--dampad); font-size: .85rem; border-top: 1px solid #2a2418; }
     footer span { color: var(--guld); }
+    .sociala { display: flex; justify-content: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+    .sociala a { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; }
 
+    /* Dialoger */
+    dialog { border: 0; background: transparent; max-width: 95vw; max-height: 95vh; margin: auto; color: var(--text); }
+    dialog::backdrop { background: rgba(0,0,0,.88); }
+    #visare img { max-height: 90vh; border-radius: 8px; }
+    .grind {
+      width: min(440px, 92vw); padding: 28px 24px; border-radius: 16px; text-align: center;
+      background: linear-gradient(160deg, #241f16, #0e0d0b); border: 1px solid var(--guld-mork);
+    }
+    .grind h3 { font-family: "Yellowtail", cursive; font-weight: 400; color: var(--guld); font-size: 2.4rem; line-height: 1.1; }
+    .grind p { color: var(--dampad); margin: 10px 0 20px; }
+    .grind .steg { display: grid; gap: 10px; }
+    .grind .knapp { justify-content: center; width: 100%; }
+    .grind .knapp.klar::after { content: " ✓"; }
+    .grind .knapp[aria-disabled=true] { opacity: .4; pointer-events: none; }
+    .grind .stang { margin-top: 14px; color: var(--dampad); font-size: .9rem; text-decoration: underline; }
+
+    @media (max-width: 860px) {
+      .radio { grid-template-columns: 1fr; }
+      .studio { position: static; max-width: 420px; margin: 0 auto; width: 100%; }
+    }
     @media (max-width: 760px) {
       nav ul { gap: 12px; }
       nav ul a { font-size: .8rem; }
       .om-grid { grid-template-columns: 1fr; }
       .galleri { grid-template-columns: 1fr; }
       .galleri .bred { grid-column: auto; }
+      .spar { grid-template-columns: 44px 1fr; }
+      .spar .hoger { grid-column: 2; }
     }
-    @media (max-width: 420px) { nav .brand { display: none; } nav { justify-content: center; } }
-    @media (prefers-reduced-motion: reduce) { .hero, .hero .logo { animation: none; } }
+    @media (max-width: 480px) { nav .brand { display: none; } nav { justify-content: center; } }
+    @media (prefers-reduced-motion: reduce) { .hero, .hero .logo, .staplar span, .live i { animation: none !important; } }
   </style>
 </head>
 <body>
@@ -151,10 +251,11 @@
   <nav>
     <a class="brand" href="#">De Evigt Unga</a>
     <ul>
+      <li><a href="#radio">Radio</a></li>
+      <li><a href="#spotify">Spotify</a></li>
       <li><a href="#om">Om oss</a></li>
-      <li><a href="#latar">Låtar</a></li>
       <li><a href="#galleri">Galleri</a></li>
-      <li><a href="#kontakt">Kontakt</a></li>
+      <li><a href="#kontakt">Boka</a></li>
     </ul>
   </nav>
 
@@ -162,9 +263,54 @@
     <div class="hero-inner">
       <img class="logo" src="assets/logo.png" alt="De Evigt Unga å Vackra">
       <p class="slogan">★ Festlåtar · Sommarhits · Rent guld ★</p>
-      <a class="knapp" href="#latar">Hör låtarna</a>
+      <div class="knappar">
+        <button class="knapp" id="heroSpela" type="button">▶ Starta radion</button>
+        <a class="knapp kontur" href="#spotify">Hitta oss på Spotify</a>
+      </div>
     </div>
   </header>
+
+  <section id="radio">
+    <div class="wrap">
+      <h2>Evigt Ung Radio</h2>
+      <div class="delare">★</div>
+      <p class="ingress">Nya låtar och demos direkt från studion. Tryck play och låt radion rulla, eller ladda ner dina favoriter.</p>
+      <div class="radio">
+        <div class="studio" id="studio">
+          <div class="omslag">
+            <img src="assets/omslag.jpg" alt="">
+            <div class="live"><i></i>ON AIR</div>
+          </div>
+          <div class="etikett">NU SPELAS</div>
+          <h3 id="nuTitel">Tryck play</h3>
+          <div class="staplar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="tidslinje">
+            <span id="tidNu">0:00</span>
+            <input type="range" id="sok" min="0" max="100" value="0" step="0.1" aria-label="Spola">
+            <span id="tidTot">0:00</span>
+          </div>
+          <div class="reglage">
+            <button class="rund" id="blanda" type="button" aria-label="Blanda" title="Blanda"><svg viewBox="0 0 24 24"><path d="M10.6 9.2 5.4 4 4 5.4l5.2 5.2 1.4-1.4ZM14.5 4l2 2L4 18.6 5.4 20 18 7.5l2 2V4h-5.5Zm.3 9.4-1.4 1.4 3.1 3.1-2 2.1H20v-5.5l-2 2-3.2-3.1Z"/></svg></button>
+            <button class="rund" id="forra" type="button" aria-label="Föregående"><svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg></button>
+            <button class="rund stor" id="spela" type="button" aria-label="Spela"><svg viewBox="0 0 24 24"><path id="spelaIkon" d="M8 5v14l11-7z"/></svg></button>
+            <button class="rund" id="nasta" type="button" aria-label="Nästa"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+            <button class="rund" id="ladda" type="button" aria-label="Ladda ner låten" title="Ladda ner"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></button>
+          </div>
+        </div>
+        <ol class="lista" id="lista"></ol>
+      </div>
+    </div>
+  </section>
+
+  <section id="spotify">
+    <div class="wrap">
+      <h2>Släppt på Spotify</h2>
+      <div class="delare">★</div>
+      <p class="ingress">Det vi redan har släppt hittar du på Spotify. Följ oss där så missar du inget nytt.</p>
+      <div id="spotifyRam"></div>
+      <div class="knappar" id="kanalKnappar"></div>
+    </div>
+  </section>
 
   <section id="om">
     <div class="wrap">
@@ -181,14 +327,6 @@
     </div>
   </section>
 
-  <section id="latar">
-    <div class="wrap">
-      <h2>Låtarna</h2>
-      <div class="delare">★</div>
-      <div class="latar" id="latlista"></div>
-    </div>
-  </section>
-
   <section id="galleri">
     <div class="wrap">
       <h2>Galleri</h2>
@@ -198,7 +336,7 @@
         <div><img src="assets/omslag.jpg" alt="Omslag"></div>
         <div class="bred"><img src="assets/mosaik.jpg" alt="Pop art-mosaik"></div>
         <div><img src="assets/logo.png" alt="Logga" style="object-fit:contain;background:#1a1610;padding:16px"></div>
-        <div class="bred" style="grid-column:1/-1"><img src="assets/guld.jpg" alt="Guldlogga"></div>
+        <div class="hel"><img src="assets/guld.jpg" alt="Guldlogga" style="aspect-ratio:auto"></div>
       </div>
     </div>
   </section>
@@ -208,45 +346,186 @@
       <h2>Boka oss</h2>
       <div class="delare">★</div>
       <p>Fest, depåparty eller sommarbrak? Hör av dig så kommer vi – evigt unga, alltid vackra.</p>
-      <a class="knapp" href="mailto:KONTAKT@EXEMPEL.SE">Skicka ett mejl</a>
+      <div id="mejl"></div>
     </div>
   </section>
 
   <footer>
+    <div class="sociala" id="sociala"></div>
     © <span id="ar"></span> <span>De Evigt Unga å Vackra</span> · Musik av DJ Stigge
   </footer>
 
+  <!-- Fast spelare längst ner -->
+  <div class="minispelare" id="mini">
+    <div class="framsteg" id="miniFramsteg"></div>
+    <img src="assets/omslag.jpg" alt="">
+    <div class="info"><small>EVIGT UNG RADIO</small><b id="miniTitel">Tryck play för att starta</b></div>
+    <div class="reglage">
+      <button class="rund stor" id="miniSpela" type="button" aria-label="Spela"><svg viewBox="0 0 24 24"><path id="miniIkon" d="M8 5v14l11-7z"/></svg></button>
+      <button class="rund" id="miniNasta" type="button" aria-label="Nästa"><svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+    </div>
+  </div>
+
+  <!-- Gilla-grind före nedladdning -->
+  <dialog id="grind">
+    <div class="grind">
+      <h3>Gilla oss först!</h3>
+      <p>Följ oss på Spotify och gilla oss på Facebook – sen är låten din. Tack för stödet!</p>
+      <div class="steg" id="grindSteg"></div>
+      <button class="stang" id="grindStang" type="button">Inte nu</button>
+    </div>
+  </dialog>
+
   <dialog id="visare"><img alt=""></dialog>
 
+  <audio id="ljud" preload="none"></audio>
+
+  <script src="musik/innehall.js"></script>
   <script>
-    const latar = [
-      { titel: "Kom och värm dej", text: "Låten som startade allt – med video och allt.", tagg: "Singel" },
-      { titel: "Parapapa (Sommarfest)", text: "PARAPA-PAPAPAPA-RAPA-PA! Ett gäng glada grabbar som vill festa. Put 'em up!", tagg: "Sommarhit" },
-      { titel: "Sista kalla flaskan", text: "Vem snodde sista kalla flaskan i natt? EDM med hård sidechain och massivt drop.", tagg: "EDM" },
-      { titel: "Svenne G", text: "Han skulle bara softa och spela spel… sen kom han in genom dörren.", tagg: "Partyrökare" },
-      { titel: "Sommargodis", text: "Godisdag! Reggaepop med strandkänsla och offbeat-gitarr.", tagg: "Reggaepop" },
-      { titel: "Bollen är röd", text: "Hur kan den runda gula bollen rulla? EDM med reggaesving.", tagg: "EDM / Reggae" },
-      { titel: "Vi älskar Siwan", text: "En hyllning. Mer behöver inte sägas.", tagg: "Hyllning" },
-      { titel: "Ingvar Ståhl", text: "En låt om en legend.", tagg: "Ny" },
-      { titel: "Vart tog den söta lilla flickan vägen", text: "Frågan alla ställer klockan tre på natten.", tagg: "Nattlåt" },
-      { titel: "När vi går för guld", text: "Hymnen. Tungan ute, solglasögonen på.", tagg: "Hymn" }
-    ];
-    document.getElementById("latlista").innerHTML = latar.map((l, i) => `
-      <article class="lat">
-        <div class="nr">SPÅR ${String(i + 1).padStart(2, "0")}</div>
-        <h3>${l.titel}</h3>
-        <p>${l.text}</p>
-        <span class="tagg">${l.tagg}</span>
-      </article>`).join("");
+    const L = window.LANKAR || {};
+    const latar = (window.LATAR || []).map(l => ({ ...l, saknas: false }));
+    const $ = id => document.getElementById(id);
+    const ljud = $("ljud");
+    const PLAY = "M8 5v14l11-7z", PAUS = "M6 5h4v14H6zm8 0h4v14h-4z";
+    let nu = -1, blanda = false;
 
-    document.getElementById("ar").textContent = new Date().getFullYear();
+    // --- Spellista ---
+    function ritaLista() {
+      $("lista").innerHTML = latar.map((l, i) => `
+        <li class="spar${i === nu ? " aktiv" : ""}${l.saknas ? " saknas" : ""}">
+          <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${l.titel}" ${l.saknas ? "disabled" : ""}>
+            <svg viewBox="0 0 24 24"><path d="${i === nu && !ljud.paused ? PAUS : PLAY}"/></svg>
+          </button>
+          <div class="namn"><b>${l.titel}</b><small>${l.saknas ? "Kommer snart" : (l.info || "")}</small></div>
+          <div class="hoger">
+            ${l.typ ? `<span class="tagg">${l.typ}</span>` : ""}
+            ${l.ladda && !l.saknas ? `<button class="ladda" type="button" data-ladda="${i}"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>Ladda ner</button>` : ""}
+          </div>
+        </li>`).join("");
+    }
+    $("lista").addEventListener("click", e => {
+      const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]");
+      if (s) { const i = +s.dataset.spela; i === nu ? vaxla() : spela(i); }
+      if (d) laddaNer(+d.dataset.ladda);
+    });
 
-    const visare = document.getElementById("visare");
+    // Kolla vilka filer som finns på servern
+    latar.forEach((l, i) => {
+      fetch("musik/" + encodeURI(l.fil), { method: "HEAD" })
+        .then(r => { if (!r.ok) throw 0; })
+        .catch(() => { if (location.protocol !== "file:") { l.saknas = true; ritaLista(); } });
+    });
+
+    // --- Uppspelning ---
+    function tillganglig(i) { return latar[i] && !latar[i].saknas; }
+    function spela(i) {
+      if (!tillganglig(i)) return nasta(1, i);
+      nu = i;
+      ljud.src = "musik/" + encodeURI(latar[i].fil);
+      ljud.play().catch(() => {});
+      uppdatera();
+    }
+    function vaxla() {
+      if (nu < 0) return nasta(1);
+      ljud.paused ? ljud.play() : ljud.pause();
+    }
+    function nasta(steg = 1, fran = nu) {
+      const n = latar.length;
+      if (!latar.some((_, i) => tillganglig(i))) { $("nuTitel").textContent = "Inga låtar uppladdade än"; return; }
+      let i = fran;
+      for (let k = 0; k < n; k++) {
+        i = blanda ? Math.floor(Math.random() * n) : (i + steg + n) % n;
+        if (tillganglig(i) && (i !== nu || n === 1)) return spela(i);
+      }
+    }
+    function uppdatera() {
+      const l = latar[nu], pa = nu >= 0 && !ljud.paused;
+      $("nuTitel").textContent = l ? l.titel : "Tryck play";
+      $("miniTitel").textContent = l ? l.titel : "Tryck play för att starta";
+      $("spelaIkon").setAttribute("d", pa ? PAUS : PLAY);
+      $("miniIkon").setAttribute("d", pa ? PAUS : PLAY);
+      $("studio").classList.toggle("spelar", pa);
+      document.title = pa ? `▶ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
+      ritaLista();
+    }
+    const tid = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00";
+    ljud.addEventListener("timeupdate", () => {
+      const p = ljud.duration ? ljud.currentTime / ljud.duration * 100 : 0;
+      $("sok").value = p; $("miniFramsteg").style.width = p + "%";
+      $("tidNu").textContent = tid(ljud.currentTime); $("tidTot").textContent = tid(ljud.duration);
+    });
+    ljud.addEventListener("play", uppdatera);
+    ljud.addEventListener("pause", uppdatera);
+    ljud.addEventListener("ended", () => nasta(1));          // radion rullar vidare
+    ljud.addEventListener("error", () => { if (nu >= 0) { latar[nu].saknas = true; nasta(1); } });
+    $("sok").addEventListener("input", e => { if (ljud.duration) ljud.currentTime = e.target.value / 100 * ljud.duration; });
+
+    $("spela").onclick = vaxla; $("miniSpela").onclick = vaxla; $("heroSpela").onclick = () => { vaxla(); $("radio").scrollIntoView(); };
+    $("nasta").onclick = () => nasta(1); $("miniNasta").onclick = () => nasta(1); $("forra").onclick = () => nasta(-1);
+    $("blanda").onclick = e => { blanda = !blanda; e.currentTarget.classList.toggle("pa", blanda); };
+    $("ladda").onclick = () => nu >= 0 ? laddaNer(nu) : null;
+
+    // --- Nedladdning bakom "gilla"-grind ---
+    // Obs: sidan kan inte kontrollera att man faktiskt följer/gillar – den litar på besökaren.
+    const kravs = [
+      L.spotify  && { id: "spotify",  text: "Följ oss på Spotify",  url: L.spotify,  klass: "spotify" },
+      L.facebook && { id: "facebook", text: "Gilla oss på Facebook", url: L.facebook, klass: "fb" }
+    ].filter(Boolean);
+    const las = k => { try { return localStorage.getItem("deu-" + k) === "1"; } catch { return false; } };
+    const spara = k => { try { localStorage.setItem("deu-" + k, "1"); } catch {} };
+    let vantar = null;
+
+    function laddaNer(i) {
+      const l = latar[i];
+      if (!l || !l.ladda || l.saknas) return;
+      if (kravs.every(k => las(k.id))) return starta(l);
+      vantar = l; ritaGrind(); $("grind").showModal();
+    }
+    function starta(l) {
+      const a = document.createElement("a");
+      a.href = "musik/" + encodeURI(l.fil);
+      a.download = `De Evigt Unga å Vackra - ${l.titel}.mp3`;
+      document.body.appendChild(a); a.click(); a.remove();
+    }
+    function ritaGrind() {
+      const klara = kravs.every(k => las(k.id));
+      $("grindSteg").innerHTML = kravs.map(k =>
+        `<a class="knapp ${k.klass}${las(k.id) ? " klar" : ""}" href="${k.url}" target="_blank" rel="noopener" data-krav="${k.id}">${k.text}</a>`
+      ).join("") + `<button class="knapp" type="button" id="grindLadda" aria-disabled="${!klara}">⬇ Ladda ner ${vantar ? vantar.titel : ""}</button>`;
+    }
+    $("grindSteg").addEventListener("click", e => {
+      const k = e.target.closest("[data-krav]");
+      if (k) { spara(k.dataset.krav); setTimeout(ritaGrind, 300); }
+      if (e.target.closest("#grindLadda") && kravs.every(k => las(k.id))) { $("grind").close(); starta(vantar); }
+    });
+    $("grindStang").onclick = () => $("grind").close();
+
+    // --- Spotify & kanaler ---
+    if (L.spotify) {
+      const embed = L.spotify.replace("open.spotify.com/", "open.spotify.com/embed/").split("?")[0];
+      $("spotifyRam").innerHTML = `<div class="spotify-ram"><iframe src="${embed}?theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="De Evigt Unga å Vackra på Spotify"></iframe></div>`;
+    } else {
+      $("spotifyRam").innerHTML = `<div class="tomt">Spotify-spelaren visas här när länken är inlagd i <code>musik/innehall.js</code>.</div>`;
+    }
+    const kanaler = [
+      ["spotify", "Spotify", "spotify"], ["facebook", "Facebook", "fb"],
+      ["instagram", "Instagram", "kontur"], ["youtube", "YouTube", "kontur"]
+    ].filter(([k]) => L[k]);
+    $("kanalKnappar").innerHTML = kanaler.map(([k, n, c]) => `<a class="knapp ${c}" href="${L[k]}" target="_blank" rel="noopener">${n}</a>`).join("");
+    $("sociala").innerHTML = kanaler.map(([k, n]) => `<a href="${L[k]}" target="_blank" rel="noopener">${n}</a>`).join("");
+    $("mejl").innerHTML = L.mejl
+      ? `<div class="knappar"><a class="knapp" href="mailto:${L.mejl}">Skicka ett mejl</a></div><div class="mejltext">${L.mejl}</div>`
+      : "";
+
+    // --- Övrigt ---
+    $("ar").textContent = new Date().getFullYear();
+    const visare = $("visare");
     document.querySelectorAll(".galleri img").forEach(img => img.addEventListener("click", () => {
-      visare.querySelector("img").src = img.src;
-      visare.showModal();
+      visare.querySelector("img").src = img.src; visare.showModal();
     }));
     visare.addEventListener("click", () => visare.close());
+
+    ritaLista();
   </script>
 </body>
 </html>
