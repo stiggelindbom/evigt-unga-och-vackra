@@ -198,6 +198,7 @@
 
     /* Citat */
     .citat { background: var(--svart); padding-block: 56px; padding-inline: 16px; border-block: 1px solid var(--kant); }
+    .citat h2 { font-size: clamp(2.2rem, 6vw, 3.2rem); }
     .citat .wrap { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 32px; align-items: start; }
     .citat figure { margin: 0; }
     .citat blockquote { font-family: "Yellowtail", cursive; color: var(--guld-ljus); font-size: clamp(1.4rem, 3vw, 1.9rem); line-height: 1.25; text-wrap: balance; }
@@ -291,11 +292,13 @@
     </div>
   </header>
 
-  <section class="citat" aria-label="Vårt motto">
+  <section class="citat" aria-labelledby="mottoRubrik">
+    <h2 id="mottoRubrik">Våra motton</h2>
+    <div class="delare">★</div>
     <div class="wrap">
       <figure class="huvud">
         <blockquote>Always look on the bright side of life.</blockquote>
-        <figcaption>Monty Python · vårt motto</figcaption>
+        <figcaption>Monty Python</figcaption>
       </figure>
       <figure>
         <blockquote>“I am an optimist. It does not seem to be much use being anything else.”</blockquote>
