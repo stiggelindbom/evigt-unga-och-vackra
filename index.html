@@ -179,6 +179,8 @@
     .ladda:hover { background: var(--guld); color: var(--svart); }
     .ladda svg { width: 14px; height: 14px; fill: currentColor; }
 
+    .studio.via-spotify .tidslinje, .studio.via-spotify .staplar { visibility: hidden; }
+    .studio.via-spotify .live { color: var(--spotify); }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
     .kredit-lank:hover { color: var(--guld); }
     .info-knapp { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--kant); color: var(--dampad); font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
@@ -572,7 +574,15 @@
     let nu = -1, blanda = false, oppenSpotify = -1;
 
     // Låtens eget omslag, annars bandets
-    const omslagFor = l => !l || !l.omslag ? "assets/omslag.jpg" : /^https?:/.test(l.omslag) ? l.omslag : "musik/" + encodeURI(l.omslag);
+    const omslagFor = l => !l ? "assets/omslag.jpg" : !l.omslag ? (l._spotifyBild || "assets/omslag.jpg") : /^https?:/.test(l.omslag) ? l.omslag : "musik/" + encodeURI(l.omslag);
+    // Släppta låtar utan eget omslag: hämta omslaget från Spotify (oEmbed, med noembed.com som reserv)
+    async function spotifyBild(lank) {
+      const ren = String(lank).split("?")[0];
+      for (const url of ["https://open.spotify.com/oembed?url=" + encodeURIComponent(ren), "https://noembed.com/embed?url=" + encodeURIComponent(ren)]) {
+        try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.thumbnail_url) return j.thumbnail_url; } } catch {}
+      }
+      return null;
+    }
 
     // Spotify-länk -> inbäddningsadress (track/album/artist)
     const spotifyEmbed = url => {
@@ -661,6 +671,9 @@
     $("lista").addEventListener("click", listKlick);
     $("slapptLista").addEventListener("click", listKlick);
 
+    latar.filter(l => l.slappt && !l.omslag && spotifyEmbed(l.spotify)).forEach(l =>
+      spotifyBild(l.spotify).then(url => { if (url) { l._spotifyBild = url; uppdatera(); } }));
+
     // Kolla vilka demofiler som finns på servern
     latar.forEach(l => {
       if (l.slappt || !l.fil) return;
@@ -702,6 +715,7 @@
       $("spelaIkon").setAttribute("d", pa ? PAUS : PLAY);
       $("miniIkon").setAttribute("d", pa ? PAUS : PLAY);
       $("studio").classList.toggle("spelar", pa);
+      $("studio").classList.toggle("via-spotify", viaSpotify);
       document.title = pa ? `▶ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
