@@ -141,10 +141,7 @@
     .rund.stor svg { width: 28px; height: 28px; }
     .tidslinje { margin-top: 14px; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; font-size: .8rem; color: var(--dampad); font-variant-numeric: tabular-nums; }
     input[type=range] { width: 100%; accent-color: var(--guld); }
-    .staplar { display: flex; justify-content: center; gap: 3px; height: 24px; align-items: end; margin-top: 12px; }
-    .staplar span { width: 4px; height: 4px; background: var(--guld); border-radius: 2px; }
-    .spelar .staplar span { animation: hoppa .9s ease-in-out infinite; }
-    .staplar span:nth-child(2n) { animation-delay: -.3s; } .staplar span:nth-child(3n) { animation-delay: -.6s; }
+    .spektrum { display: block; width: 100%; height: 40px; margin-top: 12px; }
     @keyframes hoppa { 50% { height: 24px; } }
 
     .listor { display: grid; gap: 32px; min-width: 0; }
@@ -181,7 +178,6 @@
 
     .sp-ram { margin-top: 14px; border-radius: 12px; overflow: hidden; }
     .sp-ram iframe { display: block; border-radius: 12px; }
-    .studio.via-spotify .staplar span { background: var(--spotify); }
     .studio.via-spotify .live { color: var(--spotify); }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
     .kredit-lank:hover { color: var(--guld); }
@@ -318,7 +314,7 @@
       .spar .hoger { grid-column: 2; }
     }
     @media (max-width: 480px) { nav .brand { display: none; } nav { justify-content: center; } }
-    @media (prefers-reduced-motion: reduce) { .hero, .hero .logo, .staplar span, .live i, .rulle-inner { animation: none !important; } .roterare .strocitat { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .hero, .hero .logo, .live i, .rulle-inner { animation: none !important; } .roterare .strocitat { transition: none; } }
   </style>
 </head>
 <body>
@@ -371,7 +367,7 @@
           <div class="etikett" id="nuEtikett">NU SPELAS</div>
           <h3 id="nuTitel">Tryck play</h3>
           <button class="kredit-lank" id="nuKredit" type="button" hidden>Upphovspersoner</button>
-          <div class="staplar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <canvas class="spektrum" id="spektrum" aria-hidden="true"></canvas>
           <div class="tidslinje">
             <span id="tidNu">0:00</span>
             <input type="range" id="sok" min="0" max="100" value="0" step="0.1" aria-label="Spola">
@@ -730,6 +726,7 @@
         if (spCtrl && !spPaus) spCtrl.pause();
         $("spRam").hidden = true;
         ljud.src = "musik/" + encodeURI(l.fil);
+        startaAnalys();
         ljud.play().catch(() => {});
         uppdatera();
       }
@@ -737,7 +734,7 @@
     function vaxla() {
       if (nu < 0) return nasta(1);
       if (arSpotify()) { spCtrl ? spCtrl.togglePlay() : spela(nu); return; }
-      ljud.paused ? ljud.play() : ljud.pause();
+      if (ljud.paused) { startaAnalys(); ljud.play(); } else ljud.pause();
     }
     function nasta(steg = 1, fran = nu) {
       const n = latar.length, mojliga = latar.map((_, j) => j).filter(tillganglig);
@@ -764,6 +761,54 @@
       document.title = pa ? `▶ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
+    // --- Spektrumanalysator: lyssnar på demos via Web Audio. Spotify spelar i en skyddad ruta
+    // som sidan inte får lyssna på, så då visas en lugn animation i Spotify-grönt. ---
+    let ac = null, analys = null, fdata = null;
+    function startaAnalys() {
+      if (!ac) {
+        try {
+          ac = new (window.AudioContext || window.webkitAudioContext)();
+          const kalla = ac.createMediaElementSource(ljud);
+          analys = ac.createAnalyser(); analys.fftSize = 512; analys.smoothingTimeConstant = 0.78;
+          kalla.connect(analys); analys.connect(ac.destination);
+          fdata = new Uint8Array(analys.frequencyBinCount);
+        } catch (e) { ac = null; analys = null; }
+      }
+      if (ac && ac.state === "suspended") ac.resume();
+    }
+    (() => {
+      const cv = $("spektrum"), cx = cv.getContext("2d"), N = 32, h = new Array(N).fill(0);
+      const lugn = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      // logaritmisk fördelning av frekvensbanden (ca 40 Hz – 14 kHz)
+      const band = k => Math.round(2 * Math.pow(160 / 2, k / N));
+      function ram(t) {
+        const dpr = window.devicePixelRatio || 1, B = cv.clientWidth, H = cv.clientHeight;
+        if (cv.width !== B * dpr) { cv.width = B * dpr; cv.height = H * dpr; }
+        cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, B, H);
+        const demoSpelar = !arSpotify() && nu >= 0 && !ljud.paused && analys, viaSp = arSpotify() && spelar();
+        if (demoSpelar) analys.getByteFrequencyData(fdata);
+        const farg = cx.createLinearGradient(0, H, 0, 0);
+        if (arSpotify()) { farg.addColorStop(0, "#0f7a3a"); farg.addColorStop(1, "#1ed760"); }
+        else { farg.addColorStop(0, "#b8860b"); farg.addColorStop(.6, "#f5c518"); farg.addColorStop(1, "#ffe27a"); }
+        cx.fillStyle = farg;
+        const gap = 2, w = (B - gap * (N - 1)) / N;
+        for (let k = 0; k < N; k++) {
+          let mal = 0.04;
+          if (demoSpelar) {
+            let max = 0; for (let j = band(k); j <= Math.max(band(k), band(k + 1) - 1); j++) max = Math.max(max, fdata[j]);
+            mal = Math.max(0.04, Math.pow(max / 255, 1.4));
+          } else if (viaSp && !lugn) {
+            mal = 0.18 + 0.22 * Math.abs(Math.sin(t / 380 + k * 0.55) * Math.cos(t / 610 - k * 0.3));
+          }
+          h[k] += (mal - h[k]) * (mal > h[k] ? 0.55 : 0.12);
+          const bh = Math.max(2, h[k] * H);
+          cx.beginPath(); cx.roundRect ? cx.roundRect(k * (w + gap), H - bh, w, bh, 2) : cx.rect(k * (w + gap), H - bh, w, bh); cx.fill();
+        }
+        requestAnimationFrame(ram);
+      }
+      requestAnimationFrame(ram);
+    })();
+
     const tid = s => isFinite(s) ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}` : "0:00";
     function visaTid(pos, lang) {
       const p = lang ? pos / lang * 100 : 0;
