@@ -163,7 +163,7 @@
     <button class="knapp" id="spara" type="button" disabled>Spara ändringar</button>
   </div>
 
-  <input type="file" id="filval" accept="audio/mpeg,.mp3" hidden>
+  <input type="file" id="filval" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,.wav" hidden>
 
   <script>
     // ===== Inställningar =====
@@ -275,7 +275,7 @@
             </label>` : `
             <div class="fil">
               ${filStatus}
-              <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt mp3" : "Ladda upp mp3"}</button>
+              <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav"}</button>
               <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>
             </div>`}
         </div>`;
@@ -342,17 +342,51 @@
       .replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/é/g, "e")
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") + ".mp3";
 
+    // Wav -> mp3 direkt i webbläsaren (lamejs), så att bara mp3:an laddas upp
+    let lameLaddad = null;
+    const laddaLame = () => lameLaddad ||= new Promise((ok, fel) => {
+      const sc = document.createElement("script");
+      sc.src = "assets/vendor/lame.min.js"; sc.onload = ok; sc.onerror = () => fel(new Error("mp3-kodaren kunde inte laddas"));
+      document.head.appendChild(sc);
+    });
+    async function wavTillMp3(fil, framsteg) {
+      await laddaLame();
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ljud = await ctx.decodeAudioData(await fil.arrayBuffer());
+      ctx.close && ctx.close();
+      const kanaler = Math.min(2, ljud.numberOfChannels), rate = ljud.sampleRate;
+      const kodare = new lamejs.Mp3Encoder(kanaler, rate, 320);
+      const tillInt16 = f => { const o = new Int16Array(f.length); for (let k = 0; k < f.length; k++) { const v = Math.max(-1, Math.min(1, f[k])); o[k] = v < 0 ? v * 0x8000 : v * 0x7fff; } return o; };
+      const v = tillInt16(ljud.getChannelData(0)), h = kanaler > 1 ? tillInt16(ljud.getChannelData(1)) : null;
+      const delar = [], BLOCK = 1152 * 40;
+      for (let pos = 0; pos < v.length; pos += BLOCK) {
+        const a = v.subarray(pos, pos + BLOCK), b = h ? h.subarray(pos, pos + BLOCK) : null;
+        const ut = h ? kodare.encodeBuffer(a, b) : kodare.encodeBuffer(a);
+        if (ut.length) delar.push(new Uint8Array(ut));
+        if ((pos / BLOCK) % 20 === 0) { framsteg(pos / v.length); await new Promise(r => setTimeout(r)); }
+      }
+      const slut = kodare.flush(); if (slut.length) delar.push(new Uint8Array(slut));
+      return new Blob(delar, { type: "audio/mpeg" });
+    }
+
     $("filval").addEventListener("change", async () => {
-      const fil = $("filval").files[0], i = filFor, l = data.latar[i];
+      let fil = $("filval").files[0];
+      const i = filFor, l = data.latar[i];
       if (!fil || !l) return;
-      if (!/\.mp3$/i.test(fil.name)) return status("Välj en mp3-fil. Wav-filer är för stora – gör om dem till mp3 först.", "fel");
-      if (fil.size > 40 * 1024 * 1024) return status(`Filen är ${(fil.size / 1048576).toFixed(0)} MB – max 40 MB. Exportera med lägre bitrate (t.ex. 256 kbps).`, "fel");
+      const arWav = /\.wav$/i.test(fil.name), arMp3 = /\.mp3$/i.test(fil.name);
+      if (!arWav && !arMp3) return status("Välj en mp3- eller wav-fil.", "fel");
       if (!l.titel) return status("Skriv en titel på låten innan du laddar upp.", "fel");
       const namn = l.fil || filnamn(l.titel);
-      uppladdning = i; rita(); status(`Laddar upp ${fil.name} (${(fil.size / 1048576).toFixed(1)} MB)…`);
+      uppladdning = i; rita();
       try {
+        if (arWav) {
+          status(`Gör om ${fil.name} till mp3… 0 %`);
+          fil = await wavTillMp3(fil, p => status(`Gör om till mp3… ${Math.round(p * 100)} %`));
+        }
+        if (fil.size > 40 * 1024 * 1024) throw new Error(`filen är ${(fil.size / 1048576).toFixed(0)} MB – max 40 MB`);
+        status(`Laddar upp ${namn} (${(fil.size / 1048576).toFixed(1)} MB)…`);
         const b64 = await new Promise((ok, fel) => {
-          const r = new FileReader(); r.onload = () => ok(r.result.split(",")[1]); r.onerror = fel; r.readAsDataURL(fil);
+          const r = new FileReader(); r.onload = () => ok(r.result.split(",")[1]); r.onerror = () => fel(new Error("filen kunde inte läsas")); r.readAsDataURL(fil);
         });
         let gammal = null;
         if (filer.has(namn)) gammal = (await gh(`/contents/musik/${encodeURIComponent(namn)}?ref=${GREN}`)).sha;
