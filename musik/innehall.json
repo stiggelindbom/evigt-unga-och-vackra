@@ -199,7 +199,8 @@
         "mixning": "Stig Lindbom",
         "mastering": "Stig Lindbom",
         "ar": "2026",
-        "genre": "Reggae swing"
+        "genre": "Reggae swing",
+        "isrc": "SE6I32603471"
       },
       "datum": "2026-10-22T17:17:08.350Z",
       "slapptDatum": "2026-10-22T17:17:08.350Z",
@@ -222,7 +223,7 @@
         "mastering": "Stig Lindbom",
         "ar": "2026",
         "genre": "Reggae swing",
-        "isrc": "SE6I32603471"
+        "isrc": ""
       },
       "datum": "2026-10-22T17:37:24.007Z",
       "slapptDatum": "2026-10-22T17:37:24.007Z",
@@ -237,14 +238,15 @@
       "fil": "",
       "ladda": false,
       "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
+        "artist": "DJ Stigge",
+        "kompositor": "Mauro Scocco",
+        "textforfattare": "Mauro Scocco",
         "producent": "Stig Lindbom",
         "mixning": "Stig Lindbom",
         "mastering": "Stig Lindbom",
         "ar": "2026",
-        "genre": "Reggae swing"
+        "genre": "Reggae swing",
+        "isrc": "SE6I32603472"
       },
       "datum": "2026-10-22T17:46:32.866Z",
       "slapptDatum": "2026-10-22T17:46:32.866Z",
