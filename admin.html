@@ -207,7 +207,7 @@
 
     // ===== Inloggning =====
     async function loggaIn(t) {
-      token = t.trim();
+      token = t.replace(/[\s"']+/g, "");   // ta bort mellanslag, radbrytningar och citattecken
       $("loginFel").textContent = "";
       try {
         const repo = await gh("");
@@ -218,7 +218,7 @@
         rita(); status("Inloggad. Inga ändringar än.");
       } catch (e) {
         token = "";
-        $("loginFel").textContent = e.status === 401 ? "Nyckeln fungerar inte. Kontrollera att du kopierat hela." :
+        $("loginFel").textContent = e.status === 401 ? "GitHub godkände inte nyckeln. Kopiera hela nyckeln igen direkt när den visas (den börjar med github_pat_ och är ca 90 tecken lång), eller skapa en ny." :
           e.status === 404 ? `Nyckeln har inte tillgång till ${AGARE}/${REPO}.` : e.message;
       }
     }
