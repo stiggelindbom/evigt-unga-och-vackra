@@ -9,6 +9,7 @@
   <meta property="og:description" content="Lyssna på vår radio – festlåtar, sommarhits och rent guld.">
   <meta property="og:image" content="assets/omslag.jpg">
   <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="alternate" type="application/rss+xml" title="De Evigt Unga å Vackra – nytt" href="nytt.xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Oswald:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
@@ -192,6 +193,14 @@
 
     /* Spotify */
     #spotify { background: var(--kol); text-align: center; }
+    #socialt { background: var(--svart); }
+    .socialt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
+    .fb-ram iframe { width: 100%; height: 640px; border: 0; border-radius: 12px; background: #fff; display: block; }
+    .kol { display: grid; gap: 24px; min-width: 0; }
+    .sc-ram iframe { width: 100%; height: 300px; border: 0; border-radius: 12px; display: block; }
+    .knapp.sc { background: #ff5500; color: #fff; box-shadow: 0 0 20px rgba(255,85,0,.35); }
+    .ig-kort { display: grid; gap: 14px; place-items: center; text-align: center; padding: 32px 20px; border-radius: 12px; border: 1px solid var(--kant); background: var(--yta); min-height: 300px; }
+    .ig-kort img { width: 120px; border-radius: 50%; box-shadow: 0 0 0 3px #dd2a7b; }
     .slappt-listor { max-width: 760px; margin: 0 auto 28px; text-align: left; }
     .spotify-ram { max-width: 760px; margin: 0 auto 28px; border-radius: 14px; overflow: hidden; }
     .spotify-ram iframe { width: 100%; height: 452px; border: 0; display: block; }
@@ -293,6 +302,7 @@
       <li><a href="#radio">Radio</a></li>
       <li><a href="#om">Om oss</a></li>
       <li><a href="#galleri">Galleri</a></li>
+      <li><a href="#socialt">Nytt</a></li>
       <li><a href="#kontakt">Boka</a></li>
       <li><a href="#spotify">Spotify</a></li>
     </ul>
@@ -405,6 +415,21 @@
       <div class="delare">★</div>
       <p>Fest, depåparty eller sommarbrak? Hör av dig så kommer vi – evigt unga, alltid vackra.</p>
       <div id="mejl"></div>
+    </div>
+  </section>
+
+  <section id="socialt">
+    <div class="wrap">
+      <h2>Senaste nytt</h2>
+      <div class="delare">★</div>
+      <p class="ingress">Det vi lägger upp på Facebook, Instagram och SoundCloud dyker upp här.</p>
+      <div class="socialt-grid">
+        <div class="fb-ram" id="fbFlode"></div>
+        <div class="kol">
+          <div class="ig-ram" id="igFlode"></div>
+          <div class="sc-ram" id="scFlode"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -671,13 +696,39 @@
       : `<div class="tomt">Spotify-spelaren visas här när Spotify-länken är inlagd i admin.</div>`;
     const kanaler = [
       ["spotify", "Spotify", "spotify"], ["facebook", "Facebook", "fb"],
-      ["instagram", "Instagram", "ig"], ["youtube", "YouTube", "kontur"]
+      ["instagram", "Instagram", "ig"], ["soundcloud", "SoundCloud", "sc"], ["youtube", "YouTube", "kontur"]
     ].filter(([k]) => L[k]);
     $("kanalKnappar").innerHTML = kanaler.map(([k, n, c]) => `<a class="knapp ${c}" href="${esc(L[k])}" target="_blank" rel="noopener">${n}</a>`).join("");
     $("sociala").innerHTML = kanaler.map(([k, n]) => `<a href="${esc(L[k])}" target="_blank" rel="noopener">${n}</a>`).join("");
     $("mejl").innerHTML = L.mejl
       ? `<div class="knappar"><a class="knapp" href="mailto:${esc(L.mejl)}">Skicka ett mejl</a></div><div class="mejltext">${esc(L.mejl)}</div>`
       : "";
+
+    // --- Senaste nytt: Facebook-flöde och Instagram ---
+    if (L.facebook) {
+      const fb = "https://www.facebook.com/plugins/page.php?" + new URLSearchParams({
+        href: L.facebook, tabs: "timeline", width: "500", height: "640",
+        small_header: "true", adapt_container_width: "true", hide_cover: "false", show_facepile: "false"
+      });
+      $("fbFlode").innerHTML = `<iframe src="${fb}" loading="lazy" allow="encrypted-media" title="De Evigt Unga å Vackra på Facebook"></iframe>`;
+    }
+    if (L.instagramWidget) {
+      // Inbäddningskod från en Instagram-flödestjänst (t.ex. Behold), inlagd i admin
+      $("igFlode").innerHTML = L.instagramWidget;
+      $("igFlode").querySelectorAll("script").forEach(gammal => {
+        const ny = document.createElement("script"); [...gammal.attributes].forEach(a => ny.setAttribute(a.name, a.value));
+        ny.textContent = gammal.textContent; gammal.replaceWith(ny);
+      });
+    } else if (L.instagram) {
+      $("igFlode").innerHTML = `<div class="ig-kort"><img src="assets/omslag.jpg" alt=""><b style="font-family:Oswald,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:var(--guld-ljus)">@${esc((L.instagram.match(/instagram\.com\/([^/?#]+)/) || [])[1] || "instagram")}</b><p style="color:var(--dampad)">Bilder och klipp från studion och festerna.</p><a class="knapp ig" href="${esc(L.instagram)}" target="_blank" rel="noopener">Följ oss på Instagram</a></div>`;
+    }
+    if (L.soundcloud) {
+      const sc = "https://w.soundcloud.com/player/?" + new URLSearchParams({
+        url: L.soundcloud, color: "#f5c518", auto_play: "false", hide_related: "true", show_comments: "false", show_user: "true", show_reposts: "false", visual: "false"
+      });
+      $("scFlode").innerHTML = `<iframe src="${sc}" loading="lazy" allow="autoplay" title="De Evigt Unga å Vackra på SoundCloud"></iframe>`;
+    }
+    if (!L.facebook && !L.instagram && !L.soundcloud) $("socialt").hidden = true;
 
     // --- Övrigt ---
     $("ar").textContent = new Date().getFullYear();

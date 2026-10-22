@@ -41,7 +41,7 @@
     .hjalp ol { padding-left: 20px; margin-top: 6px; display: grid; gap: 4px; }
 
     label { display: grid; gap: 4px; font-size: .8rem; color: var(--dampad); min-width: 0; }
-    input[type=text], input[type=url], input[type=email], input[type=password], select {
+    input[type=text], input[type=url], input[type=email], input[type=password], select, textarea {
       width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--kant);
       background: #0f0e0b; color: var(--text); font: inherit; font-size: .95rem;
     }
@@ -169,12 +169,15 @@
     // ===== Inställningar =====
     const AGARE = "stiggelindbom", REPO = "evigt-unga-och-vackra", GREN = "main";
     const DATAFIL = "musik/innehall.json";
+    const FLODE = "nytt.xml";   // RSS-flöde som automatiseringar (t.ex. Make) läser för att posta på sociala medier
+    const SIDA = `https://${AGARE}.github.io/${REPO}/`;
     const API = `https://api.github.com/repos/${AGARE}/${REPO}`;
 
     const $ = id => document.getElementById(id);
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     $("repoNamn").textContent = `${AGARE}/${REPO}`;
 
+    let flodeSha = null;
     let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1;
 
     // ===== GitHub =====
@@ -203,6 +206,7 @@
       data.lankar ||= {}; data.latar ||= [];
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
+      flodeSha = await gh(`/contents/${FLODE}?ref=${GREN}`).then(f => f.sha).catch(() => null);
     }
 
     // ===== Inloggning =====
@@ -239,7 +243,7 @@
     try { const t = localStorage.getItem("deu-admin-token"); if (t) loggaIn(t); } catch {}
 
     // ===== Rita =====
-    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"]];
+    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"]];
 
     function rita() {
       const rad = (l, i) => {
@@ -287,7 +291,9 @@
       $("slapptLista").innerHTML = lista(true);
       $("demoLista").innerHTML = lista(false);
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
-        `<label>${n}<input type="${typ}" data-lank="${k}" value="${esc(data.lankar[k])}"></label>`).join("");
+        `<label>${n}<input type="${typ}" data-lank="${k}" value="${esc(data.lankar[k])}"></label>`).join("") +
+        `<label style="grid-column:1/-1">Instagram-flöde – inbäddningskod (valfritt, från t.ex. Behold)
+          <textarea data-lank="instagramWidget" rows="3" placeholder="Klistra in koden här">${esc(data.lankar.instagramWidget)}</textarea></label>`;
     }
 
     function status(text, klass = "") { const m = $("meddelande"); m.textContent = text; m.className = "meddelande " + klass; }
@@ -302,7 +308,7 @@
       if (!falt || !kort) return;
       const l = data.latar[+kort.dataset.i];
       if (falt === "ladda") l.ladda = e.target.checked;
-      else if (falt === "slappt") { l.slappt = e.target.value === "1"; rita(); }
+      else if (falt === "slappt") { l.slappt = e.target.value === "1"; if (l.slappt && !l.slapptDatum) l.slapptDatum = new Date().toISOString(); rita(); }
       else { l[falt] = e.target.value; if (falt === "titel") kort.querySelector(".topp b").textContent = e.target.value || "Ny låt"; }
       andrat();
     });
@@ -311,7 +317,7 @@
       const ny = e.target.closest("[data-ny]");
       if (ny) {
         const slappt = ny.dataset.ny === "slappt";
-        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt });
+        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt, datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
         raderaVantar = -1; rita(); andrat();
         const kort = document.querySelector(`[data-i="${data.latar.length - 1}"] input`); kort && kort.focus();
         return;
@@ -403,6 +409,54 @@
       }
     });
 
+    // ===== Nyhetsflöde (RSS) =====
+    // Nya demos och släpp hamnar i nytt.xml. En automatisering (Make/Zapier/IFTTT)
+    // kan läsa flödet och posta på Facebook och Instagram. Låtar utan datum (de gamla) tas inte med.
+    const x = t => String(t ?? "").replace(/[<>&'"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]));
+    function byggFlode() {
+      const poster = [];
+      for (const l of data.latar) {
+        if (l.slappt && l.slapptDatum) poster.push({
+          id: "slappt-" + l.titel, datum: l.slapptDatum, titel: `Ute nu på Spotify: ${l.titel}`,
+          text: `${l.titel} är ute nu! ${l.info || ""} Lyssna på Spotify – varje lyssning räknas.`.replace(/\s+/g, " ").trim(),
+          lank: l.spotify || SIDA + "#spotify"
+        });
+        else if (!l.slappt && l.datum) poster.push({
+          id: "demo-" + l.titel, datum: l.datum, titel: `Ny demo: ${l.titel}`,
+          text: `Ny demo på Evigt Ung Radio: ${l.titel}. ${l.info || ""} Lyssna och ladda ner på vår sida!`.replace(/\s+/g, " ").trim(),
+          lank: SIDA + "#radio"
+        });
+      }
+      poster.sort((a, b) => b.datum.localeCompare(a.datum));
+      const bild = SIDA + "assets/omslag.jpg";
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+<channel>
+<title>De Evigt Unga å Vackra – nytt</title>
+<link>${SIDA}</link>
+<description>Nya låtar och demos från De Evigt Unga å Vackra</description>
+<language>sv</language>
+${poster.slice(0, 20).map(p => `<item>
+  <title>${x(p.titel)}</title>
+  <description>${x(p.text)}</description>
+  <link>${x(p.lank)}</link>
+  <guid isPermaLink="false">${x(p.id)}</guid>
+  <pubDate>${new Date(p.datum).toUTCString()}</pubDate>
+  <enclosure url="${bild}" type="image/jpeg" length="0"/>
+  <media:content url="${bild}" medium="image"/>
+</item>`).join("\n")}
+</channel>
+</rss>
+`;
+    }
+    async function sparaFlode() {
+      const svar = await gh(`/contents/${FLODE}`, {
+        method: "PUT",
+        body: JSON.stringify({ message: "Uppdatera nyhetsflödet", content: tillBase64(byggFlode()), branch: GREN, ...(flodeSha ? { sha: flodeSha } : {}) })
+      });
+      flodeSha = svar.content.sha;
+    }
+
     // ===== Spara =====
     $("spara").onclick = async () => {
       const tomma = data.latar.filter(l => !l.titel.trim());
@@ -414,6 +468,7 @@
           body: JSON.stringify({ message: "Uppdatera låtar och länkar via backoffice", content: tillBase64(JSON.stringify(data, null, 2) + "\n"), sha, branch: GREN })
         });
         sha = svar.content.sha; osparat = false;
+        try { await sparaFlode(); } catch (e) { console.warn("Flödet kunde inte sparas", e); }
         status("✓ Sparat! Hemsidan uppdateras inom någon minut.", "ok");
       } catch (e) {
         $("spara").disabled = false;
