@@ -5,6 +5,14 @@
 <link>https://stiggelindbom.github.io/evigt-unga-och-vackra/</link>
 <description>Nya låtar och demos från De Evigt Unga å Vackra</description>
 <language>sv</language>
-
+<item>
+  <title>Ute nu på Spotify: Kom och värm dej</title>
+  <description>Kom och värm dej är ute nu! Lyssna på Spotify – varje lyssning räknas.</description>
+  <link>https://open.spotify.com/track/66r4DllqMVnMPjl3vGnn6z</link>
+  <guid isPermaLink="false">slappt-Kom och värm dej</guid>
+  <pubDate>Thu, 22 Oct 2026 17:12:58 GMT</pubDate>
+  <enclosure url="https://stiggelindbom.github.io/evigt-unga-och-vackra/musik/omslag-kom-och-varm-dej.jpg" type="image/jpeg" length="0"/>
+  <media:content url="https://stiggelindbom.github.io/evigt-unga-och-vackra/musik/omslag-kom-och-varm-dej.jpg" medium="image"/>
+</item>
 </channel>
 </rss>
