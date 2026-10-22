@@ -60,6 +60,12 @@
     .knapp:disabled { opacity: .45; cursor: default; }
     .knapp.liten { padding: 6px 12px; font-size: .75rem; }
     .knapp.kontur { background: transparent; color: var(--guld); border: 1px solid var(--guld-mork); }
+    .knapp.gron { background: var(--spotify); color: #000; }
+    .slapp-panel { border: 1px solid rgba(30,215,96,.5); background: #0f1a13; border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
+    .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
+    .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
+    .slapp-panel a { color: var(--spotify); }
+    .slapp-knappar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .knapp.fara { background: transparent; color: var(--fel); border: 1px solid rgba(248,113,113,.5); }
     .knapp.fara.saker { background: var(--fel); color: #000; }
 
@@ -178,7 +184,7 @@
     $("repoNamn").textContent = `${AGARE}/${REPO}`;
 
     let flodeSha = null;
-    let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1;
+    let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1, slappOppen = -1;
 
     // ===== GitHub =====
     async function gh(sokvag, opt = {}) {
@@ -281,7 +287,25 @@
               ${filStatus}
               <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav"}</button>
               <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>
-            </div>`}
+              <button class="knapp gron liten" type="button" data-slapp-oppna style="margin-left:auto">🚀 Släpp låten</button>
+            </div>
+            ${slappOppen === i ? `
+            <div class="slapp-panel">
+              <h4>Släpp ”${esc(l.titel) || "låten"}”</h4>
+              <ol>
+                <li>Ladda upp låten i <a href="https://artist.amuse.io/" target="_blank" rel="noopener">Amuse ↗</a> med ett släppdatum. Använd wav-filen för bästa kvalitet.</li>
+                <li>Pitcha den i <a href="https://artists.spotify.com/" target="_blank" rel="noopener">Spotify for Artists ↗</a>, minst 7 dagar före släppdatum.</li>
+                <li>Lägg gärna upp den på <a href="https://soundcloud.com/upload" target="_blank" rel="noopener">SoundCloud ↗</a> också.</li>
+                <li>När låten är ute på Spotify: klistra in länken nedan och tryck <b>Släpp nu</b>.</li>
+              </ol>
+              <label>Spotify-länk till låten (Spotify: ··· → Dela → Kopiera länk till låt)
+                <input type="url" data-slapp-lank value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/…">
+              </label>
+              <div class="slapp-knappar">
+                <button class="knapp gron" type="button" data-slapp-nu>Släpp nu – flytta till Släppta</button>
+                <button class="knapp kontur liten" type="button" data-slapp-stang>Avbryt</button>
+              </div>
+            </div>` : ""}`}
         </div>`;
       };
       const lista = slappt => {
@@ -339,6 +363,22 @@
         rita(); return;
       }
       if (e.target.closest("[data-ladda-upp]")) { valjFil(i); }
+      if (e.target.closest("[data-slapp-oppna]")) { slappOppen = slappOppen === i ? -1 : i; raderaVantar = -1; rita(); return; }
+      if (e.target.closest("[data-slapp-stang]")) { slappOppen = -1; rita(); return; }
+      if (e.target.closest("[data-slapp-nu]")) {
+        const l = data.latar[i], lank = kort.querySelector("[data-slapp-lank]").value.trim();
+        if (lank && !/open\.spotify\.com\//.test(lank)) return status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/", "fel");
+        l.slappt = true; l.slapptDatum = new Date().toISOString(); l.spotify = lank; l.ladda = false;
+        if (!l.typ || /demo/i.test(l.typ)) l.typ = "Singel";
+        // flytta det nya släppet överst bland de släppta
+        data.latar.splice(i, 1);
+        const forstaSlappt = data.latar.findIndex(x => x.slappt);
+        const ny = forstaSlappt < 0 ? data.latar.length : forstaSlappt;
+        data.latar.splice(ny, 0, l);
+        slappOppen = -1; rita(); andrat();
+        status(`🚀 ${l.titel} ligger nu under Släppta. Tryck Spara för att publicera.` + (lank ? "" : " (Spotify-knappen går till artistsidan tills du lagt in låtens länk.)"), "osparat");
+        document.querySelector(`[data-i="${ny}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
     });
 
     // ===== Ladda upp mp3 (sparas direkt i repot) =====
