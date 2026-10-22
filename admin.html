@@ -268,6 +268,7 @@
     }
     async function omslagBytes(l) {
       if (!l.omslag) return null;
+      if (/^https?:/.test(l.omslag)) { try { return new Uint8Array(await (await fetch(l.omslag)).arrayBuffer()); } catch { return null; } }
       if (forhands[l.omslag]) return new Uint8Array(await (await fetch(forhands[l.omslag])).arrayBuffer());
       try { return await ghRa("musik/" + encodeURIComponent(l.omslag)); } catch { return null; }
     }
@@ -406,7 +407,8 @@
           ${l.slappt ? `
             <label>Spotify-länk till låten (Dela → Kopiera länk till låt)
               <input type="url" data-falt="spotify" value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/… – titel och omslag hämtas om de saknas">
-            </label>` : `
+            </label>
+            ${l.spotify && (!l.titel.trim() || !l.omslag) ? `<div><button class="knapp gron liten" type="button" data-hamta-spotify>↻ Hämta titel och omslag från Spotify</button></div>` : ""}` : `
             <div class="fil">
               ${filStatus}
               <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav"}</button>
@@ -477,7 +479,7 @@
         if (SPOTIFY_RE.test(v) && (!l.titel.trim() || !l.omslag) && !hamtar) {
           hamtar = true;
           hamtaSpotifyInfo(l, v).then(h => {
-            hamtar = false; if (!l.titel.trim()) l.titel = "Ny låt";
+            hamtar = false;
             rita(); andrat();
             status(h.length && !h[0].startsWith("men") ? `✓ Hämtade ${h.join(" och ")} från Spotify för ${l.titel}. Tryck Spara.` : `Länken är inlagd${h.length ? " " + h[0] : ""}. Tryck Spara.`, "osparat");
           });
@@ -542,6 +544,14 @@
       if (e.target.closest("[data-ladda-upp]")) { valjFil(i); }
       if (e.target.closest("[data-omslag]")) { bildFor = i; $("bildval").value = ""; $("bildval").click(); return; }
       if (e.target.closest("[data-omslag-bort]")) { delete data.latar[i].omslag; rita(); andrat(); return; }
+      if (e.target.closest("[data-hamta-spotify]")) {
+        const l = data.latar[i]; if (hamtar) return; hamtar = true;
+        hamtaSpotifyInfo(l, l.spotify).then(h => {
+          hamtar = false; rita(); andrat();
+          status(h.length && !h[0].startsWith("men") ? `✓ Hämtade ${h.join(" och ")} från Spotify. Tryck Spara.` : "Spotify svarade inte. Skriv titeln själv och ladda upp omslaget med knappen ovan.", h.length && !h[0].startsWith("men") ? "osparat" : "fel");
+        });
+        return;
+      }
       if (e.target.closest("[data-slapp-oppna]")) { slappOppen = slappOppen === i ? -1 : i; raderaVantar = -1; rita(); return; }
       if (e.target.closest("[data-slapp-stang]")) { slappOppen = -1; rita(); return; }
       if (e.target.closest("[data-slapp-nu]")) {
@@ -580,14 +590,23 @@
       status("Hämtar info från Spotify…");
       const hamtat = [];
       try {
-        const r = await fetch("https://open.spotify.com/oembed?url=" + encodeURIComponent(lank.split("?")[0]));
-        if (!r.ok) throw new Error("Spotify svarade " + r.status);
-        const info = await r.json();
+        const ren = lank.split("?")[0];
+        // Spotifys egen oEmbed först, sedan noembed.com som reserv om webbläsaren stoppar Spotify
+        let info = null;
+        for (const url of ["https://open.spotify.com/oembed?url=" + encodeURIComponent(ren), "https://noembed.com/embed?url=" + encodeURIComponent(ren)]) {
+          try { const r = await fetch(url); if (r.ok) { const j = await r.json(); if (j && j.title) { info = j; break; } } } catch (e) { console.warn("Hämtning misslyckades", url, e); }
+        }
+        if (!info) throw new Error("ingen info");
         if (!l.titel.trim() && info.title) { l.titel = info.title; hamtat.push("titel"); }
         if (!l.omslag && info.thumbnail_url && l.titel) {
           status("Hämtar omslaget från Spotify…");
-          const bild = await (await fetch(info.thumbnail_url)).blob();
-          await sparaOmslag(l, bild); hamtat.push("omslag");
+          try {
+            const bild = await (await fetch(info.thumbnail_url)).blob();
+            await sparaOmslag(l, bild);
+          } catch (e) {
+            l.omslag = info.thumbnail_url;   // går inte att ladda ner bilden: länka direkt till Spotifys bild
+          }
+          hamtat.push("omslag");
         }
       } catch (e) {
         console.warn("Kunde inte hämta från Spotify", e);
@@ -600,7 +619,7 @@
     // Bilden beskärs till kvadrat, skalas till 1000×1000 och sparas som jpg i musik/
     let bildFor = -1;
     const forhands = {};   // nyss uppladdade bilder visas direkt, innan hemsidan hunnit uppdateras
-    const omslagUrl = l => l.omslag ? (forhands[l.omslag] || "musik/" + encodeURI(l.omslag)) : "assets/omslag.jpg";
+    const omslagUrl = l => !l.omslag ? "assets/omslag.jpg" : /^https?:/.test(l.omslag) ? l.omslag : (forhands[l.omslag] || "musik/" + encodeURI(l.omslag));
     async function tillKvadratJpg(fil) {
       const bild = await createImageBitmap(fil);
       const sida = Math.min(bild.width, bild.height), mal = Math.min(1000, sida);
@@ -724,12 +743,12 @@
       const poster = [];
       for (const l of data.latar) {
         if (l.slappt && l.slapptDatum) poster.push({
-          id: "slappt-" + l.titel, datum: l.slapptDatum, bild: l.omslag ? SIDA + "musik/" + encodeURI(l.omslag) : null, titel: `Ute nu på Spotify: ${l.titel}`,
+          id: "slappt-" + l.titel, datum: l.slapptDatum, bild: !l.omslag ? null : /^https?:/.test(l.omslag) ? l.omslag : SIDA + "musik/" + encodeURI(l.omslag), titel: `Ute nu på Spotify: ${l.titel}`,
           text: `${l.titel} är ute nu! ${l.info || ""} Lyssna på Spotify – varje lyssning räknas.`.replace(/\s+/g, " ").trim(),
           lank: l.spotify || SIDA + "#spotify"
         });
         else if (!l.slappt && l.datum) poster.push({
-          id: "demo-" + l.titel, datum: l.datum, bild: l.omslag ? SIDA + "musik/" + encodeURI(l.omslag) : null, titel: `Ny demo: ${l.titel}`,
+          id: "demo-" + l.titel, datum: l.datum, bild: !l.omslag ? null : /^https?:/.test(l.omslag) ? l.omslag : SIDA + "musik/" + encodeURI(l.omslag), titel: `Ny demo: ${l.titel}`,
           text: `Ny demo på Evigt Ung Radio: ${l.titel}. ${l.info || ""} Lyssna och ladda ner på vår sida!`.replace(/\s+/g, " ").trim(),
           lank: SIDA + "#radio"
         });
@@ -766,8 +785,9 @@ ${poster.slice(0, 20).map(p => `<item>
 
     // ===== Spara =====
     $("spara").onclick = async () => {
+      for (const l of data.latar.filter(l => !l.titel.trim() && SPOTIFY_RE.test(l.spotify || ""))) await hamtaSpotifyInfo(l, l.spotify);
       const tomma = data.latar.filter(l => !l.titel.trim());
-      if (tomma.length) return status("Alla låtar måste ha en titel.", "fel");
+      if (tomma.length) { rita(); return status(`${tomma.length === 1 ? "En låt saknar" : tomma.length + " låtar saknar"} titel – skriv den i fältet Titel (Spotify kunde inte hämta den).`, "fel"); }
       $("spara").disabled = true; status("Sparar…");
       try {
         const svar = await gh(`/contents/${DATAFIL}`, {

@@ -572,7 +572,7 @@
     let nu = -1, blanda = false, oppenSpotify = -1;
 
     // Låtens eget omslag, annars bandets
-    const omslagFor = l => l && l.omslag ? "musik/" + encodeURI(l.omslag) : "assets/omslag.jpg";
+    const omslagFor = l => !l || !l.omslag ? "assets/omslag.jpg" : /^https?:/.test(l.omslag) ? l.omslag : "musik/" + encodeURI(l.omslag);
 
     // Spotify-länk -> inbäddningsadress (track/album/artist)
     const spotifyEmbed = url => {
