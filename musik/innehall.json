@@ -13,7 +13,7 @@
       "titel": "Kom och värm dej",
       "info": "Låten som startade allt.",
       "typ": "Singel",
-      "spotify": "",
+      "spotify": "https://open.spotify.com/track/66r4DllqMVnMPjl3vGnn6z",
       "fil": "",
       "ladda": false,
       "kredit": {
@@ -45,7 +45,7 @@
       }
     },
     {
-      "slappt": true,
+      "slappt": false,
       "titel": "Svenne G",
       "info": "Han skulle bara softa och spela spel …",
       "typ": "Singel",
