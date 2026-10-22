@@ -790,7 +790,7 @@
       const ny = e.target.closest("[data-ny]");
       if (ny) {
         const slappt = ny.dataset.ny === "slappt";
-        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Smakprov", spotify: "", fil: "", ladda: false, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
+        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Smakprov", spotify: "", fil: "", ladda: !slappt, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
         raderaVantar = -1; rita(); andrat();
         const kort = document.querySelector(`[data-i="${data.latar.length - 1}"] input`); kort && kort.focus();
         return;
