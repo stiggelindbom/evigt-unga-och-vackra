@@ -208,7 +208,14 @@
     // ===== Inloggning =====
     async function loggaIn(t) {
       token = t.replace(/[\s"']+/g, "");   // ta bort mellanslag, radbrytningar och citattecken
-      $("loginFel").textContent = "";
+      const knapp = $("loggaIn"), fel = $("loginFel");
+      fel.textContent = "";
+      if (!token) { fel.textContent = "Klistra in nyckeln i rutan först."; return; }
+      if (!token.startsWith("github_pat_") && !token.startsWith("ghp_")) {
+        fel.textContent = "Det där ser inte ut som en nyckel. Den ska börja med github_pat_ – använd kopieringsknappen på GitHub.";
+        return;
+      }
+      knapp.disabled = true; knapp.textContent = "Loggar in…";
       try {
         const repo = await gh("");
         if (!repo.permissions || !repo.permissions.push) throw new Error("Nyckeln saknar skrivrättighet (Contents: Read and write).");
@@ -219,7 +226,11 @@
       } catch (e) {
         token = "";
         $("loginFel").textContent = e.status === 401 ? "GitHub godkände inte nyckeln. Kopiera hela nyckeln igen direkt när den visas (den börjar med github_pat_ och är ca 90 tecken lång), eller skapa en ny." :
-          e.status === 404 ? `Nyckeln har inte tillgång till ${AGARE}/${REPO}.` : e.message;
+          e.status === 404 ? `Nyckeln har inte tillgång till ${AGARE}/${REPO}. Välj repot under Repository access på GitHub.` :
+          e.status === 403 ? "Nyckeln saknar behörighet. Sätt Contents till Read and write på GitHub." :
+          "Det gick inte att logga in: " + (e.message || "okänt fel") + ". Prova att ladda om sidan.";
+      } finally {
+        knapp.disabled = false; knapp.textContent = "Logga in";
       }
     }
     $("loggaIn").onclick = () => loggaIn($("token").value);
