@@ -191,6 +191,9 @@
     @keyframes spBlink { 50% { box-shadow: 0 0 0 4px var(--spotify), 0 0 24px rgba(30,215,96,.6); } }
     .sp-tips { margin-top: 8px; font-size: .85rem; color: var(--spotify); }
     .studio.via-spotify .live { color: var(--spotify); }
+    .kod-falt { width: 100%; padding: 12px 14px; border-radius: 999px; border: 1px solid var(--guld-mork); background: #0f0e0b; color: var(--text); font: inherit; text-align: center; letter-spacing: .15em; }
+    .kod-falt:focus { outline: none; border-color: var(--guld); }
+    .kod-fel { color: #f87171; margin: 8px 0 0; }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
     .kredit-lank:hover { color: var(--guld); }
     .info-knapp { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--kant); color: var(--dampad); font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
@@ -523,6 +526,19 @@
     </div>
   </dialog>
 
+  <dialog id="kodRuta">
+    <div class="grind">
+      <h3>Smakprov</h3>
+      <p>Det här är ett smakprov. Har du fått en kod av oss kan du ladda ner hela låten.</p>
+      <form id="kodForm" class="steg">
+        <input id="kodInput" type="password" autocomplete="off" placeholder="Skriv koden" aria-label="Kod" class="kod-falt">
+        <button class="knapp" type="submit">⬇ Ladda ner</button>
+      </form>
+      <p class="kod-fel" id="kodFel" hidden>Fel kod – försök igen.</p>
+      <button class="stang" id="kodStang" type="button">Stäng</button>
+    </div>
+  </dialog>
+
   <dialog id="grind">
     <div class="grind">
       <h3>Gilla oss först!</h3>
@@ -642,7 +658,7 @@
 
     // --- Spellista ---
     function ritaLista() {
-      const ladd = i => `<button class="ladda" type="button" data-ladda="${i}"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>Ladda ner</button>`;
+      const ladd = (i, kod) => `<button class="ladda" type="button" data-ladda="${i}">${kod ? "🔒" : `<svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>`}Ladda ner</button>`;
       const demoRad = (l, i) => `
         <li class="spar${i === nu ? " aktiv" : ""}${l.saknas ? " saknas" : ""}">
           <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
@@ -652,7 +668,7 @@
           <div class="hoger">
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
-            ${l.ladda && !l.saknas ? ladd(i) : ""}
+            ${l.ladda && !l.saknas && (!arSmakprov(l) || L.kodHash) ? ladd(i, arSmakprov(l)) : ""}
           </div>
         </li>`;
       // Släppta låtar spelas via Spotify så att lyssningarna räknas där
@@ -799,7 +815,7 @@
     function uppdatera() {
       const pa = spelar(), viaSpotify = arSpotify();
       const l = latar[nu];
-      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "30 S SMAKPROV – LADDA NER FÖR HELA" : "NU SPELAS";
+      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "30 S SMAKPROV" : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
@@ -810,7 +826,7 @@
       $("heroText").textContent = pa ? "Pausa radion" : nu >= 0 ? "Fortsätt radion" : "Starta radion";
       $("studio").classList.toggle("spelar", pa);
       $("studio").classList.toggle("via-spotify", viaSpotify);
-      $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas);
+      $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas && (!arSmakprov(l) || L.kodHash));
       document.title = pa ? `▶︎ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
@@ -933,9 +949,28 @@
     $("folj").addEventListener("click", e => { if (e.target === $("folj")) $("folj").close(); });
     let vantar = null;
 
+    // Smakprov (demo med 30 s klipp) laddas bara ner med kod. Koden jämförs som SHA-256.
+    const arSmakprov = l => l && !l.slappt && typeof l.klipp === "number";
+    const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
+    const kodOk = () => { try { return !!L.kodHash && localStorage.getItem("deu-kod") === L.kodHash; } catch { return false; } };
+    let kodFor = null;
+    $("kodForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const h = await sha256($("kodInput").value.trim().toLowerCase());
+      if (h === L.kodHash) { try { localStorage.setItem("deu-kod", h); } catch {} $("kodRuta").close(); starta(kodFor); }
+      else { $("kodFel").hidden = false; $("kodInput").select(); }
+    });
+    $("kodStang").onclick = () => $("kodRuta").close();
+
     function laddaNer(i) {
       const l = latar[i];
       if (!l || !l.ladda || !l.fil || l.saknas) return;
+      if (arSmakprov(l)) {
+        if (!L.kodHash) return;
+        if (kodOk()) return starta(l);
+        kodFor = l; $("kodInput").value = ""; $("kodFel").hidden = true; $("kodRuta").showModal(); $("kodInput").focus();
+        return;
+      }
       if (kravs.every(k => las(k.id))) return starta(l);
       vantar = l; ritaGrind(); $("grind").showModal();
     }

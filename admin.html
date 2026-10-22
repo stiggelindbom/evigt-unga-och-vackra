@@ -218,7 +218,9 @@
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     $("repoNamn").textContent = `${AGARE}/${REPO}`;
 
-    let flodeSha = null, fyllda = [];
+    let flodeSha = null, fyllda = [], nyKod = "";
+    // Koden sparas aldrig i klartext – bara dess SHA-256 (hemsidan jämför mot den)
+    const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
     let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1, slappOppen = -1;
 
     // ===== GitHub =====
@@ -450,7 +452,7 @@
             <div class="fil">
               ${filStatus}
               <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav"}</button>
-              <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>
+              <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> ${typeof l.klipp === "number" ? "Får laddas ner med kod (smakprov)" : "Får laddas ner"}</label>
               <button class="knapp gron liten" type="button" data-slapp-oppna style="margin-left:auto">🚀 Släpp låten</button>
             </div>
             ${l.fil && filer.has(l.fil) ? `
@@ -463,7 +465,7 @@
                 <label class="kryss"><input type="checkbox" data-klipp-pa ${l.klipp != null ? "checked" : ""}> Spela bara klippet på hemsidan</label>
                 <button class="knapp kontur liten" type="button" data-klipp-forslag>✨ Föreslå bästa delen</button>
               </div>
-              <p class="hjalp">Dra den gula rutan till den del av låten besökarna ska höra. Hela låten får de när de laddar ner.</p>
+              <p class="hjalp">Dra den gula rutan till den del av låten besökarna ska höra. Med klippet påslaget är låten ett <b>smakprov</b>: hela låten kan bara laddas ner med koden (sätts under Länkar).</p>
             </details>` : ""}
             <label class="snabb-spotify">Spotify-länk – klistra in när låten är ute, så flyttas den direkt till Släppta
               <input type="url" data-snabb-spotify placeholder="https://open.spotify.com/track/…">
@@ -497,6 +499,8 @@
       setTimeout(ritaAllaVagformer);
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
         `<label>${n}<input type="${typ}" data-lank="${k}" value="${esc(data.lankar[k])}"></label>`).join("") +
+        `<label>Nedladdningskod för smakprov
+          <input type="text" data-kod autocomplete="off" placeholder="${data.lankar.kodHash ? "Kod satt ✓ – skriv en ny för att byta" : "Ingen kod satt"}" value="${esc(nyKod)}"></label>` +
         `<label style="grid-column:1/-1">Instagram-flöde – inbäddningskod (valfritt, från t.ex. Behold)
           <textarea data-lank="instagramWidget" rows="3" placeholder="Klistra in koden här">${esc(data.lankar.instagramWidget)}</textarea></label>`;
     }
@@ -726,6 +730,7 @@
 
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
+      if (e.target.matches("[data-kod]")) { nyKod = e.target.value.trim(); return andrat(); }
       const lank = e.target.dataset.lank;
       if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
       if (e.target.matches('[data-falt="spotify"]')) {
@@ -1061,6 +1066,7 @@ ${poster.slice(0, 20).map(p => `<item>
     $("spara").onclick = async () => {
       for (const l of data.latar.filter(l => !l.titel.trim() && SPOTIFY_RE.test(l.spotify || ""))) await hamtaSpotifyInfo(l, l.spotify);
       if (data.vanner.some(v => !v.namn)) { return status("Alla under Med vänner måste ha ett namn.", "fel"); }
+      if (nyKod) { data.lankar.kodHash = await sha256(nyKod.toLowerCase()); nyKod = ""; }
       const tomma = data.latar.filter(l => !l.titel.trim());
       if (tomma.length) { rita(); return status(`${tomma.length === 1 ? "En låt saknar" : tomma.length + " låtar saknar"} titel – skriv den i fältet Titel (Spotify kunde inte hämta den).`, "fel"); }
       $("spara").disabled = true; status("Sparar…");
