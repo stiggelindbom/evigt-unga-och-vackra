@@ -31,7 +31,7 @@
       "titel": "Parapapa (Sommarfest)",
       "info": "PARAPA-PAPAPAPA-RAPA-PA! Put 'em up!",
       "typ": "Sommarhit",
-      "spotify": "",
+      "spotify": "https://open.spotify.com/track/4dgo1W9ORNMzXlPbYF8z9G",
       "fil": "",
       "ladda": false,
       "kredit": {
@@ -169,6 +169,28 @@
         "mastering": "Stig Lindbom",
         "ar": "2026"
       }
+    },
+    {
+      "slappt": true,
+      "titel": "Kom och värm dej",
+      "info": "",
+      "typ": "Singel",
+      "spotify": "https://open.spotify.com/track/66r4DllqMVnMPjl3vGnn6z",
+      "fil": "",
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-22T17:12:58.869Z",
+      "slapptDatum": "2026-10-22T17:12:58.869Z",
+      "omslag": "omslag-kom-och-varm-dej.jpg"
     }
   ]
 }
