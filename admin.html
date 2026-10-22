@@ -46,7 +46,7 @@
       background: #0f0e0b; color: var(--text); font: inherit; font-size: .95rem;
     }
     input:focus, select:focus { border-color: var(--guld); outline: none; }
-    .rutnat { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .rutnat { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: start; }
     .kryss { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--text); }
     .kryss input { width: 18px; height: 18px; accent-color: var(--guld); }
 
@@ -396,7 +396,7 @@
               <label>Artist<input type="text" data-kredit="artist" value="${esc((l.kredit || {}).artist)}" placeholder="${ARTIST}"></label>
               ${KREDIT.map(([r, namn]) => `<label>${namn}<input type="text" data-kredit="${r}" value="${esc((l.kredit || {})[r])}" placeholder="${r === "producent" ? "t.ex. DJ Stigge" : ""}"></label>`).join("")}
               <label>År<input type="text" inputmode="numeric" data-kredit="ar" value="${esc((l.kredit || {}).ar)}" placeholder="${new Date().getFullYear()}"></label>
-              <label>Genre<input type="text" data-kredit="genre" value="${esc((l.kredit || {}).genre)}" placeholder="t.ex. Dance, Reggae"></label>
+              <label>Genre${genreVal(l)}</label>
               <label>ISRC-kod (från distributören)<input type="text" data-kredit="isrc" value="${esc((l.kredit || {}).isrc)}" placeholder="t.ex. SEABC2600001"></label>
             </div>
           </details>
@@ -445,6 +445,18 @@
     function andrat() { osparat = true; $("spara").disabled = false; status("Du har osparade ändringar.", "osparat"); }
     window.addEventListener("beforeunload", e => { if (osparat) { e.preventDefault(); e.returnValue = ""; } });
 
+    const GENRER = ["Dance", "EDM", "House", "Pop", "Dance-pop", "Reggae", "Reggae-pop", "Schlager", "Dansband", "Hip hop", "R&B",
+                    "Rock", "Disco", "Elektroniskt", "Fest/Party", "Country", "Visa", "Soul", "Jazz", "Julmusik"];
+    function genreVal(l) {
+      const g = (l.kredit || {}).genre || "", annan = g && !GENRER.includes(g) || annanGenre.has(l);
+      return `<select data-genre-val>
+          <option value="">– Välj genre –</option>
+          ${GENRER.map(x => `<option ${x === g && !annanGenre.has(l) ? "selected" : ""}>${esc(x)}</option>`).join("")}
+          <option value="__annan" ${annan ? "selected" : ""}>Annan…</option>
+        </select>
+        ${annan ? `<input type="text" data-kredit="genre" value="${esc(g)}" placeholder="Skriv genre" style="margin-top:6px">` : ""}`;
+    }
+    const annanGenre = new WeakSet();
     const harKredit = l => l.kredit && KREDIT.some(([r]) => namnLista(l.kredit[r]).length);
     const kreditSammanfattning = l => [...new Set(KREDIT.flatMap(([r]) => namnLista((l.kredit || {})[r])))].slice(0, 3).join(", ");
     const oppnaKredit = new WeakSet(), taggAndrad = new WeakSet();
@@ -453,6 +465,15 @@
     $("adminVy").addEventListener("input", e => {
       const lank = e.target.dataset.lank;
       if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
+      if (e.target.matches("[data-genre-val]")) {
+        const l = data.latar[+e.target.closest("[data-i]").dataset.i];
+        l.kredit ||= {};
+        if (e.target.value === "__annan") { annanGenre.add(l); l.kredit.genre = ""; }
+        else { annanGenre.delete(l); l.kredit.genre = e.target.value; }
+        oppnaKredit.add(l); taggAndrad.add(l); rita(); andrat();
+        if (e.target.value === "__annan") document.querySelector(`[data-i="${data.latar.indexOf(l)}"] [data-kredit="genre"]`)?.focus();
+        return;
+      }
       const kreditFalt = e.target.dataset.kredit;
       if (kreditFalt) {
         const l = data.latar[+e.target.closest("[data-i]").dataset.i];
