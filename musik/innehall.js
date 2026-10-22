@@ -5,7 +5,7 @@
 // Länkar till våra kanaler. Klistra in hela adressen mellan citattecknen.
 // Lämna tomt ("") om vi inte har kanalen – då döljs knappen.
 window.LANKAR = {
-  spotify:   "",   // t.ex. "https://open.spotify.com/artist/XXXXXXXX"
+  spotify:   "https://open.spotify.com/artist/1zt7RJzrpN5QPvB789VIuV",
   facebook:  "https://www.facebook.com/deevigtungavackra",
   instagram: "",
   youtube:   "",
