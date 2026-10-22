@@ -159,13 +159,13 @@
   <main id="adminVy" hidden>
     <div>
       <h2>Låtar</h2>
-      <p class="hjalp">Släppta låtar spelas via Spotify på hemsidan så att lyssningarna räknas. Smakprov spelas i radion och kan laddas ner. Ordningen här är ordningen på hemsidan.</p>
+      <p class="hjalp">Släppta låtar spelas via Spotify på hemsidan så att lyssningarna räknas. Demos spelas i radion och kan laddas ner. Ordningen här är ordningen på hemsidan.</p>
     </div>
 
     <div class="kort">
       <div class="listhuvud">
-        <h3>Smakprov</h3>
-        <button class="knapp liten" type="button" data-ny="demo">+ Nytt smakprov</button>
+        <h3>Demos</h3>
+        <button class="knapp liten" type="button" data-ny="demo">+ Ny demo</button>
       </div>
       <div class="latlista" id="demoLista"></div>
     </div>
@@ -313,7 +313,7 @@
       const folk = ["producent", "mixning", "mastering"].flatMap(r => namnLista(k[r]).map(n => [KREDIT.find(x => x[0] === r)[1], n]));
       const rader = KREDIT.map(([r, namn]) => namnLista(k[r]).length ? `${namn}: ${namnLista(k[r]).join(", ")}` : "").filter(Boolean);
       return {
-        titel: l.titel, artist: k.artist || ARTIST, album: l.slappt ? "" : "Smakprov", bild: await omslagBytes(l),
+        titel: l.titel, artist: k.artist || ARTIST, album: l.slappt ? "" : "Demos", bild: await omslagBytes(l),
         kompositor: namnLista(k.kompositor).join("/"), textforfattare: namnLista(k.textforfattare).join("/"),
         folk, ar: k.ar, genre: k.genre, isrc: k.isrc,
         copyright: k.ar ? `℗ ${k.ar} ${k.artist || ARTIST}` : "",
@@ -358,9 +358,6 @@
         $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
         rita(); status("Inloggad. Inga ändringar än.");
         // Låtar som bara har förval: hämta uppgifter från en annan mix av samma låt
-        // Etiketten "Demo" heter numera "Smakprov"
-        const bytta = data.latar.filter(l => /^\s*demo\s*$/i.test(l.typ || "") && (l.typ = "Smakprov", taggAndrad.add(l), true));
-        if (bytta.length) { rita(); andrat(); status(`✓ Bytte etiketten Demo till Smakprov på ${bytta.length} låtar. Tryck Spara.`, "osparat"); }
         // Ta bort "Radio Edit" (och mellanslag) i titlarna
         const rensade = data.latar.filter(l => { const ny = rensaTitel(l.titel); if (ny !== l.titel) { l.titel = ny; taggAndrad.add(l); return true; } return false; });
         if (rensade.length) { rita(); andrat(); status(`✓ Tog bort "Radio Edit" i ${rensade.length} titlar. Tryck Spara.`, "osparat"); }
@@ -421,11 +418,11 @@
           <div class="rutnat">
             <label>Titel<input type="text" data-falt="titel" value="${esc(l.titel)}"></label>
             <label>Kort text<input type="text" data-falt="info" value="${esc(l.info)}"></label>
-            <label>Etikett (t.ex. Singel, Smakprov)<input type="text" data-falt="typ" value="${esc(l.typ)}"></label>
+            <label>Etikett (t.ex. Singel, Demo)<input type="text" data-falt="typ" value="${esc(l.typ)}"></label>
             <label>Lista
               <select data-falt="slappt">
                 <option value="1" ${l.slappt ? "selected" : ""}>Släppt (Spotify)</option>
-                <option value="0" ${!l.slappt ? "selected" : ""}>Smakprov</option>
+                <option value="0" ${!l.slappt ? "selected" : ""}>Demo</option>
               </select>
             </label>
           </div>
@@ -790,7 +787,7 @@
       const ny = e.target.closest("[data-ny]");
       if (ny) {
         const slappt = ny.dataset.ny === "slappt";
-        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Smakprov", spotify: "", fil: "", ladda: !slappt, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
+        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
         raderaVantar = -1; rita(); andrat();
         const kort = document.querySelector(`[data-i="${data.latar.length - 1}"] input`); kort && kort.focus();
         return;
@@ -1025,8 +1022,8 @@
           lank: l.spotify || SIDA + "#spotify"
         });
         else if (!l.slappt && l.datum) poster.push({
-          id: "demo-" + l.titel, datum: l.datum, bild: !l.omslag ? null : /^https?:/.test(l.omslag) ? l.omslag : SIDA + "musik/" + encodeURI(l.omslag), titel: `Nytt smakprov: ${l.titel}`,
-          text: `Nytt smakprov på Evigt Ung Radio: ${l.titel}. ${l.info || ""} Lyssna och ladda ner på vår sida!`.replace(/\s+/g, " ").trim(),
+          id: "demo-" + l.titel, datum: l.datum, bild: !l.omslag ? null : /^https?:/.test(l.omslag) ? l.omslag : SIDA + "musik/" + encodeURI(l.omslag), titel: `Ny demo: ${l.titel}`,
+          text: `Ny demo på Evigt Ung Radio: ${l.titel}. ${l.info || ""} Lyssna och ladda ner på vår sida!`.replace(/\s+/g, " ").trim(),
           lank: SIDA + "#radio"
         });
       }
@@ -1037,7 +1034,7 @@
 <channel>
 <title>De Evigt Unga å Vackra – nytt</title>
 <link>${SIDA}</link>
-<description>Nya låtar och smakprov från De Evigt Unga å Vackra</description>
+<description>Nya låtar och demos från De Evigt Unga å Vackra</description>
 <language>sv</language>
 ${poster.slice(0, 20).map(p => `<item>
   <title>${x(p.titel)}</title>

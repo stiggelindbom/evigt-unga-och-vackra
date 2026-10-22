@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>De Evigt Unga å Vackra</title>
-  <meta name="description" content="De Evigt Unga å Vackra – lyssna på vår radio, lyssna på smakprov och hitta oss på Spotify. Musik av DJ Stigge.">
+  <meta name="description" content="De Evigt Unga å Vackra – lyssna på vår radio, ladda ner demos och hitta oss på Spotify. Musik av DJ Stigge.">
   <meta property="og:title" content="De Evigt Unga å Vackra">
   <meta property="og:description" content="Lyssna på vår radio – festlåtar, sommarhits och rent guld.">
   <meta property="og:image" content="assets/omslag.jpg">
@@ -373,7 +373,7 @@
     <div class="wrap">
       <h2>Evigt Ung Radio</h2>
       <div class="delare">★</div>
-      <p class="ingress">Smakprov direkt från studion och våra släppta låtar. Tryck play och låt radion rulla – gillar du oss kan du ladda ner låtarna.</p>
+      <p class="ingress">Demos direkt från studion och våra släppta låtar. Tryck play och låt radion rulla – gillar du oss kan du ladda ner demos.</p>
       <div class="radio">
         <div class="studio" id="studio">
           <div class="omslag">
@@ -517,7 +517,7 @@
   <dialog id="folj">
     <div class="grind">
       <h3>Gillar du det du hör?</h3>
-      <p>Följ oss så missar du inga nya låtar. Gillar du oss kan du dessutom ladda ner låtarna!</p>
+      <p>Följ oss så missar du inga nya låtar. Gillar du oss kan du dessutom ladda ner demos!</p>
       <div class="steg" id="foljSteg"></div>
       <button class="stang" id="foljStang" type="button">Fortsätt lyssna</button>
     </div>
@@ -593,7 +593,7 @@
     const L = DATA.lankar || {};
     // "Radio Edit" som Spotify lägger till i titeln visas inte
     const rensaTitel = t => String(t || "").replace(/\s*[-–—]\s*radio edit\s*$/i, "").replace(/\s*[([]\s*radio edit\s*[)\]]\s*$/i, "").trim();
-    const latar = (DATA.latar || []).map(l => ({ ...l, titel: rensaTitel(l.titel), typ: /^\s*demo\s*$/i.test(l.typ || "") ? "Smakprov" : l.typ, saknas: !l.fil }));
+    const latar = (DATA.latar || []).map(l => ({ ...l, titel: rensaTitel(l.titel), saknas: !l.fil }));
     const $ = id => document.getElementById(id);
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const ljud = $("ljud");
@@ -648,7 +648,7 @@
           <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
             <svg viewBox="0 0 24 24"><path d="${i === nu && spelar() ? PAUS : PLAY}"/></svg>
           </button>
-          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : (typeof l.klipp === "number" ? "30 s · " : "") + esc(l.info)}</small></div></div>
+          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : (typeof l.klipp === "number" ? "30 s smakprov · " : "") + esc(l.info)}</small></div></div>
           <div class="hoger">
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
@@ -678,8 +678,8 @@
         return rader.length ? `<div><div class="listrubrik"><h3>${rubrik}</h3><small>${under}</small></div>
           <ol class="lista">${rader.map(([l, i]) => rad(l, i)).join("")}</ol></div>` : "";
       };
-      $("lista").innerHTML = grupp("Smakprov", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt, demoRad)
-        || `<div class="tomt">Inga smakprov uppladdade än.</div>`;
+      $("lista").innerHTML = grupp("Demos", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt, demoRad)
+        || `<div class="tomt">Inga demos uppladdade än.</div>`;
       $("slapptLista").innerHTML = grupp("Släppta låtar", "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
     }
     const listKlick = e => {
@@ -799,7 +799,7 @@
     function uppdatera() {
       const pa = spelar(), viaSpotify = arSpotify();
       const l = latar[nu];
-      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "SMAKPROV 30 S – LADDA NER FÖR HELA" : "NU SPELAS";
+      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "30 S SMAKPROV – LADDA NER FÖR HELA" : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
