@@ -152,6 +152,10 @@
     .lista { list-style: none; display: grid; gap: 10px; }
     .spotify-lank { display: inline-flex; align-items: center; gap: 6px; font-size: .8rem; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--spotify); color: var(--spotify); text-decoration: none; white-space: nowrap; }
     .spotify-lank:hover { background: var(--spotify); color: #000; }
+    .spar .sp { color: var(--spotify); border-color: rgba(30,215,96,.5); }
+    .spar .sp:hover { color: #000; background: var(--spotify); border-color: var(--spotify); }
+    .spar.slappt.aktiv { border-color: var(--spotify); background: #13241a; }
+    .sp-spelare { grid-column: 1 / -1; width: 100%; height: 152px; border: 0; border-radius: 12px; }
     .spar {
       display: grid; grid-template-columns: 44px 1fr auto; gap: 14px; align-items: center;
       padding: 12px 14px; border-radius: 10px; background: var(--yta); border: 1px solid var(--kant);
@@ -187,6 +191,7 @@
 
     /* Spotify */
     #spotify { background: var(--kol); text-align: center; }
+    .slappt-listor { max-width: 760px; margin: 0 auto 28px; text-align: left; }
     .spotify-ram { max-width: 760px; margin: 0 auto 28px; border-radius: 14px; overflow: hidden; }
     .spotify-ram iframe { width: 100%; height: 452px; border: 0; display: block; }
     .tomt { max-width: 560px; margin: 0 auto 28px; padding: 28px; border: 1px dashed var(--kant); border-radius: 14px; color: var(--dampad); }
@@ -258,10 +263,10 @@
     <a class="brand" href="#">De Evigt Unga</a>
     <ul>
       <li><a href="#radio">Radio</a></li>
-      <li><a href="#spotify">Spotify</a></li>
       <li><a href="#om">Om oss</a></li>
       <li><a href="#galleri">Galleri</a></li>
       <li><a href="#kontakt">Boka</a></li>
+      <li><a href="#spotify">Spotify</a></li>
     </ul>
   </nav>
 
@@ -280,7 +285,7 @@
     <div class="wrap">
       <h2>Evigt Ung Radio</h2>
       <div class="delare">★</div>
-      <p class="ingress">Nya låtar och demos direkt från studion. Tryck play och låt radion rulla, eller ladda ner dina favoriter.</p>
+      <p class="ingress">Demos direkt från studion. Tryck play och låt radion rulla – gillar du oss kan du ladda ner dina favoriter.</p>
       <div class="radio">
         <div class="studio" id="studio">
           <div class="omslag">
@@ -308,15 +313,6 @@
     </div>
   </section>
 
-  <section id="spotify">
-    <div class="wrap">
-      <h2>Släppt på Spotify</h2>
-      <div class="delare">★</div>
-      <p class="ingress">Det vi redan har släppt hittar du på Spotify. Följ oss där så missar du inget nytt.</p>
-      <div id="spotifyRam"></div>
-      <div class="knappar" id="kanalKnappar"></div>
-    </div>
-  </section>
 
   <section id="om">
     <div class="wrap">
@@ -356,6 +352,17 @@
     </div>
   </section>
 
+  <section id="spotify">
+    <div class="wrap">
+      <h2>Släppt på Spotify</h2>
+      <div class="delare">★</div>
+      <p class="ingress">Det vi redan har släppt spelas via Spotify – då räknas varje lyssning. Följ oss där så missar du inget nytt.</p>
+      <div class="listor slappt-listor" id="slapptLista"></div>
+      <div id="spotifyRam"></div>
+      <div class="knappar" id="kanalKnappar"></div>
+    </div>
+  </section>
+
   <footer>
     <div class="sociala" id="sociala"></div>
     © <span id="ar"></span> <span>De Evigt Unga å Vackra</span> · Musik av DJ Stigge
@@ -386,71 +393,110 @@
 
   <audio id="ljud" preload="none"></audio>
 
-  <script src="musik/innehall.js"></script>
   <script>
-    const L = window.LANKAR || {};
-    const latar = (window.LATAR || []).map(l => ({ ...l, saknas: false }));
+  // Innehållet (låtar och länkar) ligger i musik/innehall.json och redigeras i admin.html
+  fetch("musik/innehall.json", { cache: "no-store" })
+    .then(r => r.json())
+    .then(start)
+    .catch(() => start({}));
+
+  function start(DATA) {
+    const L = DATA.lankar || {};
+    const latar = (DATA.latar || []).map(l => ({ ...l, saknas: !l.fil }));
     const $ = id => document.getElementById(id);
+    const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const ljud = $("ljud");
     const PLAY = "M8 5v14l11-7z", PAUS = "M6 5h4v14H6zm8 0h4v14h-4z";
-    let nu = -1, blanda = false;
+    let nu = -1, blanda = false, oppenSpotify = -1;
+
+    // Spotify-länk -> inbäddningsadress (track/album/artist)
+    const spotifyEmbed = url => {
+      const m = String(url || "").match(/open\.spotify\.com\/(?:intl-[a-z]+\/)?(track|album|artist|playlist)\/([A-Za-z0-9]+)/);
+      return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}?theme=0` : "";
+    };
 
     // --- Spellista ---
     function ritaLista() {
-      const rad = (l, i) => `
-        <li class="spar${i === nu ? " aktiv" : ""}${l.saknas && !l.slappt ? " saknas" : ""}">
-          <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${l.titel}" ${l.saknas ? `disabled style="visibility:${l.slappt ? "hidden" : "visible"}"` : ""}>
+      const ladd = i => `<button class="ladda" type="button" data-ladda="${i}"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>Ladda ner</button>`;
+      const demoRad = (l, i) => `
+        <li class="spar${i === nu ? " aktiv" : ""}${l.saknas ? " saknas" : ""}">
+          <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
             <svg viewBox="0 0 24 24"><path d="${i === nu && !ljud.paused ? PAUS : PLAY}"/></svg>
           </button>
-          <div class="namn"><b>${l.titel}</b><small>${l.saknas && !l.slappt ? "Kommer snart" : (l.info || "")}</small></div>
+          <div class="namn"><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div>
           <div class="hoger">
-            ${l.typ ? `<span class="tagg">${l.typ}</span>` : ""}
-            ${l.slappt && (l.spotify || L.spotify) ? `<a class="spotify-lank" href="${l.spotify || L.spotify}" target="_blank" rel="noopener">Spotify</a>` : ""}
-            ${l.ladda && !l.saknas ? `<button class="ladda" type="button" data-ladda="${i}"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>Ladda ner</button>` : ""}
+            ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
+            ${l.ladda && !l.saknas ? ladd(i) : ""}
           </div>
         </li>`;
-      const grupp = (rubrik, under, filter) => {
+      // Släppta låtar spelas via Spotify så att lyssningarna räknas där
+      const slapptRad = (l, i) => {
+        const embed = spotifyEmbed(l.spotify);
+        const lank = l.spotify || L.spotify;
+        return `
+        <li class="spar slappt${i === oppenSpotify ? " aktiv" : ""}">
+          ${embed
+            ? `<button class="rund spela sp" type="button" data-spotify="${i}" aria-label="Spela ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${i === oppenSpotify ? PAUS : PLAY}"/></svg></button>`
+            : `<a class="rund spela sp" href="${esc(lank)}" target="_blank" rel="noopener" aria-label="Lyssna på ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${PLAY}"/></svg></a>`}
+          <div class="namn"><b>${esc(l.titel)}</b><small>${esc(l.info)}</small></div>
+          <div class="hoger">
+            ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
+            ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
+          </div>
+          ${i === oppenSpotify && embed ? `<iframe class="sp-spelare" src="${embed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" title="${esc(l.titel)} på Spotify"></iframe>` : ""}
+        </li>`;
+      };
+      const grupp = (rubrik, under, filter, rad) => {
         const rader = latar.map((l, i) => [l, i]).filter(([l]) => filter(l));
         return rader.length ? `<div><div class="listrubrik"><h3>${rubrik}</h3><small>${under}</small></div>
           <ol class="lista">${rader.map(([l, i]) => rad(l, i)).join("")}</ol></div>` : "";
       };
-      $("lista").innerHTML =
-        grupp("Släppta låtar", "Finns på Spotify", l => l.slappt) +
-        grupp("Demos", "Direkt från studion", l => !l.slappt);
+      $("lista").innerHTML = grupp("Demos", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt, demoRad)
+        || `<div class="tomt">Inga demos uppladdade än.</div>`;
+      $("slapptLista").innerHTML = grupp("Släppta låtar", "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
     }
-    $("lista").addEventListener("click", e => {
-      const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]");
+    const listKlick = e => {
+      const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]"), sp = e.target.closest("[data-spotify]");
       if (s) { const i = +s.dataset.spela; i === nu ? vaxla() : spela(i); }
       if (d) laddaNer(+d.dataset.ladda);
-    });
+      if (sp) {
+        const i = +sp.dataset.spotify;
+        oppenSpotify = oppenSpotify === i ? -1 : i;
+        if (oppenSpotify >= 0) ljud.pause();   // pausa radion när Spotify-spelaren öppnas
+        ritaLista();
+      }
+    };
+    $("lista").addEventListener("click", listKlick);
+    $("slapptLista").addEventListener("click", listKlick);
 
-    // Kolla vilka filer som finns på servern
-    latar.forEach((l, i) => {
+    // Kolla vilka demofiler som finns på servern
+    latar.forEach(l => {
+      if (l.slappt || !l.fil) return;
       fetch("musik/" + encodeURI(l.fil), { method: "HEAD" })
         .then(r => { if (!r.ok) throw 0; })
-        .catch(() => { if (location.protocol !== "file:") { l.saknas = true; ritaLista(); } });
+        .catch(() => { l.saknas = true; ritaLista(); });
     });
 
-    // --- Uppspelning ---
-    function tillganglig(i) { return latar[i] && !latar[i].saknas; }
+    // --- Radion (spelar demos) ---
+    function tillganglig(i) { return latar[i] && !latar[i].slappt && !latar[i].saknas; }
     function spela(i) {
       if (!tillganglig(i)) return nasta(1, i);
-      nu = i;
+      nu = i; oppenSpotify = -1;
       ljud.src = "musik/" + encodeURI(latar[i].fil);
       ljud.play().catch(() => {});
       uppdatera();
     }
     function vaxla() {
       if (nu < 0) return nasta(1);
-      ljud.paused ? ljud.play() : ljud.pause();
+      if (ljud.paused) { oppenSpotify = -1; ljud.play(); } else ljud.pause();
     }
     function nasta(steg = 1, fran = nu) {
       const n = latar.length;
-      if (!latar.some((_, i) => tillganglig(i))) { $("nuTitel").textContent = "Inga låtar uppladdade än"; return; }
+      if (!latar.some((_, i) => tillganglig(i))) { $("nuTitel").textContent = "Inga demos uppladdade än"; return; }
       let i = fran;
       for (let k = 0; k < n; k++) {
         i = blanda ? Math.floor(Math.random() * n) : (i + steg + n) % n;
-        if (tillganglig(i) && (i !== nu || n === 1)) return spela(i);
+        if (tillganglig(i) && (i !== nu || latar.filter((_, j) => tillganglig(j)).length === 1)) return spela(i);
       }
     }
     function uppdatera() {
@@ -492,7 +538,7 @@
 
     function laddaNer(i) {
       const l = latar[i];
-      if (!l || !l.ladda || l.saknas) return;
+      if (!l || !l.ladda || l.saknas || l.slappt) return;
       if (kravs.every(k => las(k.id))) return starta(l);
       vantar = l; ritaGrind(); $("grind").showModal();
     }
@@ -505,8 +551,8 @@
     function ritaGrind() {
       const klara = kravs.every(k => las(k.id));
       $("grindSteg").innerHTML = kravs.map(k =>
-        `<a class="knapp ${k.klass}${las(k.id) ? " klar" : ""}" href="${k.url}" target="_blank" rel="noopener" data-krav="${k.id}">${k.text}</a>`
-      ).join("") + `<button class="knapp" type="button" id="grindLadda" aria-disabled="${!klara}">⬇ Ladda ner ${vantar ? vantar.titel : ""}</button>`;
+        `<a class="knapp ${k.klass}${las(k.id) ? " klar" : ""}" href="${esc(k.url)}" target="_blank" rel="noopener" data-krav="${k.id}">${k.text}</a>`
+      ).join("") + `<button class="knapp" type="button" id="grindLadda" aria-disabled="${!klara}">⬇ Ladda ner ${vantar ? esc(vantar.titel) : ""}</button>`;
     }
     $("grindSteg").addEventListener("click", e => {
       const k = e.target.closest("[data-krav]");
@@ -516,20 +562,18 @@
     $("grindStang").onclick = () => $("grind").close();
 
     // --- Spotify & kanaler ---
-    if (L.spotify) {
-      const embed = L.spotify.replace("open.spotify.com/", "open.spotify.com/embed/").split("?")[0];
-      $("spotifyRam").innerHTML = `<div class="spotify-ram"><iframe src="${embed}?theme=0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="De Evigt Unga å Vackra på Spotify"></iframe></div>`;
-    } else {
-      $("spotifyRam").innerHTML = `<div class="tomt">Spotify-spelaren visas här när länken är inlagd i <code>musik/innehall.js</code>.</div>`;
-    }
+    const artistEmbed = spotifyEmbed(L.spotify);
+    $("spotifyRam").innerHTML = artistEmbed
+      ? `<div class="spotify-ram"><iframe src="${artistEmbed}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" title="De Evigt Unga å Vackra på Spotify"></iframe></div>`
+      : `<div class="tomt">Spotify-spelaren visas här när Spotify-länken är inlagd i admin.</div>`;
     const kanaler = [
       ["spotify", "Spotify", "spotify"], ["facebook", "Facebook", "fb"],
       ["instagram", "Instagram", "kontur"], ["youtube", "YouTube", "kontur"]
     ].filter(([k]) => L[k]);
-    $("kanalKnappar").innerHTML = kanaler.map(([k, n, c]) => `<a class="knapp ${c}" href="${L[k]}" target="_blank" rel="noopener">${n}</a>`).join("");
-    $("sociala").innerHTML = kanaler.map(([k, n]) => `<a href="${L[k]}" target="_blank" rel="noopener">${n}</a>`).join("");
+    $("kanalKnappar").innerHTML = kanaler.map(([k, n, c]) => `<a class="knapp ${c}" href="${esc(L[k])}" target="_blank" rel="noopener">${n}</a>`).join("");
+    $("sociala").innerHTML = kanaler.map(([k, n]) => `<a href="${esc(L[k])}" target="_blank" rel="noopener">${n}</a>`).join("");
     $("mejl").innerHTML = L.mejl
-      ? `<div class="knappar"><a class="knapp" href="mailto:${L.mejl}">Skicka ett mejl</a></div><div class="mejltext">${L.mejl}</div>`
+      ? `<div class="knappar"><a class="knapp" href="mailto:${esc(L.mejl)}">Skicka ett mejl</a></div><div class="mejltext">${esc(L.mejl)}</div>`
       : "";
 
     // --- Övrigt ---
@@ -541,6 +585,7 @@
     visare.addEventListener("click", () => visare.close());
 
     ritaLista();
+  }
   </script>
 </body>
 </html>

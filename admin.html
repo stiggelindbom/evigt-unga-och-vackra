@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Backoffice – De Evigt Unga å Vackra</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Oswald:wght@500;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --svart: #0b0b0b; --kol: #161412; --yta: #1f1b14; --kant: #3a3020;
+      --guld: #f5c518; --guld-ljus: #ffe27a; --guld-mork: #b8860b;
+      --text: #f4ecd6; --dampad: #b9ad8d;
+      --spotify: #1ed760; --ok: #4ade80; --fel: #f87171;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--svart); color: var(--text); font-family: "Inter", system-ui, sans-serif; line-height: 1.5; padding-bottom: 100px; }
+    a { color: var(--guld); }
+    button { font: inherit; cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--guld); outline-offset: 2px; }
+    [hidden] { display: none !important; }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      padding: 14px 16px; border-bottom: 1px solid var(--kant); background: var(--kol);
+    }
+    header .namn { display: flex; align-items: center; gap: 12px; }
+    header img { height: 44px; }
+    header h1 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .15em; font-size: 1rem; color: var(--guld); }
+    header nav { display: flex; gap: 14px; align-items: center; font-size: .9rem; }
+
+    main { max-width: 900px; margin: 0 auto; padding: 24px 16px; display: grid; gap: 28px; }
+    h2 { font-family: "Yellowtail", cursive; font-weight: 400; color: var(--guld); font-size: 2.2rem; line-height: 1.1; }
+    h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--guld); font-size: 1rem; }
+    .kort { background: var(--yta); border: 1px solid var(--kant); border-radius: 12px; padding: 20px; }
+    .hjalp { color: var(--dampad); font-size: .9rem; }
+    .hjalp ol { padding-left: 20px; margin-top: 6px; display: grid; gap: 4px; }
+
+    label { display: grid; gap: 4px; font-size: .8rem; color: var(--dampad); min-width: 0; }
+    input[type=text], input[type=url], input[type=email], input[type=password], select {
+      width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--kant);
+      background: #0f0e0b; color: var(--text); font: inherit; font-size: .95rem;
+    }
+    input:focus, select:focus { border-color: var(--guld); outline: none; }
+    .rutnat { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .kryss { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--text); }
+    .kryss input { width: 18px; height: 18px; accent-color: var(--guld); }
+
+    .knapp {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 10px 18px; border-radius: 999px; border: 0;
+      background: linear-gradient(135deg, var(--guld-ljus), var(--guld), var(--guld-mork));
+      color: var(--svart); font-family: "Oswald", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+      text-decoration: none; font-size: .85rem;
+    }
+    .knapp:disabled { opacity: .45; cursor: default; }
+    .knapp.liten { padding: 6px 12px; font-size: .75rem; }
+    .knapp.kontur { background: transparent; color: var(--guld); border: 1px solid var(--guld-mork); }
+    .knapp.fara { background: transparent; color: var(--fel); border: 1px solid rgba(248,113,113,.5); }
+    .knapp.fara.saker { background: var(--fel); color: #000; }
+
+    .listhuvud { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+    .latlista { display: grid; gap: 12px; }
+    .lat { background: #14120e; border: 1px solid var(--kant); border-radius: 10px; padding: 14px; display: grid; gap: 12px; }
+    .lat.slappt { border-left: 3px solid var(--spotify); }
+    .lat.demo { border-left: 3px solid var(--guld); }
+    .lat .topp { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .lat .topp b { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .04em; color: var(--guld-ljus); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .lat .verktyg { display: flex; gap: 6px; flex-shrink: 0; }
+    .ikon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--kant); background: transparent; color: var(--text); }
+    .ikon:hover { border-color: var(--guld); color: var(--guld); }
+    .ikon:disabled { opacity: .3; cursor: default; }
+    .fil { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: .9rem; }
+    .status { font-size: .78rem; padding: 2px 9px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+    .status.ok { color: var(--ok); border-color: rgba(74,222,128,.4); }
+    .status.saknas { color: var(--fel); border-color: rgba(248,113,113,.4); }
+    .status.laddar { color: var(--guld); border-color: var(--guld-mork); }
+    .tom { color: var(--dampad); font-style: italic; padding: 8px 0; }
+
+    .sparrad {
+      position: fixed; inset: auto 0 0 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 14px 16px; background: rgba(14,13,11,.97); border-top: 1px solid var(--guld-mork);
+    }
+    .sparrad .meddelande { font-size: .9rem; color: var(--dampad); min-width: 0; }
+    .sparrad .meddelande.ok { color: var(--ok); }
+    .sparrad .meddelande.fel { color: var(--fel); }
+    .sparrad .meddelande.osparat { color: var(--guld-ljus); }
+
+    .login { max-width: 520px; margin: 40px auto; display: grid; gap: 16px; }
+    .login .loggo { width: 220px; margin: 0 auto; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="namn"><img src="assets/logo.png" alt=""><h1>Backoffice</h1></div>
+    <nav>
+      <a href="./" target="_blank" rel="noopener">Visa hemsidan ↗</a>
+      <button class="knapp kontur liten" id="loggaUt" type="button" hidden>Logga ut</button>
+    </nav>
+  </header>
+
+  <!-- Inloggning -->
+  <section class="login" id="loginVy">
+    <img class="loggo" src="assets/logo.png" alt="De Evigt Unga å Vackra">
+    <div class="kort" style="display:grid;gap:14px">
+      <h3>Logga in</h3>
+      <label>GitHub-nyckel (token)
+        <input type="password" id="token" autocomplete="off" placeholder="github_pat_…">
+      </label>
+      <button class="knapp" id="loggaIn" type="button">Logga in</button>
+      <div class="hjalp" id="loginFel" style="color:var(--fel)"></div>
+      <div class="hjalp">
+        <b>Första gången?</b> Skapa en nyckel på GitHub:
+        <ol>
+          <li>Öppna <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com → Fine-grained token</a>.</li>
+          <li>Namn: <i>Backoffice</i>. Utgångsdatum: välj t.ex. 1 år.</li>
+          <li>Repository access: <i>Only select repositories</i> → <b id="repoNamn"></b>.</li>
+          <li>Permissions → Repository → <b>Contents: Read and write</b>.</li>
+          <li>Generate token, kopiera och klistra in här.</li>
+        </ol>
+        Nyckeln sparas bara i den här webbläsaren. Den som har nyckeln kan ändra sidan – dela den inte.
+      </div>
+    </div>
+  </section>
+
+  <!-- Admin -->
+  <main id="adminVy" hidden>
+    <div>
+      <h2>Låtar</h2>
+      <p class="hjalp">Släppta låtar spelas via Spotify på hemsidan så att lyssningarna räknas. Demos spelas i radion och kan laddas ner. Ordningen här är ordningen på hemsidan.</p>
+    </div>
+
+    <div class="kort">
+      <div class="listhuvud">
+        <h3>Demos</h3>
+        <button class="knapp liten" type="button" data-ny="demo">+ Ny demo</button>
+      </div>
+      <div class="latlista" id="demoLista"></div>
+    </div>
+
+    <div class="kort">
+      <div class="listhuvud">
+        <h3 style="color:var(--spotify)">Släppta låtar</h3>
+        <button class="knapp liten" type="button" data-ny="slappt">+ Ny släppt låt</button>
+      </div>
+      <div class="latlista" id="slapptLista"></div>
+    </div>
+
+    <div>
+      <h2>Länkar</h2>
+      <p class="hjalp">Tomma fält döljs på hemsidan.</p>
+    </div>
+    <div class="kort rutnat" id="lankar"></div>
+  </main>
+
+  <div class="sparrad" id="sparrad" hidden>
+    <div class="meddelande" id="meddelande">Inga ändringar</div>
+    <button class="knapp" id="spara" type="button" disabled>Spara ändringar</button>
+  </div>
+
+  <input type="file" id="filval" accept="audio/mpeg,.mp3" hidden>
+
+  <script>
+    // ===== Inställningar =====
+    const AGARE = "stiggelindbom", REPO = "evigt-unga-och-vackra", GREN = "main";
+    const DATAFIL = "musik/innehall.json";
+    const API = `https://api.github.com/repos/${AGARE}/${REPO}`;
+
+    const $ = id => document.getElementById(id);
+    const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    $("repoNamn").textContent = `${AGARE}/${REPO}`;
+
+    let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1;
+
+    // ===== GitHub =====
+    async function gh(sokvag, opt = {}) {
+      const r = await fetch(API + sokvag, {
+        ...opt,
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", ...(opt.headers || {}) }
+      });
+      if (!r.ok) {
+        const t = await r.json().catch(() => ({}));
+        const e = new Error(t.message || r.statusText); e.status = r.status; throw e;
+      }
+      return r.status === 204 ? null : r.json();
+    }
+    const tillBase64 = text => {
+      const b = new TextEncoder().encode(text); let s = "";
+      for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
+      return btoa(s);
+    };
+    const franBase64 = b64 => new TextDecoder().decode(Uint8Array.from(atob(b64.replace(/\n/g, "")), c => c.charCodeAt(0)));
+
+    async function hamta() {
+      const f = await gh(`/contents/${DATAFIL}?ref=${GREN}`);
+      sha = f.sha;
+      data = JSON.parse(franBase64(f.content));
+      data.lankar ||= {}; data.latar ||= [];
+      const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
+      filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
+    }
+
+    // ===== Inloggning =====
+    async function loggaIn(t) {
+      token = t.trim();
+      $("loginFel").textContent = "";
+      try {
+        const repo = await gh("");
+        if (!repo.permissions || !repo.permissions.push) throw new Error("Nyckeln saknar skrivrättighet (Contents: Read and write).");
+        await hamta();
+        try { localStorage.setItem("deu-admin-token", token); } catch {}
+        $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
+        rita(); status("Inloggad. Inga ändringar än.");
+      } catch (e) {
+        token = "";
+        $("loginFel").textContent = e.status === 401 ? "Nyckeln fungerar inte. Kontrollera att du kopierat hela." :
+          e.status === 404 ? `Nyckeln har inte tillgång till ${AGARE}/${REPO}.` : e.message;
+      }
+    }
+    $("loggaIn").onclick = () => loggaIn($("token").value);
+    $("token").addEventListener("keydown", e => { if (e.key === "Enter") loggaIn($("token").value); });
+    $("loggaUt").onclick = () => { try { localStorage.removeItem("deu-admin-token"); } catch {} location.reload(); };
+    try { const t = localStorage.getItem("deu-admin-token"); if (t) loggaIn(t); } catch {}
+
+    // ===== Rita =====
+    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"]];
+
+    function rita() {
+      const rad = (l, i) => {
+        const forsta = data.latar.findIndex(x => !!x.slappt === !!l.slappt) === i;
+        const sista = data.latar.map(x => !!x.slappt).lastIndexOf(!!l.slappt) === i;
+        const filStatus = uppladdning === i ? `<span class="status laddar">Laddar upp…</span>`
+          : l.fil && filer.has(l.fil) ? `<span class="status ok">✓ ${esc(l.fil)}</span>`
+          : l.fil ? `<span class="status saknas">${esc(l.fil)} saknas</span>` : `<span class="status saknas">Ingen fil</span>`;
+        return `
+        <div class="lat ${l.slappt ? "slappt" : "demo"}" data-i="${i}">
+          <div class="topp">
+            <b>${esc(l.titel) || "Ny låt"}</b>
+            <div class="verktyg">
+              <button class="ikon" type="button" data-flytta="-1" title="Flytta upp" aria-label="Flytta upp" ${forsta ? "disabled" : ""}>↑</button>
+              <button class="ikon" type="button" data-flytta="1" title="Flytta ner" aria-label="Flytta ner" ${sista ? "disabled" : ""}>↓</button>
+              <button class="knapp fara liten${raderaVantar === i ? " saker" : ""}" type="button" data-radera>${raderaVantar === i ? "Säker? Ta bort" : "Ta bort"}</button>
+            </div>
+          </div>
+          <div class="rutnat">
+            <label>Titel<input type="text" data-falt="titel" value="${esc(l.titel)}"></label>
+            <label>Kort text<input type="text" data-falt="info" value="${esc(l.info)}"></label>
+            <label>Etikett (t.ex. Singel, Demo)<input type="text" data-falt="typ" value="${esc(l.typ)}"></label>
+            <label>Lista
+              <select data-falt="slappt">
+                <option value="1" ${l.slappt ? "selected" : ""}>Släppt (Spotify)</option>
+                <option value="0" ${!l.slappt ? "selected" : ""}>Demo</option>
+              </select>
+            </label>
+          </div>
+          ${l.slappt ? `
+            <label>Spotify-länk till låten (Dela → Kopiera länk till låt)
+              <input type="url" data-falt="spotify" value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/…">
+            </label>` : `
+            <div class="fil">
+              ${filStatus}
+              <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt mp3" : "Ladda upp mp3"}</button>
+              <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>
+            </div>`}
+        </div>`;
+      };
+      const lista = slappt => {
+        const r = data.latar.map((l, i) => [l, i]).filter(([l]) => !!l.slappt === slappt).map(([l, i]) => rad(l, i)).join("");
+        return r || `<div class="tom">Inga låtar här än.</div>`;
+      };
+      $("slapptLista").innerHTML = lista(true);
+      $("demoLista").innerHTML = lista(false);
+      $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
+        `<label>${n}<input type="${typ}" data-lank="${k}" value="${esc(data.lankar[k])}"></label>`).join("");
+    }
+
+    function status(text, klass = "") { const m = $("meddelande"); m.textContent = text; m.className = "meddelande " + klass; }
+    function andrat() { osparat = true; $("spara").disabled = false; status("Du har osparade ändringar.", "osparat"); }
+    window.addEventListener("beforeunload", e => { if (osparat) { e.preventDefault(); e.returnValue = ""; } });
+
+    // ===== Redigering =====
+    $("adminVy").addEventListener("input", e => {
+      const lank = e.target.dataset.lank;
+      if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
+      const falt = e.target.dataset.falt, kort = e.target.closest("[data-i]");
+      if (!falt || !kort) return;
+      const l = data.latar[+kort.dataset.i];
+      if (falt === "ladda") l.ladda = e.target.checked;
+      else if (falt === "slappt") { l.slappt = e.target.value === "1"; rita(); }
+      else { l[falt] = e.target.value; if (falt === "titel") kort.querySelector(".topp b").textContent = e.target.value || "Ny låt"; }
+      andrat();
+    });
+
+    $("adminVy").addEventListener("click", e => {
+      const ny = e.target.closest("[data-ny]");
+      if (ny) {
+        const slappt = ny.dataset.ny === "slappt";
+        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt });
+        raderaVantar = -1; rita(); andrat();
+        const kort = document.querySelector(`[data-i="${data.latar.length - 1}"] input`); kort && kort.focus();
+        return;
+      }
+      const kort = e.target.closest("[data-i]"); if (!kort) return;
+      const i = +kort.dataset.i;
+      const flytta = e.target.closest("[data-flytta]");
+      if (flytta) {
+        const steg = +flytta.dataset.flytta, grupp = !!data.latar[i].slappt;
+        let j = i + steg;
+        while (j >= 0 && j < data.latar.length && !!data.latar[j].slappt !== grupp) j += steg;
+        if (j < 0 || j >= data.latar.length) return;
+        [data.latar[i], data.latar[j]] = [data.latar[j], data.latar[i]];
+        raderaVantar = -1; rita(); andrat(); return;
+      }
+      if (e.target.closest("[data-radera]")) {
+        if (raderaVantar === i) { data.latar.splice(i, 1); raderaVantar = -1; andrat(); }
+        else raderaVantar = i;
+        rita(); return;
+      }
+      if (e.target.closest("[data-ladda-upp]")) { valjFil(i); }
+    });
+
+    // ===== Ladda upp mp3 (sparas direkt i repot) =====
+    let filFor = -1;
+    function valjFil(i) { filFor = i; $("filval").value = ""; $("filval").click(); }
+    const filnamn = titel => (titel || "lat").toLowerCase()
+      .replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/é/g, "e")
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") + ".mp3";
+
+    $("filval").addEventListener("change", async () => {
+      const fil = $("filval").files[0], i = filFor, l = data.latar[i];
+      if (!fil || !l) return;
+      if (!/\.mp3$/i.test(fil.name)) return status("Välj en mp3-fil. Wav-filer är för stora – gör om dem till mp3 först.", "fel");
+      if (fil.size > 40 * 1024 * 1024) return status(`Filen är ${(fil.size / 1048576).toFixed(0)} MB – max 40 MB. Exportera med lägre bitrate (t.ex. 256 kbps).`, "fel");
+      if (!l.titel) return status("Skriv en titel på låten innan du laddar upp.", "fel");
+      const namn = l.fil || filnamn(l.titel);
+      uppladdning = i; rita(); status(`Laddar upp ${fil.name} (${(fil.size / 1048576).toFixed(1)} MB)…`);
+      try {
+        const b64 = await new Promise((ok, fel) => {
+          const r = new FileReader(); r.onload = () => ok(r.result.split(",")[1]); r.onerror = fel; r.readAsDataURL(fil);
+        });
+        let gammal = null;
+        if (filer.has(namn)) gammal = (await gh(`/contents/musik/${encodeURIComponent(namn)}?ref=${GREN}`)).sha;
+        await gh(`/contents/musik/${encodeURIComponent(namn)}`, {
+          method: "PUT",
+          body: JSON.stringify({ message: `Ladda upp ${l.titel} via backoffice`, content: b64, branch: GREN, ...(gammal ? { sha: gammal } : {}) })
+        });
+        filer.add(namn);
+        if (l.fil !== namn) { l.fil = namn; andrat(); }
+        uppladdning = null; rita();
+        status(osparat ? `✓ ${namn} uppladdad. Glöm inte att spara.` : `✓ ${namn} uppladdad.`, osparat ? "osparat" : "ok");
+      } catch (e) {
+        uppladdning = null; rita(); status("Uppladdningen misslyckades: " + e.message, "fel");
+      }
+    });
+
+    // ===== Spara =====
+    $("spara").onclick = async () => {
+      const tomma = data.latar.filter(l => !l.titel.trim());
+      if (tomma.length) return status("Alla låtar måste ha en titel.", "fel");
+      $("spara").disabled = true; status("Sparar…");
+      try {
+        const svar = await gh(`/contents/${DATAFIL}`, {
+          method: "PUT",
+          body: JSON.stringify({ message: "Uppdatera låtar och länkar via backoffice", content: tillBase64(JSON.stringify(data, null, 2) + "\n"), sha, branch: GREN })
+        });
+        sha = svar.content.sha; osparat = false;
+        status("✓ Sparat! Hemsidan uppdateras inom någon minut.", "ok");
+      } catch (e) {
+        $("spara").disabled = false;
+        status(e.status === 409 ? "Någon annan har sparat under tiden. Ladda om sidan och gör om ändringen." : "Kunde inte spara: " + e.message, "fel");
+      }
+    };
+  </script>
+</body>
+</html>

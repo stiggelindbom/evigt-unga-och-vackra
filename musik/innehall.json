@@ -1,0 +1,101 @@
+{
+  "lankar": {
+    "spotify": "https://open.spotify.com/artist/1zt7RJzrpN5QPvB789VIuV",
+    "facebook": "https://www.facebook.com/deevigtungavackra",
+    "instagram": "",
+    "youtube": "",
+    "mejl": ""
+  },
+  "latar": [
+    {
+      "slappt": true,
+      "titel": "Kom och värm dej",
+      "info": "Låten som startade allt.",
+      "typ": "Singel",
+      "spotify": "",
+      "fil": "",
+      "ladda": false
+    },
+    {
+      "slappt": true,
+      "titel": "Parapapa (Sommarfest)",
+      "info": "PARAPA-PAPAPAPA-RAPA-PA! Put 'em up!",
+      "typ": "Sommarhit",
+      "spotify": "",
+      "fil": "",
+      "ladda": false
+    },
+    {
+      "slappt": true,
+      "titel": "Svenne G",
+      "info": "Han skulle bara softa och spela spel …",
+      "typ": "Singel",
+      "spotify": "",
+      "fil": "",
+      "ladda": false
+    },
+    {
+      "slappt": false,
+      "titel": "Sista kalla flaskan",
+      "info": "Vem snodde sista kalla flaskan i natt?",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "sista-kalla-flaskan.mp3",
+      "ladda": true
+    },
+    {
+      "slappt": false,
+      "titel": "Sommargodis",
+      "info": "Godisdag! Reggaepop med strandkänsla.",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "sommargodis.mp3",
+      "ladda": true
+    },
+    {
+      "slappt": false,
+      "titel": "Bollen är röd",
+      "info": "Hur kan den runda gula bollen rulla?",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "bollen-ar-rod.mp3",
+      "ladda": true
+    },
+    {
+      "slappt": false,
+      "titel": "Vi älskar Siwan",
+      "info": "En hyllning.",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "vi-alskar-siwan.mp3",
+      "ladda": true
+    },
+    {
+      "slappt": false,
+      "titel": "Ingvar Ståhl",
+      "info": "En låt om en legend.",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "ingvar-stahl.mp3",
+      "ladda": true
+    },
+    {
+      "slappt": false,
+      "titel": "Vart tog den söta lilla flickan vägen",
+      "info": "Frågan alla ställer klockan tre på natten.",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "vart-tog-flickan-vagen.mp3",
+      "ladda": true
+    },
+    {
+      "slappt": false,
+      "titel": "När vi går för guld",
+      "info": "Hymnen. Tungan ute, solglasögonen på.",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "nar-vi-gar-for-guld.mp3",
+      "ladda": true
+    }
+  ]
+}

@@ -1,18 +1,17 @@
-# Så lägger du upp en ny låt på radion
+# Så lägger du upp en ny låt
 
-1. **Gör om låten till mp3.** Wav-filer är 50+ MB, vilket är för stort. 320 kbps räcker gott.
-   Med ffmpeg: `ffmpeg -i "låten.wav" -b:a 320k sista-kalla-flaskan.mp3`
-   (eller exportera som mp3 direkt från Suno eller DAW:en).
-2. **Döp filen enkelt**: små bokstäver, bindestreck i stället för mellanslag, inga å/ä/ö.
-   Exempel: `sista-kalla-flaskan.mp3`
-3. **Lägg filen i den här mappen** (`musik/`).
-   På GitHub: öppna mappen → *Add file* → *Upload files* → dra in mp3:an → *Commit changes*.
-4. **Lägg till en rad i `innehall.js`** under `window.LATAR`, eller kontrollera att filnamnet
-   stämmer om låten redan står där. Låten som står överst spelas först.
+## Enklast: via backoffice
+1. Gå till `/admin.html` och logga in.
+2. Klicka **+ Ny demo**, skriv titel och kort text.
+3. Klicka **Ladda upp mp3** och välj filen. Den laddas upp direkt.
+4. Klicka **Spara ändringar**.
 
-Klart! Låtar vars fil saknas visas som "Kommer snart" och hoppas över av radion.
+När låten släpps på Spotify: byt **Lista** till *Släppt (Spotify)*, klistra in låtens
+Spotify-länk (i Spotify: ··· → Dela → Kopiera länk till låt) och spara.
 
-## Spotify, Facebook m.m.
-Klistra in länkarna överst i `innehall.js` under `window.LANKAR`.
-När Spotify-länken finns visas Spotify-spelaren på sidan automatiskt, och
-nedladdningsknappen ber besökaren följa och gilla innan låten laddas ner.
+## Om mp3-filen
+- Använd mp3, inte wav (wav är 50+ MB). 256–320 kbps räcker gott. Max 40 MB.
+- Med ffmpeg: `ffmpeg -i "låten.wav" -b:a 320k laten.mp3`
+
+## Utan backoffice (för Fredde)
+Lägg mp3:an i `musik/` och lägg till låten i `musik/innehall.json` med samma filnamn under `"fil"`.
