@@ -197,17 +197,18 @@
     .tomt { max-width: 560px; margin: 0 auto 28px; padding: 28px; border: 1px dashed var(--kant); border-radius: 14px; color: var(--dampad); }
 
     /* Citat */
-    .citat { background: var(--svart); padding-block: 56px; padding-inline: 16px; border-block: 1px solid var(--kant); }
+    .citat { background: var(--svart); padding-block: 56px; padding-inline: 16px; border-block: 1px solid var(--kant); text-align: center; }
     .citat h2 { font-size: clamp(2.2rem, 6vw, 3.2rem); }
-    .citat .wrap { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px 48px; max-width: 900px; align-items: start; text-align: center; }
-    .citat .huvud { grid-column: 1 / -1; }
-    .citat .ja { font-family: "Oswald", sans-serif; font-style: normal; color: var(--guld); letter-spacing: .05em; }
-    .citat figure { margin: 0; }
-    .citat blockquote { font-family: "Yellowtail", cursive; color: var(--guld-ljus); font-size: clamp(1.4rem, 3vw, 1.9rem); line-height: 1.25; text-wrap: balance; }
-    .citat .huvud blockquote { font-size: clamp(2rem, 5vw, 2.8rem); color: var(--guld); text-shadow: 0 0 18px rgba(245,197,24,.3); }
-    .citat figcaption { margin-top: 10px; font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .15em; font-size: .8rem; color: var(--guld-mork); }
-    .citat figcaption i { display: block; font-family: "Inter", sans-serif; text-transform: none; letter-spacing: 0; font-size: .85rem; color: var(--dampad); margin-top: 2px; }
-    @media (max-width: 860px) { .citat .wrap { grid-template-columns: 1fr; gap: 28px; text-align: center; } }
+    .citat .huvud blockquote { font-family: "Yellowtail", cursive; font-size: clamp(2rem, 5vw, 2.8rem); color: var(--guld); text-shadow: 0 0 18px rgba(245,197,24,.3); line-height: 1.2; text-wrap: balance; }
+    .citat figure, .strocitat { margin: 0; }
+    .citat figcaption, .strocitat figcaption { margin-top: 10px; font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .15em; font-size: .8rem; color: var(--guld-mork); }
+    .strocitat { max-width: 640px; margin: 0 auto 36px; text-align: center; }
+    .strocitat blockquote { font-family: "Yellowtail", cursive; color: var(--guld-ljus); font-size: clamp(1.5rem, 3.4vw, 2rem); line-height: 1.25; text-wrap: balance; }
+    .strocitat figcaption i { display: block; font-family: "Inter", sans-serif; text-transform: none; letter-spacing: 0; font-size: .85rem; color: var(--dampad); margin-top: 2px; }
+    .strocitat.vanster { text-align: left; margin: 28px 0 0; padding-left: 18px; border-left: 2px solid var(--guld-mork); }
+    .strocitat.vanster blockquote { font-size: clamp(1.3rem, 2.6vw, 1.6rem); }
+    .citatband { padding-block: 48px 12px; padding-inline: 16px; background: var(--kol); border-top: 1px solid var(--kant); }
+    .ja { font-family: "Oswald", sans-serif; font-style: normal; color: var(--guld); letter-spacing: .05em; }
 
     /* Om oss */
     #om { background: linear-gradient(180deg, var(--kol), var(--svart)); }
@@ -295,30 +296,12 @@
   </header>
 
   <section class="citat" aria-labelledby="mottoRubrik">
-    <h2 id="mottoRubrik">Våra motton</h2>
+    <h2 id="mottoRubrik">Vårt motto</h2>
     <div class="delare">★</div>
-    <div class="wrap">
-      <figure class="huvud">
-        <blockquote>Always look on the bright side of life.</blockquote>
-        <figcaption>Monty Python</figcaption>
-      </figure>
-      <figure>
-        <blockquote>“I am an optimist. It does not seem to be much use being anything else.”</blockquote>
-        <figcaption>Winston Churchill<i>Jag är optimist. Det verkar inte vara mycket idé att vara något annat.</i></figcaption>
-      </figure>
-      <figure>
-        <blockquote>“I have taken more out of alcohol than alcohol has taken out of me.”</blockquote>
-        <figcaption>Winston Churchill<i>Jag har fått ut mer av alkoholen än alkoholen har fått ut av mig.</i></figcaption>
-      </figure>
-      <figure>
-        <blockquote>“It costs a lot of money to look this cheap.”</blockquote>
-        <figcaption>Dolly Parton<i>Det kostar mycket pengar att se så här billig ut.</i></figcaption>
-      </figure>
-      <figure>
-        <blockquote>“Does humor belong in music?”</blockquote>
-        <figcaption>Frank Zappa<i>Hör humor hemma i musiken? Vårt svar: <b class="ja">Ja.</b></i></figcaption>
-      </figure>
-    </div>
+    <figure class="huvud">
+      <blockquote>Always look on the bright side of life.</blockquote>
+      <figcaption>Monty Python</figcaption>
+    </figure>
   </section>
 
   <section id="radio">
@@ -354,6 +337,13 @@
   </section>
 
 
+  <div class="citatband">
+    <figure class="strocitat">
+        <blockquote>“I have taken more out of alcohol than alcohol has taken out of me.”</blockquote>
+        <figcaption>Winston Churchill<i>Jag har fått ut mer av alkoholen än alkoholen har fått ut av mig.</i></figcaption>
+      </figure>
+  </div>
+
   <section id="om">
     <div class="wrap">
       <h2>Om oss</h2>
@@ -364,6 +354,10 @@
           <p>Vi är <strong>De Evigt Unga å Vackra</strong> – ett gäng glada grabbar som vägrar bli vuxna. Åldern är bara en siffra, och den siffran har vi glömt.</p>
           <p>Vi gör musik för fester, sommarkvällar och depåpartyn: hårda drops, reggaegung och refränger man skriker med i redan andra gången. Det mesta med glimten i ögat – livet är för kort för att ta sig själv på allvar.</p>
           <p>Producerat av <strong>DJ Stigge</strong>. Tungan ute, solglasögonen på – <strong>när vi går för guld</strong>.</p>
+          <figure class="strocitat vanster">
+        <blockquote>“I am an optimist. It does not seem to be much use being anything else.”</blockquote>
+        <figcaption>Winston Churchill<i>Jag är optimist. Det verkar inte vara mycket idé att vara något annat.</i></figcaption>
+      </figure>
         </div>
       </div>
     </div>
@@ -373,6 +367,10 @@
     <div class="wrap">
       <h2>Galleri</h2>
       <div class="delare">★</div>
+      <figure class="strocitat">
+        <blockquote>“It costs a lot of money to look this cheap.”</blockquote>
+        <figcaption>Dolly Parton<i>Det kostar mycket pengar att se så här billig ut.</i></figcaption>
+      </figure>
       <div class="galleri">
         <div class="bred"><img src="assets/banner.jpg" alt="Mosaik med logga"></div>
         <div><img src="assets/omslag.jpg" alt="Omslag"></div>
@@ -391,6 +389,13 @@
       <div id="mejl"></div>
     </div>
   </section>
+
+  <div class="citatband">
+    <figure class="strocitat">
+      <blockquote>“Does humor belong in music?”</blockquote>
+      <figcaption>Frank Zappa<i>Hör humor hemma i musiken? Vårt svar: <b class="ja">Ja.</b></i></figcaption>
+    </figure>
+  </div>
 
   <section id="spotify">
     <div class="wrap">
