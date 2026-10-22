@@ -6,7 +6,7 @@
 // Lämna tomt ("") om vi inte har kanalen – då döljs knappen.
 window.LANKAR = {
   spotify:   "",   // t.ex. "https://open.spotify.com/artist/XXXXXXXX"
-  facebook:  "",   // t.ex. "https://www.facebook.com/devigtungaavackra"
+  facebook:  "https://www.facebook.com/deevigtungavackra",
   instagram: "",
   youtube:   "",
   mejl:      ""    // t.ex. "boka@exempel.se"
