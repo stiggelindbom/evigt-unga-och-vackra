@@ -208,6 +208,19 @@
     .strocitat.vanster { text-align: left; margin: 28px 0 0; padding-left: 18px; border-left: 2px solid var(--guld-mork); }
     .strocitat.vanster blockquote { font-size: clamp(1.3rem, 2.6vw, 1.6rem); }
     .citatband { padding-block: 48px 12px; padding-inline: 16px; background: var(--kol); border-top: 1px solid var(--kant); }
+    .roterare { min-height: 150px; display: grid; align-items: start; }
+    .roterare .strocitat { transition: opacity .6s ease; }
+    .roterare .strocitat.ut { opacity: 0; }
+    .prickar { display: flex; justify-content: center; gap: 8px; margin-top: -20px; margin-bottom: 24px; }
+    .prickar button { width: 9px; height: 9px; border-radius: 50%; background: var(--kant); padding: 0; }
+    .prickar button.pa { background: var(--guld); }
+    .rulle { overflow: hidden; background: linear-gradient(90deg, var(--guld-mork), var(--guld), var(--guld-mork)); color: var(--svart); padding-block: 10px; }
+    .rulle-inner { display: inline-flex; white-space: nowrap; animation: rulla 70s linear infinite; }
+    .rulle:hover .rulle-inner { animation-play-state: paused; }
+    .rulle span { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; font-size: .95rem; padding-inline: 18px; }
+    .rulle span b { font-weight: 700; }
+    .rulle span small { font-size: .8em; opacity: .75; letter-spacing: .15em; }
+    @keyframes rulla { to { transform: translateX(-50%); } }
     .ja { font-family: "Oswald", sans-serif; font-style: normal; color: var(--guld); letter-spacing: .05em; }
 
     /* Om oss */
@@ -268,7 +281,7 @@
       .spar .hoger { grid-column: 2; }
     }
     @media (max-width: 480px) { nav .brand { display: none; } nav { justify-content: center; } }
-    @media (prefers-reduced-motion: reduce) { .hero, .hero .logo, .staplar span, .live i { animation: none !important; } }
+    @media (prefers-reduced-motion: reduce) { .hero, .hero .logo, .staplar span, .live i, .rulle-inner { animation: none !important; } .roterare .strocitat { transition: none; } }
   </style>
 </head>
 <body>
@@ -294,6 +307,8 @@
       </div>
     </div>
   </header>
+
+  <div class="rulle" aria-hidden="true"><div class="rulle-inner" id="rulle"></div></div>
 
   <section class="citat" aria-labelledby="mottoRubrik">
     <h2 id="mottoRubrik">Vårt motto</h2>
@@ -338,10 +353,12 @@
 
 
   <div class="citatband">
+    <div class="roterare" data-start="1" aria-live="polite">
     <figure class="strocitat">
         <blockquote>“I have taken more out of alcohol than alcohol has taken out of me.”</blockquote>
         <figcaption>Winston Churchill<i>Jag har fått ut mer av alkoholen än alkoholen har fått ut av mig.</i></figcaption>
       </figure>
+    </div>
   </div>
 
   <section id="om">
@@ -391,10 +408,12 @@
   </section>
 
   <div class="citatband">
+    <div class="roterare" data-start="4" aria-live="polite">
     <figure class="strocitat">
       <blockquote>“Does humor belong in music?”</blockquote>
       <figcaption>Frank Zappa<i>Hör humor hemma i musiken? Vårt svar: <b class="ja">Ja.</b></i></figcaption>
     </figure>
+    </div>
   </div>
 
   <section id="spotify">
@@ -439,6 +458,43 @@
   <audio id="ljud" preload="none"></audio>
 
   <script>
+  // --- Citat: rullande remsa + citat som byts ut ---
+  const CITAT = [
+    { q: "Always look on the bright side of life.", vem: "Monty Python", sv: "" },
+    { q: "I am an optimist. It does not seem to be much use being anything else.", vem: "Winston Churchill", sv: "Jag är optimist. Det verkar inte vara mycket idé att vara något annat." },
+    { q: "I have taken more out of alcohol than alcohol has taken out of me.", vem: "Winston Churchill", sv: "Jag har fått ut mer av alkoholen än alkoholen har fått ut av mig." },
+    { q: "It costs a lot of money to look this cheap.", vem: "Dolly Parton", sv: "Det kostar mycket pengar att se så här billig ut." },
+    { q: "Does humor belong in music?", vem: "Frank Zappa", sv: "Hör humor hemma i musiken? Vårt svar: <b class=\"ja\">Ja.</b>" }
+  ];
+  (() => {
+    const rad = CITAT.map(c => `<span>★ <b>${c.q}</b> <small>– ${c.vem}</small></span>`).join("");
+    document.getElementById("rulle").innerHTML = rad + rad;   // dubbelt för sömlös loop
+    const lugn = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.querySelectorAll(".roterare").forEach(r => {
+      let i = +r.dataset.start || 0;
+      const fig = r.querySelector(".strocitat");
+      const prickar = document.createElement("div"); prickar.className = "prickar";
+      prickar.innerHTML = CITAT.map((c, k) => `<button type="button" aria-label="Citat ${k + 1}"></button>`).join("");
+      r.after(prickar);
+      const visa = n => {
+        i = (n + CITAT.length) % CITAT.length;
+        fig.classList.add("ut");
+        setTimeout(() => {
+          const c = CITAT[i];
+          fig.innerHTML = `<blockquote>“${c.q}”</blockquote><figcaption>${c.vem}${c.sv ? `<i>${c.sv}</i>` : ""}</figcaption>`;
+          fig.classList.remove("ut");
+        }, lugn ? 0 : 600);
+        prickar.querySelectorAll("button").forEach((b, k) => b.classList.toggle("pa", k === i));
+      };
+      let t = setInterval(() => visa(i + 1), 7000);
+      prickar.addEventListener("click", e => {
+        const k = [...prickar.children].indexOf(e.target); if (k < 0) return;
+        clearInterval(t); visa(k); t = setInterval(() => visa(i + 1), 7000);
+      });
+      visa(i);
+    });
+  })();
+
   // Innehållet (låtar och länkar) ligger i musik/innehall.json och redigeras i admin.html
   fetch("musik/innehall.json", { cache: "no-store" })
     .then(r => r.json())
