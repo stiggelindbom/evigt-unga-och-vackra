@@ -316,7 +316,7 @@
       .spar { grid-template-columns: 44px 1fr; }
       .spar .hoger { grid-column: 2; }
     }
-    @media (max-width: 480px) { nav .brand { display: none; } nav { justify-content: center; } }
+    @media (max-width: 480px) { nav .brand { display: none; } nav { justify-content: center; } .hero p.slogan { letter-spacing: .1em; } }
     @media (prefers-reduced-motion: reduce) { .hero, .hero .logo, .live i, .rulle-inner { animation: none !important; } .roterare .strocitat { transition: none; } }
   </style>
 </head>
@@ -339,7 +339,7 @@
       <img class="logo" src="assets/logo.png" alt="De Evigt Unga å Vackra">
       <p class="slogan">★ Festlåtar · Sommarhits · Rent guld ★</p>
       <div class="knappar">
-        <button class="knapp" id="heroSpela" type="button">▶ Starta radion</button>
+        <button class="knapp" id="heroSpela" type="button"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" style="fill:currentColor"><path d="M8 5v14l11-7z"/></svg>Starta radion</button>
         <a class="knapp kontur" href="#spotify">Hitta oss på Spotify</a>
       </div>
     </div>
@@ -384,7 +384,7 @@
             <button class="rund" id="ladda" type="button" aria-label="Ladda ner låten" title="Ladda ner"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg></button>
           </div>
           <div class="sp-ram" id="spRam" hidden><div id="spMal"></div></div>
-          <p class="sp-tips" id="spTips" hidden>Tryck på <b>▶</b> i Spotify-rutan för att starta låten</p>
+          <p class="sp-tips" id="spTips" hidden>Tryck på <b>▶︎</b> i Spotify-rutan för att starta låten</p>
         </div>
         <div class="listor">
           <div class="listor" id="lista"></div>
@@ -747,7 +747,11 @@
       }
     }
     function vaxla() {
-      if (nu < 0) return nasta(1);
+      if (nu < 0) {
+        // börja med första demon: den spelas från vår server och startar direkt även på iPhone
+        const demo = latar.findIndex((l, i) => !l.slappt && tillganglig(i));
+        return demo >= 0 ? spela(demo) : nasta(1);
+      }
       if (arSpotify()) {
         if (!spCtrl) return spela(nu);
         spCtrl.togglePlay();
@@ -778,7 +782,7 @@
       $("studio").classList.toggle("spelar", pa);
       $("studio").classList.toggle("via-spotify", viaSpotify);
       $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas);
-      document.title = pa ? `▶ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
+      document.title = pa ? `▶︎ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       ritaLista();
     }
     // --- Spektrumanalysator: lyssnar på demos via Web Audio. Spotify spelar i en skyddad ruta
