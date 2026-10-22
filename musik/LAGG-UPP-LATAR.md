@@ -32,3 +32,9 @@ Omslaget läggs också in i mp3-filen (ID3-taggar: titel, artist och omslag), s�
 som laddar ner låten ser bilden i telefonen. Det spelar ingen roll om du laddar upp
 omslaget före eller efter låtfilen.
 För Spotify/SoundCloud krävs 3000×3000 – ladda upp originalbilden där.
+
+## Upphovspersoner
+Öppna **Upphovspersoner** på låten i backoffice och fyll i kompositör, textförfattare,
+producent, mixning, mastering, år, genre och ISRC (flera namn: skilj med komma).
+Tryck **Spara** – då läggs uppgifterna in i låtfilen (ID3) och visas på hemsidan
+under "Upphovspersoner", på samma sätt som på Spotify.

@@ -65,6 +65,9 @@
     .omslag-tumme { width: 72px; height: 72px; border-radius: 8px; object-fit: cover; box-shadow: 0 0 0 1px var(--kant); flex-shrink: 0; }
     .omslag-info { display: grid; gap: 6px; font-size: .85rem; color: var(--dampad); }
     .omslag-knappar { display: flex; gap: 8px; flex-wrap: wrap; }
+    details.kredit { border: 1px solid var(--kant); border-radius: 8px; padding: 10px 12px; }
+    details.kredit summary { cursor: pointer; font-size: .9rem; color: var(--guld); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    details.kredit[open] { display: grid; gap: 10px; }
     .slapp-panel { border: 1px solid rgba(30,215,96,.5); background: #0f1a13; border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
     .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
     .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
@@ -213,7 +216,7 @@
 
     // ===== ID3-taggar: titel, artist och omslag i mp3-filen =====
     const ARTIST = "De Evigt Unga å Vackra";
-    function id3(mp3, { titel, artist, album, bild }) {
+    function id3(mp3, { titel, artist, album, bild, kompositor, textforfattare, folk, ar, genre, isrc, copyright, kommentar }) {
       // ta bort ev. befintlig ID3v2-tagg
       if (mp3[0] === 0x49 && mp3[1] === 0x44 && mp3[2] === 0x33) {
         const st = ((mp3[6] & 127) << 21) | ((mp3[7] & 127) << 14) | ((mp3[8] & 127) << 7) | (mp3[9] & 127);
@@ -234,6 +237,20 @@
       if (titel) ramar.push(ram("TIT2", text(titel)));
       if (artist) ramar.push(ram("TPE1", text(artist)), ram("TPE2", text(artist)));
       if (album) ramar.push(ram("TALB", text(album)));
+      if (kompositor) ramar.push(ram("TCOM", text(kompositor)));
+      if (textforfattare) ramar.push(ram("TEXT", text(textforfattare)));
+      if (ar) ramar.push(ram("TYER", text(String(ar))));
+      if (genre) ramar.push(ram("TCON", text(genre)));
+      if (isrc) ramar.push(ram("TSRC", text(isrc)));
+      if (copyright) ramar.push(ram("TCOP", text(copyright)));
+      if (folk && folk.length) {   // IPLS: medverkande (roll, namn, roll, namn …)
+        const delar = folk.flatMap(([roll, namn]) => [roll, namn]).map(t => [...text(t).subarray(1)]);   // varje sträng: BOM + text + 00 00
+        ramar.push(ram("IPLS", new Uint8Array([1, ...delar.flat()])));
+      }
+      if (kommentar) {   // COMM: språk swe, tom beskrivning, text
+        const t = text(kommentar).subarray(1);
+        ramar.push(ram("COMM", new Uint8Array([1, 0x73, 0x77, 0x65, 0xff, 0xfe, 0, 0, ...t])));
+      }
       if (bild) {
         const mime = [..."image/jpeg"].map(c => c.charCodeAt(0));
         const d = new Uint8Array(1 + mime.length + 1 + 1 + 1 + bild.length);
@@ -251,7 +268,27 @@
       if (forhands[l.omslag]) return new Uint8Array(await (await fetch(forhands[l.omslag])).arrayBuffer());
       try { return await ghRa("musik/" + encodeURIComponent(l.omslag)); } catch { return null; }
     }
-    const taggar = async l => ({ titel: l.titel, artist: ARTIST, album: l.slappt ? "" : "Demos", bild: await omslagBytes(l) });
+    // Upphovspersoner, som på Spotify. Namn skrivs kommaseparerat i admin.
+    const KREDIT = [
+      ["kompositor", "Kompositör", "Komposition och låttexter"],
+      ["textforfattare", "Textförfattare", "Komposition och låttexter"],
+      ["producent", "Producent", "Produktion och teknik"],
+      ["mixning", "Mixning", "Produktion och teknik"],
+      ["mastering", "Mastering", "Produktion och teknik"]
+    ];
+    const namnLista = t => String(t || "").split(",").map(x => x.trim()).filter(Boolean);
+    const taggar = async l => {
+      const k = l.kredit || {};
+      const folk = ["producent", "mixning", "mastering"].flatMap(r => namnLista(k[r]).map(n => [KREDIT.find(x => x[0] === r)[1], n]));
+      const rader = KREDIT.map(([r, namn]) => namnLista(k[r]).length ? `${namn}: ${namnLista(k[r]).join(", ")}` : "").filter(Boolean);
+      return {
+        titel: l.titel, artist: ARTIST, album: l.slappt ? "" : "Demos", bild: await omslagBytes(l),
+        kompositor: namnLista(k.kompositor).join("/"), textforfattare: namnLista(k.textforfattare).join("/"),
+        folk, ar: k.ar, genre: k.genre, isrc: k.isrc,
+        copyright: k.ar ? `℗ ${k.ar} ${ARTIST}` : "",
+        kommentar: rader.join(" · ")
+      };
+    };
 
     const tillBase64 = text => {
       const b = new TextEncoder().encode(text); let s = "";
@@ -344,6 +381,16 @@
               </select>
             </label>
           </div>
+          <details class="kredit"${oppnaKredit.has(l) ? " open" : ""}>
+            <summary>Upphovspersoner${harKredit(l) ? ` – ${esc(kreditSammanfattning(l))}` : ""}</summary>
+            <p class="hjalp">Flera namn skiljs med komma. Läggs in i låtfilen (ID3) och visas under Upphovspersoner på hemsidan.</p>
+            <div class="rutnat">
+              ${KREDIT.map(([r, namn]) => `<label>${namn}<input type="text" data-kredit="${r}" value="${esc((l.kredit || {})[r])}" placeholder="${r === "producent" ? "t.ex. DJ Stigge" : ""}"></label>`).join("")}
+              <label>År<input type="text" inputmode="numeric" data-kredit="ar" value="${esc((l.kredit || {}).ar)}" placeholder="${new Date().getFullYear()}"></label>
+              <label>Genre<input type="text" data-kredit="genre" value="${esc((l.kredit || {}).genre)}" placeholder="t.ex. Dance, Reggae"></label>
+              <label>ISRC-kod (från distributören)<input type="text" data-kredit="isrc" value="${esc((l.kredit || {}).isrc)}" placeholder="t.ex. SEABC2600001"></label>
+            </div>
+          </details>
           ${l.slappt ? `
             <label>Spotify-länk till låten (Dela → Kopiera länk till låt)
               <input type="url" data-falt="spotify" value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/…">
@@ -389,16 +436,26 @@
     function andrat() { osparat = true; $("spara").disabled = false; status("Du har osparade ändringar.", "osparat"); }
     window.addEventListener("beforeunload", e => { if (osparat) { e.preventDefault(); e.returnValue = ""; } });
 
+    const harKredit = l => l.kredit && KREDIT.some(([r]) => namnLista(l.kredit[r]).length);
+    const kreditSammanfattning = l => [...new Set(KREDIT.flatMap(([r]) => namnLista((l.kredit || {})[r])))].slice(0, 3).join(", ");
+    const oppnaKredit = new WeakSet(), taggAndrad = new WeakSet();
+
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
       const lank = e.target.dataset.lank;
       if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
+      const kreditFalt = e.target.dataset.kredit;
+      if (kreditFalt) {
+        const l = data.latar[+e.target.closest("[data-i]").dataset.i];
+        l.kredit ||= {}; l.kredit[kreditFalt] = e.target.value;
+        oppnaKredit.add(l); taggAndrad.add(l); return andrat();
+      }
       const falt = e.target.dataset.falt, kort = e.target.closest("[data-i]");
       if (!falt || !kort) return;
       const l = data.latar[+kort.dataset.i];
       if (falt === "ladda") l.ladda = e.target.checked;
       else if (falt === "slappt") { l.slappt = e.target.value === "1"; if (l.slappt && !l.slapptDatum) l.slapptDatum = new Date().toISOString(); rita(); }
-      else { l[falt] = e.target.value; if (falt === "titel") kort.querySelector(".topp b").textContent = e.target.value || "Ny låt"; }
+      else { l[falt] = e.target.value; if (falt === "titel") { kort.querySelector(".topp b").textContent = e.target.value || "Ny låt"; taggAndrad.add(l); } }
       andrat();
     });
 
@@ -622,6 +679,16 @@ ${poster.slice(0, 20).map(p => `<item>
           body: JSON.stringify({ message: "Uppdatera låtar och länkar via backoffice", content: tillBase64(JSON.stringify(data, null, 2) + "\n"), sha, branch: GREN })
         });
         sha = svar.content.sha; osparat = false;
+        for (const l of data.latar) {
+          if (!taggAndrad.has(l) || !l.fil || !filer.has(l.fil)) continue;
+          status(`Uppdaterar taggarna i ${l.fil}…`);
+          try {
+            const ny = id3(await ghRa("musik/" + encodeURIComponent(l.fil)), await taggar(l));
+            const fsha = (await gh(`/contents/musik/${encodeURIComponent(l.fil)}?ref=${GREN}`)).sha;
+            await gh(`/contents/musik/${encodeURIComponent(l.fil)}`, { method: "PUT", body: JSON.stringify({ message: `Uppdatera taggar i ${l.fil}`, content: bytesTillBase64(ny), branch: GREN, sha: fsha }) });
+            taggAndrad.delete(l);
+          } catch (e) { console.warn("Taggar kunde inte uppdateras", l.fil, e); }
+        }
         try { await sparaFlode(); } catch (e) { console.warn("Flödet kunde inte sparas", e); }
         status("✓ Sparat! Hemsidan uppdateras inom någon minut.", "ok");
       } catch (e) {

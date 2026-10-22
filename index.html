@@ -179,6 +179,26 @@
     .ladda:hover { background: var(--guld); color: var(--svart); }
     .ladda svg { width: 14px; height: 14px; fill: currentColor; }
 
+    .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
+    .kredit-lank:hover { color: var(--guld); }
+    .info { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--kant); color: var(--dampad); font-family: Georgia, serif; font-style: italic; font-weight: 700; font-size: .85rem; flex-shrink: 0; }
+    .info:hover { border-color: var(--guld); color: var(--guld); }
+    .kryss-stang { position: absolute; top: 14px; right: 16px; color: var(--dampad); font-size: 1.1rem; }
+    .kryss-stang:hover { color: var(--text); }
+    .kredit-rad.med-knapp { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .kredit-rad.med-knapp > div { display: grid; }
+    .folj { padding: 5px 16px; border-radius: 999px; border: 1px solid var(--dampad); color: var(--text); text-decoration: none; font-size: .85rem; font-weight: 600; }
+    .folj:hover { border-color: var(--text); transform: scale(1.04); }
+    .kredit-ruta { position: relative; max-height: 85vh; overflow-y: auto; width: min(440px, 92vw); padding: 24px; border-radius: 16px; background: linear-gradient(160deg, #241f16, #0e0d0b); border: 1px solid var(--guld-mork); display: grid; gap: 4px; }
+    .kredit-ruta h3 { font-family: "Yellowtail", cursive; font-weight: 400; color: var(--guld); font-size: 2rem; }
+    .kredit-ruta .kredit-titel { color: var(--dampad); font-size: .9rem; margin-bottom: 6px; padding-bottom: 12px; border-bottom: 1px solid var(--kant); }
+    .kredit-ruta h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; font-size: .78rem; color: var(--guld-mork); margin-top: 14px; font-weight: 500; }
+    .kredit-rad { padding: 6px 0; border-bottom: 1px solid #2a2418; display: grid; }
+    .kredit-rad b { font-weight: 600; }
+    .kredit-rad small { color: var(--dampad); }
+    .kredit-fot { margin-top: 12px; font-size: .8rem; color: var(--dampad); }
+    .kredit-ruta .stang { margin-top: 14px; color: var(--dampad); text-decoration: underline; justify-self: center; }
+
     /* Fast spelare längst ner */
     .minispelare {
       position: fixed; inset: auto 0 0 0; z-index: 30;
@@ -346,6 +366,7 @@
           </div>
           <div class="etikett">NU SPELAS</div>
           <h3 id="nuTitel">Tryck play</h3>
+          <button class="kredit-lank" id="nuKredit" type="button" hidden>Upphovspersoner</button>
           <div class="staplar" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
           <div class="tidslinje">
             <span id="tidNu">0:00</span>
@@ -484,6 +505,15 @@
 
   <dialog id="visare"><img alt=""></dialog>
 
+  <dialog id="kreditRuta">
+    <div class="kredit-ruta">
+      <button class="kryss-stang" id="kreditKryss" type="button" aria-label="Stäng">✕</button>
+      <h3>Upphovspersoner</h3>
+      <div id="kreditInnehall"></div>
+      <button class="stang" id="kreditStang" type="button">Stäng</button>
+    </div>
+  </dialog>
+
   <audio id="ljud" preload="none"></audio>
 
   <script>
@@ -548,6 +578,29 @@
       return m ? `https://open.spotify.com/embed/${m[1]}/${m[2]}?theme=0` : "";
     };
 
+    // --- Upphovspersoner (som på Spotify) ---
+    const ROLLER = [["kompositor", "Kompositör", "Komposition och låttexter"], ["textforfattare", "Textförfattare", "Komposition och låttexter"],
+                    ["producent", "Producent", "Produktion och teknik"], ["mixning", "Mixning", "Produktion och teknik"], ["mastering", "Mastering", "Produktion och teknik"]];
+    const namnLista = t => String(t || "").split(",").map(x => x.trim()).filter(Boolean);
+    const harKredit = l => l && l.kredit && ROLLER.some(([r]) => namnLista(l.kredit[r]).length);
+    function visaKredit(l) {
+      const grupper = {};
+      for (const [r, roll, grupp] of ROLLER) for (const n of namnLista(l.kredit[r])) {
+        grupper[grupp] ||= new Map();
+        grupper[grupp].set(n, [...(grupper[grupp].get(n) || []), roll]);
+      }
+      const rad = (namn, roll) => `<div class="kredit-rad"><b>${esc(namn)}</b><small>${esc(roll)}</small></div>`;
+      const folj = L.spotify ? `<a class="folj" href="${esc(L.spotify)}" target="_blank" rel="noopener">Följ</a>` : "";
+      $("kreditInnehall").innerHTML = `<p class="kredit-titel">${esc(l.titel)}</p>` +
+        `<h4>Artist</h4><div class="kredit-rad med-knapp"><div><b>De Evigt Unga å Vackra</b><small>Huvudartist</small></div>${folj}</div>` +
+        Object.entries(grupper).map(([g, folk]) => `<h4>${g}</h4>` + [...folk].map(([n, roller]) => rad(n, roller.join(", "))).join("")).join("") +
+        (l.kredit.ar || l.kredit.genre ? `<p class="kredit-fot">${[l.kredit.genre, l.kredit.ar ? "℗ " + l.kredit.ar + " De Evigt Unga å Vackra" : ""].filter(Boolean).map(esc).join(" · ")}</p>` : "");
+      $("kreditRuta").showModal();
+    }
+    $("kreditStang").onclick = $("kreditKryss").onclick = () => $("kreditRuta").close();
+    $("kreditRuta").addEventListener("click", e => { if (e.target === $("kreditRuta")) $("kreditRuta").close(); });
+    $("nuKredit").onclick = () => latar[nu] && visaKredit(latar[nu]);
+
     // --- Spellista ---
     function ritaLista() {
       const ladd = i => `<button class="ladda" type="button" data-ladda="${i}"><svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>Ladda ner</button>`;
@@ -558,6 +611,7 @@
           </button>
           <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : esc(l.info)}</small></div></div>
           <div class="hoger">
+            ${harKredit(l) ? `<button class="info" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${l.ladda && !l.saknas ? ladd(i) : ""}
           </div>
@@ -573,6 +627,7 @@
             : `<a class="rund spela sp" href="${esc(lank)}" target="_blank" rel="noopener" aria-label="Lyssna på ${esc(l.titel)} på Spotify"><svg viewBox="0 0 24 24"><path d="${PLAY}"/></svg></a>`}
           <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${esc(l.info)}</small></div></div>
           <div class="hoger">
+            ${harKredit(l) ? `<button class="info" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
             ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
           </div>
@@ -589,6 +644,8 @@
       $("slapptLista").innerHTML = grupp("Släppta låtar", "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
     }
     const listKlick = e => {
+      const kr = e.target.closest("[data-kredit]");
+      if (kr) return visaKredit(latar[+kr.dataset.kredit]);
       const s = e.target.closest("[data-spela]"), d = e.target.closest("[data-ladda]"), sp = e.target.closest("[data-spotify]");
       if (s) { const i = +s.dataset.spela; i === nu ? vaxla() : spela(i); }
       if (d) laddaNer(+d.dataset.ladda);
@@ -635,6 +692,7 @@
     function uppdatera() {
       const l = latar[nu], pa = nu >= 0 && !ljud.paused;
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
+      $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
       $("miniTitel").textContent = l ? l.titel : "Tryck play för att starta";
       $("spelaIkon").setAttribute("d", pa ? PAUS : PLAY);
