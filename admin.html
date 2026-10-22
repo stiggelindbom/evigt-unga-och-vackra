@@ -71,6 +71,8 @@
     .snabb-spotify { color: var(--spotify); }
     .snabb-spotify input { border-color: rgba(30,215,96,.35); }
     .snabb-spotify input:focus { border-color: var(--spotify); }
+    .van-logga { width: 120px; height: 60px; object-fit: contain; border-radius: 8px; background: #2a2418; padding: 6px; flex-shrink: 0; }
+    .tom-logga { display: grid; place-items: center; font-size: .75rem; color: var(--dampad); }
     .slapp-panel { border: 1px solid rgba(30,215,96,.5); background: #0f1a13; border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
     .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
     .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
@@ -172,6 +174,18 @@
       <p class="hjalp">Tomma fält döljs på hemsidan.</p>
     </div>
     <div class="kort rutnat" id="lankar"></div>
+
+    <div>
+      <h2>Vänner & projekt</h2>
+      <p class="hjalp">Visas som en rad med loggor under logon på startsidan. Ladda upp en logga (gärna png med genomskinlig bakgrund).</p>
+    </div>
+    <div class="kort">
+      <div class="listhuvud">
+        <h3>Vänner & projekt</h3>
+        <button class="knapp liten" type="button" id="nyVan">+ Nytt projekt</button>
+      </div>
+      <div class="latlista" id="vannerLista"></div>
+    </div>
   </main>
 
   <div class="sparrad" id="sparrad" hidden>
@@ -181,6 +195,7 @@
 
   <input type="file" id="filval" accept="audio/mpeg,.mp3,audio/wav,audio/x-wav,.wav" hidden>
   <input type="file" id="bildval" accept="image/jpeg,image/png,image/webp" hidden>
+  <input type="file" id="loggval" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
 
   <script>
     // ===== Inställningar =====
@@ -308,7 +323,7 @@
       const f = await gh(`/contents/${DATAFIL}?ref=${GREN}`);
       sha = f.sha;
       data = JSON.parse(franBase64(f.content));
-      data.lankar ||= {}; data.latar ||= [];
+      data.lankar ||= {}; data.latar ||= []; data.vanner ||= [];
       for (const l of data.latar) if (!l.kredit) { l.kredit = FORVAL(); fyllda.push(l); }
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
@@ -457,6 +472,7 @@
       };
       $("slapptLista").innerHTML = lista(true);
       $("demoLista").innerHTML = lista(false);
+      ritaVanner();
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
         `<label>${n}<input type="${typ}" data-lank="${k}" value="${esc(data.lankar[k])}"></label>`).join("") +
         `<label style="grid-column:1/-1">Instagram-flöde – inbäddningskod (valfritt, från t.ex. Behold)
@@ -509,6 +525,68 @@
       taggAndrad.add(l);
       return `Kopierade ${kopierat.join(", ")} från ”${kalla.titel}”.`;
     }
+
+    // ===== Vänner & projekt =====
+    const loggUrl = v => !v.logga ? "" : /^https?:/.test(v.logga) ? v.logga : (forhands[v.logga] || "musik/" + encodeURI(v.logga));
+    function ritaVanner() {
+      $("vannerLista").innerHTML = data.vanner.length ? data.vanner.map((v, i) => `
+        <div class="lat van-kort" data-van="${i}">
+          <div class="omslag-rad">
+            ${v.logga ? `<img src="${loggUrl(v)}" alt="" class="van-logga">` : `<div class="van-logga tom-logga">Ingen logga</div>`}
+            <div class="omslag-info">
+              <div class="omslag-knappar">
+                <button class="knapp kontur liten" type="button" data-van-logga ${uppladdning !== null ? "disabled" : ""}>${uppladdning === "van" + i ? "Laddar upp…" : v.logga ? "Byt logga" : "Ladda upp logga"}</button>
+                <button class="ikon" type="button" data-van-flytta="-1" ${i === 0 ? "disabled" : ""} aria-label="Flytta upp">↑</button>
+                <button class="ikon" type="button" data-van-flytta="1" ${i === data.vanner.length - 1 ? "disabled" : ""} aria-label="Flytta ner">↓</button>
+                <button class="knapp fara liten${raderaVan === i ? " saker" : ""}" type="button" data-van-radera>${raderaVan === i ? "Säker? Ta bort" : "Ta bort"}</button>
+              </div>
+            </div>
+          </div>
+          <div class="rutnat">
+            <label>Namn<input type="text" data-van-falt="namn" value="${esc(v.namn)}" placeholder="t.ex. DJ Stigge"></label>
+            <label>Länk<input type="url" data-van-falt="lank" value="${esc(v.lank)}" placeholder="https://…"></label>
+          </div>
+        </div>`).join("") : `<div class="tom">Inga projekt än. Klicka + Nytt projekt.</div>`;
+    }
+    let raderaVan = -1, loggFor = -1;
+    $("nyVan").onclick = () => { data.vanner.push({ namn: "", lank: "", logga: "" }); raderaVan = -1; ritaVanner(); andrat(); document.querySelector(`[data-van="${data.vanner.length - 1}"] input`)?.focus(); };
+    $("vannerLista").addEventListener("input", e => {
+      const f = e.target.dataset.vanFalt; if (!f) return;
+      data.vanner[+e.target.closest("[data-van]").dataset.van][f] = e.target.value.trim(); andrat();
+    });
+    $("vannerLista").addEventListener("click", e => {
+      const kort = e.target.closest("[data-van]"); if (!kort) return;
+      const i = +kort.dataset.van;
+      if (e.target.closest("[data-van-logga]")) { loggFor = i; $("loggval").value = ""; $("loggval").click(); return; }
+      const fl = e.target.closest("[data-van-flytta]");
+      if (fl) { const j = i + +fl.dataset.vanFlytta; [data.vanner[i], data.vanner[j]] = [data.vanner[j], data.vanner[i]]; raderaVan = -1; ritaVanner(); andrat(); return; }
+      if (e.target.closest("[data-van-radera]")) { if (raderaVan === i) { data.vanner.splice(i, 1); raderaVan = -1; andrat(); } else raderaVan = i; ritaVanner(); }
+    });
+    // Loggan skalas ner (max 400 px) och sparas som png så att genomskinlighet behålls
+    async function tillPng(fil) {
+      if (fil.type === "image/svg+xml") return fil;
+      const bild = await createImageBitmap(fil);
+      const skala = Math.min(1, 400 / Math.max(bild.width, bild.height));
+      const c = document.createElement("canvas"); c.width = Math.round(bild.width * skala); c.height = Math.round(bild.height * skala);
+      c.getContext("2d").drawImage(bild, 0, 0, c.width, c.height);
+      return new Promise(ok => c.toBlob(ok, "image/png"));
+    }
+    $("loggval").addEventListener("change", async () => {
+      const fil = $("loggval").files[0], i = loggFor, v = data.vanner[i];
+      if (!fil || !v) return;
+      const svg = fil.type === "image/svg+xml";
+      const namn = "van-" + filnamn(v.namn || "projekt-" + (i + 1)).replace(/\.mp3$/, svg ? ".svg" : ".png");
+      uppladdning = "van" + i; ritaVanner(); status("Laddar upp loggan…");
+      try {
+        const bild = await tillPng(fil);
+        const b64 = bytesTillBase64(new Uint8Array(await bild.arrayBuffer()));
+        let gammal = null;
+        if (filer.has(namn)) gammal = (await gh(`/contents/musik/${encodeURIComponent(namn)}?ref=${GREN}`)).sha;
+        await gh(`/contents/musik/${encodeURIComponent(namn)}`, { method: "PUT", body: JSON.stringify({ message: `Logga för ${v.namn || "projekt"} via backoffice`, content: b64, branch: GREN, ...(gammal ? { sha: gammal } : {}) }) });
+        filer.add(namn); forhands[namn] = URL.createObjectURL(bild); v.logga = namn;
+        uppladdning = null; ritaVanner(); andrat(); status("✓ Loggan är uppladdad. Tryck Spara.", "osparat");
+      } catch (e) { uppladdning = null; ritaVanner(); status("Loggan kunde inte laddas upp: " + e.message, "fel"); }
+    });
 
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
@@ -835,6 +913,7 @@ ${poster.slice(0, 20).map(p => `<item>
     // ===== Spara =====
     $("spara").onclick = async () => {
       for (const l of data.latar.filter(l => !l.titel.trim() && SPOTIFY_RE.test(l.spotify || ""))) await hamtaSpotifyInfo(l, l.spotify);
+      if (data.vanner.some(v => !v.namn)) { return status("Alla projekt under Vänner & projekt måste ha ett namn.", "fel"); }
       const tomma = data.latar.filter(l => !l.titel.trim());
       if (tomma.length) { rita(); return status(`${tomma.length === 1 ? "En låt saknar" : tomma.length + " låtar saknar"} titel – skriv den i fältet Titel (Spotify kunde inte hämta den).`, "fel"); }
       $("spara").disabled = true; status("Sparar…");
