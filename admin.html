@@ -279,7 +279,7 @@
     const namnLista = t => String(t || "").split(",").map(x => x.trim()).filter(Boolean);
     // Förval för nya låtar och låtar som saknar upphovspersoner
     const FORVAL = () => ({ artist: ARTIST, kompositor: "Stig Lindbom", textforfattare: "Stig Lindbom", producent: "Stig Lindbom",
-                            mixning: "Stig Lindbom", mastering: "Stig Lindbom", ar: String(new Date().getFullYear()) });
+                            mixning: "Stig Lindbom", mastering: "Stig Lindbom", ar: String(new Date().getFullYear()), genre: "Reggae swing" });
     const taggar = async l => {
       const k = l.kredit || {};
       const folk = ["producent", "mixning", "mastering"].flatMap(r => namnLista(k[r]).map(n => [KREDIT.find(x => x[0] === r)[1], n]));
@@ -445,7 +445,7 @@
     function andrat() { osparat = true; $("spara").disabled = false; status("Du har osparade ändringar.", "osparat"); }
     window.addEventListener("beforeunload", e => { if (osparat) { e.preventDefault(); e.returnValue = ""; } });
 
-    const GENRER = ["Dance", "EDM", "House", "Pop", "Dance-pop", "Reggae", "Reggae-pop", "Schlager", "Dansband", "Hip hop", "R&B",
+    const GENRER = ["Reggae swing", "Dance", "EDM", "House", "Pop", "Dance-pop", "Reggae", "Reggae-pop", "Schlager", "Dansband", "Hip hop", "R&B",
                     "Rock", "Disco", "Elektroniskt", "Fest/Party", "Country", "Visa", "Soul", "Jazz", "Julmusik"];
     function genreVal(l) {
       const g = (l.kredit || {}).genre || "", annan = g && !GENRER.includes(g) || annanGenre.has(l);
