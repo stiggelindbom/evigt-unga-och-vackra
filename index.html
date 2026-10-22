@@ -199,7 +199,9 @@
     /* Citat */
     .citat { background: var(--svart); padding-block: 56px; padding-inline: 16px; border-block: 1px solid var(--kant); }
     .citat h2 { font-size: clamp(2.2rem, 6vw, 3.2rem); }
-    .citat .wrap { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 32px; align-items: start; }
+    .citat .wrap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px 32px; align-items: start; text-align: center; }
+    .citat .huvud { grid-column: 1 / -1; }
+    .citat .ja { font-family: "Oswald", sans-serif; font-style: normal; color: var(--guld); letter-spacing: .05em; }
     .citat figure { margin: 0; }
     .citat blockquote { font-family: "Yellowtail", cursive; color: var(--guld-ljus); font-size: clamp(1.4rem, 3vw, 1.9rem); line-height: 1.25; text-wrap: balance; }
     .citat .huvud blockquote { font-size: clamp(2rem, 5vw, 2.8rem); color: var(--guld); text-shadow: 0 0 18px rgba(245,197,24,.3); }
@@ -301,12 +303,16 @@
         <figcaption>Monty Python</figcaption>
       </figure>
       <figure>
-        <blockquote>“I am an optimist. It does not seem to be much use being anything else.”</blockquote>
-        <figcaption>Winston Churchill<i>Jag är optimist. Det verkar inte vara mycket idé att vara något annat.</i></figcaption>
-      </figure>
-      <figure>
         <blockquote>“I have taken more out of alcohol than alcohol has taken out of me.”</blockquote>
         <figcaption>Winston Churchill<i>Jag har fått ut mer av alkoholen än alkoholen har fått ut av mig.</i></figcaption>
+      </figure>
+      <figure>
+        <blockquote>“It costs a lot of money to look this cheap.”</blockquote>
+        <figcaption>Dolly Parton<i>Det kostar mycket pengar att se så här billig ut.</i></figcaption>
+      </figure>
+      <figure>
+        <blockquote>“Does humor belong in music?”</blockquote>
+        <figcaption>Frank Zappa<i>Hör humor hemma i musiken? Vårt svar: <b class="ja">Ja.</b></i></figcaption>
       </figure>
     </div>
   </section>
