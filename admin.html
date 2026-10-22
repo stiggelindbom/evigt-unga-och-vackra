@@ -68,6 +68,9 @@
     details.kredit { border: 1px solid var(--kant); border-radius: 8px; padding: 10px 12px; }
     details.kredit summary { cursor: pointer; font-size: .9rem; color: var(--guld); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     details.kredit[open] { display: grid; gap: 10px; }
+    .snabb-spotify { color: var(--spotify); }
+    .snabb-spotify input { border-color: rgba(30,215,96,.35); }
+    .snabb-spotify input:focus { border-color: var(--spotify); }
     .slapp-panel { border: 1px solid rgba(30,215,96,.5); background: #0f1a13; border-radius: 10px; padding: 16px; display: grid; gap: 12px; }
     .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
     .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
@@ -410,6 +413,9 @@
               <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>
               <button class="knapp gron liten" type="button" data-slapp-oppna style="margin-left:auto">🚀 Släpp låten</button>
             </div>
+            <label class="snabb-spotify">Spotify-länk – klistra in när låten är ute, så flyttas den direkt till Släppta
+              <input type="url" data-snabb-spotify placeholder="https://open.spotify.com/track/…">
+            </label>
             ${slappOppen === i ? `
             <div class="slapp-panel">
               <h4>Släpp ”${esc(l.titel) || "låten"}”</h4>
@@ -465,6 +471,12 @@
     $("adminVy").addEventListener("input", e => {
       const lank = e.target.dataset.lank;
       if (lank) { data.lankar[lank] = e.target.value.trim(); return andrat(); }
+      if (e.target.matches("[data-snabb-spotify]")) {
+        const v = e.target.value.trim(), l = data.latar[+e.target.closest("[data-i]").dataset.i];
+        if (SPOTIFY_RE.test(v)) { e.target.disabled = true; autoSlapp(l, v); }
+        else if (v.length > 20 && !v.includes("spotify")) status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/track/", "fel");
+        return;
+      }
       if (e.target.matches("[data-genre-val]")) {
         const l = data.latar[+e.target.closest("[data-i]").dataset.i];
         l.kredit ||= {};
@@ -520,20 +532,51 @@
       if (e.target.closest("[data-slapp-oppna]")) { slappOppen = slappOppen === i ? -1 : i; raderaVantar = -1; rita(); return; }
       if (e.target.closest("[data-slapp-stang]")) { slappOppen = -1; rita(); return; }
       if (e.target.closest("[data-slapp-nu]")) {
-        const l = data.latar[i], lank = kort.querySelector("[data-slapp-lank]").value.trim();
-        if (lank && !/open\.spotify\.com\//.test(lank)) return status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/", "fel");
-        l.slappt = true; l.slapptDatum = new Date().toISOString(); l.spotify = lank; l.ladda = false;
-        if (!l.typ || /demo/i.test(l.typ)) l.typ = "Singel";
-        // flytta det nya släppet överst bland de släppta
-        data.latar.splice(i, 1);
-        const forstaSlappt = data.latar.findIndex(x => x.slappt);
-        const ny = forstaSlappt < 0 ? data.latar.length : forstaSlappt;
-        data.latar.splice(ny, 0, l);
-        slappOppen = -1; rita(); andrat();
-        status(`🚀 ${l.titel} ligger nu under Släppta. Tryck Spara för att publicera.` + (lank ? "" : " (Spotify-knappen går till artistsidan tills du lagt in låtens länk.)"), "osparat");
-        document.querySelector(`[data-i="${ny}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const lank = kort.querySelector("[data-slapp-lank]").value.trim();
+        if (lank && !SPOTIFY_RE.test(lank)) return status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/", "fel");
+        lank ? autoSlapp(data.latar[i], lank) : slappLat(data.latar[i], "");
       }
     });
+
+    // ===== Släpp: flytta demo till Släppta =====
+    const SPOTIFY_RE = /^https?:\/\/open\.spotify\.com\/(intl-[a-z]+\/)?(track|album)\/[A-Za-z0-9]+/;
+    function slappLat(l, lank, extra = "") {
+      l.slappt = true; l.slapptDatum = new Date().toISOString(); l.spotify = lank; l.ladda = false;
+      if (!l.typ || /demo/i.test(l.typ)) l.typ = "Singel";
+      // flytta det nya släppet överst bland de släppta
+      data.latar.splice(data.latar.indexOf(l), 1);
+      const forstaSlappt = data.latar.findIndex(x => x.slappt);
+      const ny = forstaSlappt < 0 ? data.latar.length : forstaSlappt;
+      data.latar.splice(ny, 0, l);
+      slappOppen = -1; rita(); andrat();
+      status(`🚀 ${l.titel} ligger nu under Släppta${extra}. Tryck Spara för att publicera.` + (lank ? "" : " (Spotify-knappen går till artistsidan tills du lagt in låtens länk.)"), "osparat");
+      document.querySelector(`[data-i="${ny}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    // Klistrar man in en Spotify-länk hämtas titel och omslag (om de saknas) och låten släpps
+    let hamtar = false;
+    async function autoSlapp(l, lank) {
+      if (hamtar) return; hamtar = true;
+      status("Hämtar info från Spotify…");
+      const hamtat = [];
+      try {
+        const r = await fetch("https://open.spotify.com/oembed?url=" + encodeURIComponent(lank.split("?")[0]));
+        if (!r.ok) throw new Error("Spotify svarade " + r.status);
+        const info = await r.json();
+        if (!l.titel.trim() && info.title) { l.titel = info.title; hamtat.push("titel"); }
+        if (!l.omslag && info.thumbnail_url && l.titel) {
+          status("Hämtar omslaget från Spotify…");
+          const bild = await (await fetch(info.thumbnail_url)).blob();
+          await sparaOmslag(l, bild); hamtat.push("omslag");
+        }
+      } catch (e) {
+        console.warn("Kunde inte hämta från Spotify", e);
+        hamtat.push("men info kunde inte hämtas från Spotify");
+      }
+      hamtar = false;
+      if (!l.titel.trim()) l.titel = "Ny låt";
+      const extra = hamtat.length ? (hamtat[0].startsWith("men") ? " (" + hamtat[0] + ")" : " – hämtade " + hamtat.join(" och ") + " från Spotify") : "";
+      slappLat(l, lank, extra);
+    }
 
     // ===== Omslag per låt =====
     // Bilden beskärs till kvadrat, skalas till 1000×1000 och sparas som jpg i musik/
@@ -551,10 +594,20 @@
       const fil = $("bildval").files[0], i = bildFor, l = data.latar[i];
       if (!fil || !l) return;
       if (!l.titel) return status("Skriv en titel på låten innan du laddar upp omslaget.", "fel");
-      const namn = "omslag-" + filnamn(l.titel).replace(/\.mp3$/, ".jpg");
       uppladdning = "bild" + i; rita(); status("Laddar upp omslaget…");
       try {
-        const jpg = await tillKvadratJpg(fil);
+        await sparaOmslag(l, fil);
+        uppladdning = null; rita(); andrat();
+        status("✓ Omslaget är uppladdat" + (l.fil && filer.has(l.fil) ? " och inlagt i låtfilen" : "") + ". Tryck Spara för att visa det på hemsidan.", "osparat");
+      } catch (e) {
+        uppladdning = null; rita(); status("Omslaget kunde inte laddas upp: " + e.message, "fel");
+      }
+    });
+
+    // Laddar upp omslaget (fil eller blob) och lägger in det i låtfilen om den finns
+    async function sparaOmslag(l, bild) {
+        const namn = "omslag-" + filnamn(l.titel).replace(/\.mp3$/, ".jpg");
+        const jpg = await tillKvadratJpg(bild);
         const b64 = await new Promise((ok, fel) => { const r = new FileReader(); r.onload = () => ok(r.result.split(",")[1]); r.onerror = () => fel(new Error("bilden kunde inte läsas")); r.readAsDataURL(jpg); });
         let gammal = null;
         if (filer.has(namn)) gammal = (await gh(`/contents/musik/${encodeURIComponent(namn)}?ref=${GREN}`)).sha;
@@ -575,12 +628,7 @@
             body: JSON.stringify({ message: `Omslag och taggar i ${l.fil} via backoffice`, content: bytesTillBase64(ny), branch: GREN, sha: mp3Sha })
           });
         }
-        uppladdning = null; rita(); andrat();
-        status("✓ Omslaget är uppladdat" + (l.fil && filer.has(l.fil) ? " och inlagt i låtfilen" : "") + ". Tryck Spara för att visa det på hemsidan.", "osparat");
-      } catch (e) {
-        uppladdning = null; rita(); status("Omslaget kunde inte laddas upp: " + e.message, "fel");
-      }
-    });
+    }
 
     // ===== Ladda upp mp3 (sparas direkt i repot) =====
     let filFor = -1;
