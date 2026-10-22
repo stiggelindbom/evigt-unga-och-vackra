@@ -28,4 +28,7 @@ Tryck **🚀 Släpp låten** på demon i backoffice och följ checklistan:
 Klicka **Ladda upp omslag** på låten i backoffice och välj en bild (jpg/png).
 Den beskärs automatiskt till kvadrat, 1000×1000, och visas i spellistan, i "Nu spelas"
 och i nyhetsflödet. Tryck **Spara** efteråt. Utan eget omslag används bandets.
+Omslaget läggs också in i mp3-filen (ID3-taggar: titel, artist och omslag), så att den
+som laddar ner låten ser bilden i telefonen. Det spelar ingen roll om du laddar upp
+omslaget före eller efter låtfilen.
 För Spotify/SoundCloud krävs 3000×3000 – ladda upp originalbilden där.

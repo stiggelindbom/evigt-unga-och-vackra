@@ -203,6 +203,56 @@
       }
       return r.status === 204 ? null : r.json();
     }
+    const bytesTillBase64 = b => { let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
+    // Hämta en fil ur repot som rå bytes (fungerar även för stora filer)
+    async function ghRa(sokvag) {
+      const r = await fetch(`${API}/contents/${sokvag}?ref=${GREN}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github.raw" } });
+      if (!r.ok) throw new Error("kunde inte hämta " + sokvag);
+      return new Uint8Array(await r.arrayBuffer());
+    }
+
+    // ===== ID3-taggar: titel, artist och omslag i mp3-filen =====
+    const ARTIST = "De Evigt Unga å Vackra";
+    function id3(mp3, { titel, artist, album, bild }) {
+      // ta bort ev. befintlig ID3v2-tagg
+      if (mp3[0] === 0x49 && mp3[1] === 0x44 && mp3[2] === 0x33) {
+        const st = ((mp3[6] & 127) << 21) | ((mp3[7] & 127) << 14) | ((mp3[8] & 127) << 7) | (mp3[9] & 127);
+        mp3 = mp3.subarray(10 + st + (mp3[5] & 0x10 ? 10 : 0));
+      }
+      const ram = (id, data) => {
+        const h = new Uint8Array(10 + data.length);
+        h.set([...id].map(c => c.charCodeAt(0)), 0);
+        new DataView(h.buffer).setUint32(4, data.length);   // ID3v2.3: vanlig storlek
+        h.set(data, 10); return h;
+      };
+      const text = t => {   // UTF-16 med BOM, så å/ä/ö blir rätt
+        const d = new Uint8Array(3 + t.length * 2 + 2); d[0] = 1; d[1] = 0xff; d[2] = 0xfe;
+        for (let i = 0; i < t.length; i++) { const c = t.charCodeAt(i); d[3 + i * 2] = c & 255; d[4 + i * 2] = c >> 8; }
+        return d;
+      };
+      const ramar = [];
+      if (titel) ramar.push(ram("TIT2", text(titel)));
+      if (artist) ramar.push(ram("TPE1", text(artist)), ram("TPE2", text(artist)));
+      if (album) ramar.push(ram("TALB", text(album)));
+      if (bild) {
+        const mime = [..."image/jpeg"].map(c => c.charCodeAt(0));
+        const d = new Uint8Array(1 + mime.length + 1 + 1 + 1 + bild.length);
+        d[0] = 0; d.set(mime, 1); let o = 1 + mime.length; d[o++] = 0; d[o++] = 3; d[o++] = 0;   // 3 = framsida
+        d.set(bild, o); ramar.push(ram("APIC", d));
+      }
+      const storlek = ramar.reduce((n, r) => n + r.length, 0);
+      const ut = new Uint8Array(10 + storlek + mp3.length);
+      ut.set([0x49, 0x44, 0x33, 3, 0, 0, (storlek >> 21) & 127, (storlek >> 14) & 127, (storlek >> 7) & 127, storlek & 127]);
+      let o = 10; for (const r of ramar) { ut.set(r, o); o += r.length; }
+      ut.set(mp3, o); return ut;
+    }
+    async function omslagBytes(l) {
+      if (!l.omslag) return null;
+      if (forhands[l.omslag]) return new Uint8Array(await (await fetch(forhands[l.omslag])).arrayBuffer());
+      try { return await ghRa("musik/" + encodeURIComponent(l.omslag)); } catch { return null; }
+    }
+    const taggar = async l => ({ titel: l.titel, artist: ARTIST, album: l.slappt ? "" : "Demos", bild: await omslagBytes(l) });
+
     const tillBase64 = text => {
       const b = new TextEncoder().encode(text); let s = "";
       for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000));
@@ -426,8 +476,20 @@
           body: JSON.stringify({ message: `Omslag för ${l.titel} via backoffice`, content: b64, branch: GREN, ...(gammal ? { sha: gammal } : {}) })
         });
         filer.add(namn); forhands[namn] = URL.createObjectURL(jpg);
-        l.omslag = namn; uppladdning = null; rita(); andrat();
-        status("✓ Omslaget är uppladdat. Tryck Spara för att visa det på hemsidan.", "osparat");
+        l.omslag = namn;
+        // Finns låtfilen redan: lägg in omslaget i den också
+        if (l.fil && filer.has(l.fil)) {
+          status("Lägger in omslaget i låtfilen…");
+          const mp3 = await ghRa("musik/" + encodeURIComponent(l.fil));
+          const ny = id3(mp3, await taggar(l));
+          const mp3Sha = (await gh(`/contents/musik/${encodeURIComponent(l.fil)}?ref=${GREN}`)).sha;
+          await gh(`/contents/musik/${encodeURIComponent(l.fil)}`, {
+            method: "PUT",
+            body: JSON.stringify({ message: `Omslag och taggar i ${l.fil} via backoffice`, content: bytesTillBase64(ny), branch: GREN, sha: mp3Sha })
+          });
+        }
+        uppladdning = null; rita(); andrat();
+        status("✓ Omslaget är uppladdat" + (l.fil && filer.has(l.fil) ? " och inlagt i låtfilen" : "") + ". Tryck Spara för att visa det på hemsidan.", "osparat");
       } catch (e) {
         uppladdning = null; rita(); status("Omslaget kunde inte laddas upp: " + e.message, "fel");
       }
@@ -482,10 +544,10 @@
           fil = await wavTillMp3(fil, p => status(`Gör om till mp3… ${Math.round(p * 100)} %`));
         }
         if (fil.size > 40 * 1024 * 1024) throw new Error(`filen är ${(fil.size / 1048576).toFixed(0)} MB – max 40 MB`);
-        status(`Laddar upp ${namn} (${(fil.size / 1048576).toFixed(1)} MB)…`);
-        const b64 = await new Promise((ok, fel) => {
-          const r = new FileReader(); r.onload = () => ok(r.result.split(",")[1]); r.onerror = () => fel(new Error("filen kunde inte läsas")); r.readAsDataURL(fil);
-        });
+        status("Lägger in titel, artist och omslag i filen…");
+        const taggad = id3(new Uint8Array(await fil.arrayBuffer()), await taggar(l));
+        status(`Laddar upp ${namn} (${(taggad.length / 1048576).toFixed(1)} MB)…`);
+        const b64 = bytesTillBase64(taggad);
         let gammal = null;
         if (filer.has(namn)) gammal = (await gh(`/contents/musik/${encodeURIComponent(namn)}?ref=${GREN}`)).sha;
         await gh(`/contents/musik/${encodeURIComponent(namn)}`, {
