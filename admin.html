@@ -102,6 +102,17 @@
     .lat.slappt { border-left: 3px solid var(--spotify); }
     .lat.demo { border-left: 3px solid var(--guld); }
     .lat .topp { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+    .titel-rad { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    /* låt långa rader krympa i stället för att göra sidan bredare (mobil) */
+    main > *, .kort, .lat, .latlista, details, .rutnat > *, .titel-rad b, .omslag-info { min-width: 0; }
+    main, .lat, .latlista, details[open] { grid-template-columns: minmax(0, 1fr); }
+    .titel-rad b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #kodLista { overflow-x: auto; }
+    @media (max-width: 480px) { .lat .topp { flex-wrap: wrap; } .verktyg { margin-left: auto; } }
+    .dra-handtag { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--kant); background: transparent; color: var(--dampad); font-size: 1.2rem; line-height: 1; cursor: grab; touch-action: none; flex-shrink: 0; }
+    .dra-handtag:hover { color: var(--guld); border-color: var(--guld); }
+    .lat.drar { opacity: .9; outline: 2px dashed var(--guld); outline-offset: 2px; box-shadow: 0 12px 30px rgba(0,0,0,.6); position: relative; z-index: 5; }
+    .lat.drar .dra-handtag { cursor: grabbing; color: var(--guld); }
     .lat .topp b { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .04em; color: var(--guld-ljus); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
     .lat .verktyg { display: flex; gap: 6px; flex-shrink: 0; }
     .ikon { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--kant); background: transparent; color: var(--text); }
@@ -421,7 +432,7 @@
         return `
         <div class="lat ${l.slappt ? "slappt" : "demo"}" data-i="${i}">
           <div class="topp">
-            <b>${esc(l.titel) || "Ny låt"}</b>
+            <div class="titel-rad"><button class="dra-handtag" type="button" data-dra aria-label="Håll och dra för att flytta" title="Håll och dra för att flytta">⠿</button><b>${esc(l.titel) || "Ny låt"}</b></div>
             <div class="verktyg">
               <button class="ikon" type="button" data-flytta="-1" title="Flytta upp" aria-label="Flytta upp" ${forsta ? "disabled" : ""}>↑</button>
               <button class="ikon" type="button" data-flytta="1" title="Flytta ner" aria-label="Flytta ner" ${sista ? "disabled" : ""}>↓</button>
@@ -573,6 +584,36 @@
       taggAndrad.add(l);
       return `Kopierade ${kopierat.join(", ")} från ”${kalla.titel}”.`;
     }
+
+    // ===== Dra och släpp för att ändra ordning (mus och touch) =====
+    let draKort = null;
+    $("adminVy").addEventListener("pointerdown", e => {
+      const h = e.target.closest("[data-dra]"); if (!h) return;
+      draKort = h.closest(".lat"); draKort.classList.add("drar");
+      h.setPointerCapture(e.pointerId); e.preventDefault();
+    });
+    $("adminVy").addEventListener("pointermove", e => {
+      if (!draKort) return;
+      const lista = draKort.parentElement, y = e.clientY;
+      const ovriga = [...lista.querySelectorAll(":scope > .lat")].filter(k => k !== draKort);
+      const fore = ovriga.find(k => { const r = k.getBoundingClientRect(); return y < r.top + r.height / 2; });
+      if (fore) { if (draKort.nextElementSibling !== fore) lista.insertBefore(draKort, fore); }
+      else if (lista.lastElementChild !== draKort) lista.appendChild(draKort);
+      // scrolla när man drar nära kanten
+      if (y < 80) window.scrollBy(0, -12); else if (y > innerHeight - 110) window.scrollBy(0, 12);
+    });
+    const slappDra = () => {
+      if (!draKort) return;
+      const lista = draKort.parentElement; draKort.classList.remove("drar"); draKort = null;
+      const ny = [...lista.querySelectorAll(":scope > .lat")].map(k => data.latar[+k.dataset.i]);
+      const platser = data.latar.map((l, i) => ny.includes(l) ? i : -1).filter(i => i >= 0);
+      const fore = platser.map(i => data.latar[i]);
+      if (ny.every((l, k) => l === fore[k])) return;   // ingen ändring
+      platser.forEach((p, k) => { data.latar[p] = ny[k]; });
+      raderaVantar = -1; rita(); andrat(); status("Ordningen ändrad. Tryck Spara.", "osparat");
+    };
+    $("adminVy").addEventListener("pointerup", slappDra);
+    $("adminVy").addEventListener("pointercancel", slappDra);
 
     // ===== 30 s lyssningsklipp för demos =====
     const KLIPP = 30;
