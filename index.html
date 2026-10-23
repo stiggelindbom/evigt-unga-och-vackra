@@ -333,6 +333,10 @@
 
     footer { text-align: center; padding: 30px 16px; color: var(--dampad); font-size: .85rem; border-top: 1px solid #2a2418; }
     footer span { color: var(--guld); }
+    .qr-dela { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0 auto 26px; }
+    .qr-dela img { width: 150px; height: 150px; border-radius: 10px; box-shadow: 0 0 24px rgba(245,197,24,.25); image-rendering: pixelated; }
+    .qr-dela b { font-family: "Oswald", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--guld); font-size: .9rem; }
+    .qr-dela .knappar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
     .sociala { display: flex; justify-content: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
     .sociala a { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; }
 
@@ -541,6 +545,15 @@
   </section>
 
   <footer>
+    <div class="qr-dela">
+      <b>Dela sidan</b>
+      <img src="assets/qr-devigtunga.svg" alt="QR-kod till devigtunga.se" width="150" height="150" loading="lazy">
+      <small>Skanna med mobilkameran – devigtunga.se</small>
+      <div class="knappar">
+        <button class="mix-knapp pa" type="button" id="delaSidan">↗ Dela</button>
+        <a class="mix-knapp" href="assets/qr-devigtunga.png" download="De Evigt Unga å Vackra - QR-kod.png">⬇ QR-kod för tryck</a>
+      </div>
+    </div>
     <div class="sociala" id="sociala"></div>
     © <span id="ar"></span> <span>De Evigt Unga å Vackra</span> · Musik av DJ Stigge
   </footer>
@@ -1395,6 +1408,7 @@
     // --- Dela: telefonens delningsmeny, annars en ruta med länkar ---
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const latLank = l => location.origin + location.pathname + (l ? "#lat-" + slugga(l.titel) : "");
+    $("delaSidan").onclick = () => dela(null);
     async function dela(l) {
       rakna("Delad", l ? l.titel : "Sidan");
       const url = latLank(l);
