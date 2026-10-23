@@ -30,48 +30,12 @@
     },
     {
       "slappt": false,
-      "titel": "Svenne G",
-      "info": "Han skulle bara softa och spela spel …",
-      "typ": "Singel",
-      "spotify": "",
-      "fil": "svenne-g.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026"
-      }
-    },
-    {
-      "slappt": false,
-      "titel": "Sista kalla flaskan",
-      "info": "Vem snodde sista kalla flaskan i natt?",
-      "typ": "Demo",
-      "spotify": "",
-      "fil": "sista-kalla-flaskan.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026"
-      }
-    },
-    {
-      "slappt": false,
-      "titel": "vilken härlig dag! ",
+      "titel": "vilken härlig dag!",
       "info": "Godisdag! Reggaepop med strandkänsla.",
       "typ": "Demo",
       "spotify": "",
       "fil": "sommargodis.mp3",
-      "ladda": true,
+      "ladda": false,
       "kredit": {
         "artist": "De Evigt Unga å Vackra",
         "kompositor": "Stig Lindbom",
@@ -120,6 +84,42 @@
       }
     },
     {
+      "slappt": false,
+      "titel": "Sista kalla flaskan",
+      "info": "Vem snodde sista kalla flaskan i natt?",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "sista-kalla-flaskan.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
+    },
+    {
+      "slappt": false,
+      "titel": "Svenne G",
+      "info": "Han skulle bara softa och spela spel …",
+      "typ": "Singel",
+      "spotify": "",
+      "fil": "svenne-g.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      }
+    },
+    {
       "slappt": true,
       "titel": "Kom och värm dej",
       "info": "",
@@ -143,7 +143,7 @@
     },
     {
       "slappt": true,
-      "titel": "Vi älskar Siwan - Radio Edit",
+      "titel": "Vi älskar Siwan",
       "info": "",
       "typ": "Singel",
       "spotify": "https://open.spotify.com/track/6azQbuhnwTOZaukjEQTQG0",
@@ -165,7 +165,7 @@
     },
     {
       "slappt": true,
-      "titel": "1987 - Radio Edit",
+      "titel": "1987",
       "info": "",
       "typ": "Singel",
       "spotify": "https://open.spotify.com/track/6J3w6wL5nbgs3qGATXMF1I",
@@ -187,7 +187,7 @@
     },
     {
       "slappt": true,
-      "titel": "Oops... I did it again... - Radio Edit",
+      "titel": "Oops... I did it again...",
       "info": "",
       "typ": "Singel",
       "spotify": "https://open.spotify.com/track/61E7a8F2uPyJQcDCiNuykw",
@@ -233,7 +233,7 @@
     },
     {
       "slappt": true,
-      "titel": "Himlen Runt Hörnet ",
+      "titel": "Himlen Runt Hörnet",
       "info": "",
       "typ": " Radio Edit",
       "spotify": "https://open.spotify.com/track/6kxkMcIG3iQbledbxXXtkA",
