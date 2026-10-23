@@ -246,7 +246,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261023112527";
+    const VERSION = "v20261023162741";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -443,7 +443,7 @@
     try { const t = localStorage.getItem("deu-admin-token"); if (t) loggaIn(t); } catch {}
 
     // ===== Rita =====
-    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"], ["server", "Server för engångskoder (Freddes server, t.ex. https://…/server/)", "url"]];
+    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"], ["server", "Server för engångskoder (Freddes server, t.ex. https://…/server/)", "url"], ["statistik", "Statistik – GoatCounter-kod (t.ex. devigtunga)", "text"]];
 
     function rita() {
       const rad = (l, i) => {
@@ -560,7 +560,8 @@
         `<label>Nedladdningskod för smakprov
           <input type="text" data-kod autocomplete="off" placeholder="${data.lankar.kodHash ? "Kod satt ✓ – skriv en ny för att byta" : "Ingen kod satt"}" value="${esc(nyKod)}"></label>` +
         `<label style="grid-column:1/-1">Instagram-flöde – inbäddningskod (valfritt, från t.ex. Behold)
-          <textarea data-lank="instagramWidget" rows="3" placeholder="Klistra in koden här">${esc(data.lankar.instagramWidget)}</textarea></label>`;
+          <textarea data-lank="instagramWidget" rows="3" placeholder="Klistra in koden här">${esc(data.lankar.instagramWidget)}</textarea></label>` +
+        (data.lankar.statistik ? `<p style="grid-column:1/-1;margin:0"><a href="https://${esc(String(data.lankar.statistik).replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, ""))}.goatcounter.com" target="_blank" rel="noopener">📊 Öppna statistiken</a> – besökare, spelade låtar, nedladdningar och delningar</p>` : "");
     }
 
     function status(text, klass = "") { const m = $("meddelande"); m.textContent = text; m.className = "meddelande " + klass; }

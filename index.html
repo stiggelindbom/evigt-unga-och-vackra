@@ -665,6 +665,23 @@
 
   function start(DATA) {
     const L = DATA.lankar || {};
+    // --- Statistik via GoatCounter: inga kakor och inga personuppgifter, så ingen cookie-ruta behövs ---
+    const statKod = String(L.statistik || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
+    if (/^[a-z0-9-]+$/.test(statKod)) {
+      const sc = document.createElement("script"); sc.async = true;
+      sc.dataset.goatcounter = `https://${statKod}.goatcounter.com/count`; sc.src = "https://gc.zgo.at/count.js";
+      document.head.appendChild(sc);
+    }
+    // händelser (spelad låt, nedladdning, delning …) syns som egna rader i statistiken
+    function rakna(handelse, namn) {
+      try { if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: `${handelse}: ${namn}`, title: handelse, event: true }); } catch {}
+    }
+    // klick vidare till Spotify, Facebook m.fl.
+    document.addEventListener("click", e => {
+      const a = e.target.closest("a[href]"); if (!a) return;
+      const m = a.href.match(/^https?:\/\/(?:[a-z]+\.)?(spotify|facebook|instagram|soundcloud|youtube)\.com/i);
+      if (m) rakna("Till " + m[1][0].toUpperCase() + m[1].slice(1), (a.textContent || "").trim().slice(0, 60) || a.href);
+    }, true);
     // "Radio Edit" som Spotify lägger till i titeln visas inte
     const rensaTitel = t => String(t || "").replace(/\s*[-–—]\s*radio edit\s*$/i, "").replace(/\s*[([]\s*radio edit\s*[)\]]\s*$/i, "").trim();
     const latar = (DATA.latar || []).filter(l => !l.dold).map(l => ({ ...l, titel: rensaTitel(l.titel), saknas: !l.fil }));
@@ -870,6 +887,7 @@
     $("stationer").addEventListener("click", e => {
       const b = e.target.closest("[data-station]"); if (!b) return;
       const i = +b.dataset.station; valjStation(i < 0 ? null : stationer[i]);
+      rakna("Station", i < 0 ? "Evigt Ung Radio" : stationer[i].namn);
     });
     for (const h of ["play", "pause", "playing"]) stationLjud.addEventListener(h, () => uppdatera());
     stationLjud.addEventListener("error", () => { if (pass) return passFel(); if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
@@ -890,6 +908,7 @@
     }
     $("vanMixKnapp").onclick = () => {
       vanMixPa = !vanMixPa; try { localStorage.setItem("deu-vanmix", vanMixPa ? "pa" : "av"); } catch {}
+      if (vanMixPa) rakna("Vän-mix på", vanStation.namn);
       if (vanMixPa && !upplastStation && !station) {   // iPhone: stationsspelaren måste startas en gång i ett tryck
         upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
         stationLjud.play().then(() => { if (!station) { stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load(); } stationLjud.muted = false; }).catch(() => { stationLjud.muted = false; });
@@ -958,6 +977,7 @@
       if (i !== nu) raknadFor = -1;
       nu = i;
       const l = latar[i];
+      rakna("Spelad", l.titel);
       if (l.slappt) {
         avbrytMix(); if (!ljud.paused) ljud.pause();
         $("spRam").hidden = false; spStartat = false; spPaus = true; visaTid(0, 0);
@@ -1263,6 +1283,7 @@
         if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.fel || "Det gick inte att ladda ner just nu"); }
         const url = URL.createObjectURL(await r.blob());
         const a = document.createElement("a"); a.href = url; a.download = namn; document.body.appendChild(a); a.click(); a.remove();
+        rakna("Nedladdad", l.titel + " (kod)");
         setTimeout(() => URL.revokeObjectURL(url), 60000);
         $("kodRuta").close();
       } catch (e) {
@@ -1296,6 +1317,7 @@
       a.href = "musik/" + encodeURI(l.fil);
       a.download = `De Evigt Unga å Vackra - ${l.titel}.mp3`;
       document.body.appendChild(a); a.click(); a.remove();
+      rakna("Nedladdad", l.titel);
     }
     function ritaGrind() {
       const klara = kravs.every(k => las(k.id));
@@ -1374,6 +1396,7 @@
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const latLank = l => location.origin + location.pathname + (l ? "#lat-" + slugga(l.titel) : "");
     async function dela(l) {
+      rakna("Delad", l ? l.titel : "Sidan");
       const url = latLank(l);
       const titel = l ? `${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
       const text = l ? (l.slappt ? `Lyssna på ${l.titel} med De Evigt Unga å Vackra!` : `Lyssna på ${l.titel} – direkt från studion!`) : "Festlåtar, sommarhits och rent guld!";
