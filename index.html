@@ -333,10 +333,14 @@
 
     footer { text-align: center; padding: 30px 16px; color: var(--dampad); font-size: .85rem; border-top: 1px solid #2a2418; }
     footer span { color: var(--guld); }
-    .qr-dela { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0 auto 26px; }
-    .qr-dela img { width: 150px; height: 150px; border-radius: 10px; box-shadow: 0 0 24px rgba(245,197,24,.25); image-rendering: pixelated; }
-    .qr-dela b { font-family: "Oswald", sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--guld); font-size: .9rem; }
-    .qr-dela .knappar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+    .dela-pil { margin-left: 12px; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--guld); color: var(--guld); flex: none; }
+    .dela-pil:hover { background: var(--guld); color: var(--svart); }
+    .dela-pil svg { width: 16px; height: 16px; fill: currentColor; }
+    .qr-ruta { position: relative; display: grid; justify-items: center; gap: 12px; background: #14110c; border: 1px solid var(--kant); border-radius: 16px; padding: 28px 24px 22px; text-align: center; width: min(340px, 92vw); }
+    .qr-ruta h3 { font-family: "Yellowtail", cursive; font-weight: 400; color: var(--guld); font-size: 2rem; }
+    .qr-ruta img { width: min(240px, 70vw); aspect-ratio: 1; border-radius: 12px; box-shadow: 0 0 30px rgba(245,197,24,.3); image-rendering: pixelated; }
+    .qr-ruta small { color: var(--dampad); }
+    .qr-ruta .knappar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
     .sociala { display: flex; justify-content: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
     .sociala a { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .1em; text-decoration: none; }
 
@@ -385,6 +389,7 @@
       <li><a href="#kontakt">Boka</a></li>
       <li><a href="#spotify">Spotify</a></li>
     </ul>
+    <button class="dela-pil" type="button" id="qrOppna" aria-label="Dela sidan (QR-kod)" title="Dela sidan"><svg viewBox="0 0 24 24"><path d="M14 4v4C7 9 4 14 3 20c2.5-3.5 6-5.1 11-5.1V19l7-7.5L14 4z"/></svg></button>
   </nav>
 
   <header class="hero">
@@ -545,15 +550,6 @@
   </section>
 
   <footer>
-    <div class="qr-dela">
-      <b>Dela sidan</b>
-      <img src="assets/qr-devigtunga.svg" alt="QR-kod till devigtunga.se" width="150" height="150" loading="lazy">
-      <small>Skanna med mobilkameran – devigtunga.se</small>
-      <div class="knappar">
-        <button class="mix-knapp pa" type="button" id="delaSidan">↗ Dela</button>
-        <a class="mix-knapp" href="assets/qr-devigtunga.png" download="De Evigt Unga å Vackra - QR-kod.png">⬇ QR-kod för tryck</a>
-      </div>
-    </div>
     <div class="sociala" id="sociala"></div>
     © <span id="ar"></span> <span>De Evigt Unga å Vackra</span> · Musik av DJ Stigge
   </footer>
@@ -602,6 +598,19 @@
   </dialog>
 
   <dialog id="visare"><img alt=""></dialog>
+
+  <dialog id="qrRuta">
+    <div class="qr-ruta">
+      <button class="kryss-stang" id="qrKryss" type="button" aria-label="Stäng">✕</button>
+      <h3>Dela sidan</h3>
+      <img src="assets/qr-devigtunga.svg" alt="QR-kod till devigtunga.se" width="240" height="240">
+      <small>Skanna med mobilkameran – devigtunga.se</small>
+      <div class="knappar">
+        <button class="mix-knapp pa" type="button" id="delaSidan">↗ Dela länken</button>
+        <a class="mix-knapp" href="assets/qr-devigtunga.png" download="De Evigt Unga å Vackra - QR-kod.png">⬇ QR-kod för tryck</a>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="delaRuta">
     <div class="grind">
@@ -1408,7 +1417,10 @@
     // --- Dela: telefonens delningsmeny, annars en ruta med länkar ---
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const latLank = l => location.origin + location.pathname + (l ? "#lat-" + slugga(l.titel) : "");
-    $("delaSidan").onclick = () => dela(null);
+    $("qrOppna").onclick = () => { rakna("Delad", "QR-rutan"); $("qrRuta").showModal(); };
+    $("qrKryss").onclick = () => $("qrRuta").close();
+    $("qrRuta").addEventListener("click", e => { if (e.target === $("qrRuta")) $("qrRuta").close(); });   // klick utanför stänger
+    $("delaSidan").onclick = () => { $("qrRuta").close(); dela(null); };
     async function dela(l) {
       rakna("Delad", l ? l.titel : "Sidan");
       const url = latLank(l);
