@@ -261,6 +261,7 @@
     // ===== GitHub =====
     async function gh(sokvag, opt = {}) {
       const r = await fetch(API + sokvag, {
+        cache: "no-store",   // annars kan webbläsaren svara med en sparad (rå) fil i stället för JSON
         ...opt,
         headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json", ...(opt.headers || {}) }
       });
@@ -268,12 +269,14 @@
         const t = await r.json().catch(() => ({}));
         const e = new Error(t.message || r.statusText); e.status = r.status; throw e;
       }
-      return r.status === 204 ? null : r.json();
+      if (r.status === 204) return null;
+      const text = await r.text();
+      try { return JSON.parse(text); } catch { throw new Error("GitHub svarade oväntat – ladda om sidan och försök igen"); }
     }
     const bytesTillBase64 = b => { let s = ""; for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode(...b.subarray(i, i + 0x8000)); return btoa(s); };
     // Hämta en fil ur repot som rå bytes (fungerar även för stora filer)
     async function ghRa(sokvag) {
-      const r = await fetch(`${API}/contents/${sokvag}?ref=${GREN}`, { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github.raw" } });
+      const r = await fetch(`${API}/contents/${sokvag}?ref=${GREN}&format=raw`, { cache: "no-store", headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github.raw" } });
       if (!r.ok) throw new Error("kunde inte hämta " + sokvag);
       return new Uint8Array(await r.arrayBuffer());
     }
