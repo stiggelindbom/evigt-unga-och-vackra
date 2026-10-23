@@ -832,7 +832,8 @@
       $("spRam").hidden = true; $("spTips").hidden = true;
       if (station !== v) stationTitel = null;
       station = v; stationLjud.src = v.stream;
-      clearInterval(latinfoTimer); latinfoTimer = setInterval(lasLatinfo, 15000); lasLatinfo(); stationLjud.volume = iPass ? 0 : 1;
+      clearInterval(latinfoTimer); latinfoTimer = setInterval(lasLatinfo, 15000); lasLatinfo();
+      if (!iPass && vanMixPa && v === vanStation) startaPass(); stationLjud.volume = iPass ? 0 : 1;
       stationLjud.play().then(() => { if (iPass) tona(stationLjud, 1); }).catch(() => { if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
       uppdatera(); ritaStationer();
     }
@@ -858,16 +859,20 @@
     function visaVanMix() {
       const b = $("vanMixKnapp"); if (!vanStation) return;
       b.hidden = false; b.classList.toggle("pa", vanMixPa); b.setAttribute("aria-pressed", vanMixPa);
-      b.textContent = (vanMixPa ? "✓ " : "+ ") + vanStation.namn;
-      b.title = `Blanda in ${vanStation.namn}: ${PASS_LATAR} låtar därifrån, sedan en av våra`;
+      // på vår radio blandar knappen in vännen; när man lyssnar på vännens station blandar den in oss
+      const hosVan = station === vanStation;
+      b.textContent = (vanMixPa ? "✓ " : "+ ") + (hosVan ? "Evigt Unga" : vanStation.namn);
+      b.title = `Varva: ${PASS_LATAR} låtar från ${vanStation.namn}, sedan en av De Evigt Unga å Vackras`;
     }
     $("vanMixKnapp").onclick = () => {
       vanMixPa = !vanMixPa; try { localStorage.setItem("deu-vanmix", vanMixPa ? "pa" : "av"); } catch {}
-      if (vanMixPa && !upplastStation) {   // iPhone: stationsspelaren måste startas en gång i ett tryck
+      if (vanMixPa && !upplastStation && !station) {   // iPhone: stationsspelaren måste startas en gång i ett tryck
         upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
         stationLjud.play().then(() => { if (!station) { stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load(); } stationLjud.muted = false; }).catch(() => { stationLjud.muted = false; });
       }
-      if (!vanMixPa && pass) { valjStation(null); nasta(1); }
+      if (station === vanStation) {
+        if (vanMixPa) { lasUppEgen(); startaPass(); } else avslutaPass();   // stannar på vännens radio
+      } else if (!vanMixPa && pass) { valjStation(null); nasta(1); }
       visaVanMix(); uppdatera();
     };
     let upplastStation = false;
@@ -882,8 +887,18 @@
     // en av våra låtar är slut: med vän-mix på går vi över till vännens radio, annars nästa låt
     function latSlut() {
       if (!vanMixPa || !vanStation) return nasta(1);
-      pass = { latar: 0, titel: null, tid: setTimeout(passSlut, PASS_MAX) };
-      valjStation(vanStation, true);
+      startaPass(); valjStation(vanStation, true);
+    }
+    function startaPass() {
+      avslutaPass();
+      pass = { latar: 0, titel: station ? stationTitel : null, tid: setTimeout(passSlut, PASS_MAX) };   // låten som går nu räknas som den första
+    }
+    // iPhone: vår spelare måste ha startats i ett tryck för att kunna ta över efter vännens låtar
+    function lasUppEgen() {
+      if (ljud.getAttribute("src")) return;
+      const d = latar.find((l, i) => !l.slappt && tillganglig(i)); if (!d) return;
+      ljud.muted = true; ljud.src = "musik/" + encodeURI(d.fil);
+      ljud.play().then(() => { ljud.pause(); ljud.muted = false; }).catch(() => { ljud.muted = false; });
     }
     function passSlut() {
       if (!pass) return;
@@ -1001,7 +1016,7 @@
     }
     function uppdatera() {
       const pa = spelar(), viaSpotify = !station && arSpotify();
-      $("studio").classList.toggle("via-station", !!station);
+      $("studio").classList.toggle("via-station", !!station); visaVanMix();
       if (station) {
         $("nuEtikett").textContent = !pa ? "LIVE – TRYCK PLAY" : pass ? `LIVE · ${station.namn.toUpperCase()} · SEN EVIGT UNG` : "LIVE · DIREKTSÄNDNING";
         $("nuTitel").textContent = stationTitel || station.namn; $("miniTitel").textContent = stationTitel ? `${station.namn} · ${stationTitel}` : station.namn; $("nuKredit").hidden = true;
