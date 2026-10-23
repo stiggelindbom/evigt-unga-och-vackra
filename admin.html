@@ -103,6 +103,9 @@
     .lat.demo { border-left: 3px solid var(--guld); }
     .lat .topp { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
     .titel-rad { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .lage-skylt { font-size: .7rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--guld); color: var(--guld); white-space: nowrap; flex-shrink: 0; }
+    .lage-skylt.dold { border-color: var(--dampad); color: var(--dampad); }
+    .lat.ar-dold { opacity: .55; }
     /* låt långa rader krympa i stället för att göra sidan bredare (mobil) */
     main > *, .kort, .lat, .latlista, details, .rutnat > *, .titel-rad b, .omslag-info { min-width: 0; }
     main, .lat, .latlista, details[open] { grid-template-columns: minmax(0, 1fr); }
@@ -430,9 +433,9 @@
           : l.fil && filer.has(l.fil) ? `<span class="status ok">✓ ${esc(l.fil)}</span>`
           : l.fil ? `<span class="status saknas">${esc(l.fil)} saknas</span>` : `<span class="status saknas">Ingen fil</span>`;
         return `
-        <div class="lat ${l.slappt ? "slappt" : "demo"}" data-i="${i}">
+        <div class="lat ${l.slappt ? "slappt" : "demo"}${l.dold ? " ar-dold" : ""}" data-i="${i}">
           <div class="topp">
-            <div class="titel-rad"><button class="dra-handtag" type="button" data-dra aria-label="Håll och dra för att flytta" title="Håll och dra för att flytta">⠿</button><b>${esc(l.titel) || "Ny låt"}</b></div>
+            <div class="titel-rad"><button class="dra-handtag" type="button" data-dra aria-label="Håll och dra för att flytta" title="Håll och dra för att flytta">⠿</button><b>${esc(l.titel) || "Ny låt"}</b>${l.dold ? `<span class="lage-skylt dold">Dold</span>` : lage(l) === "kommande" ? `<span class="lage-skylt">Kommande</span>` : ""}</div>
             <div class="verktyg">
               <button class="ikon" type="button" data-flytta="-1" title="Flytta upp" aria-label="Flytta upp" ${forsta ? "disabled" : ""}>↑</button>
               <button class="ikon" type="button" data-flytta="1" title="Flytta ner" aria-label="Flytta ner" ${sista ? "disabled" : ""}>↓</button>
@@ -454,9 +457,11 @@
             <label>Kort text<input type="text" data-falt="info" value="${esc(l.info)}"></label>
             <label>Etikett (t.ex. Singel, Demo)<input type="text" data-falt="typ" value="${esc(l.typ)}"></label>
             <label>Lista
-              <select data-falt="slappt">
-                <option value="1" ${l.slappt ? "selected" : ""}>Släppt (Spotify)</option>
-                <option value="0" ${!l.slappt ? "selected" : ""}>Demo</option>
+              <select data-lage>
+                <option value="demo" ${lage(l) === "demo" ? "selected" : ""}>Demo – hela låten</option>
+                <option value="kommande" ${lage(l) === "kommande" ? "selected" : ""}>Kommande – 30 s smakprov</option>
+                <option value="slappt" ${lage(l) === "slappt" ? "selected" : ""}>Släppt (Spotify)</option>
+                <option value="dold" ${lage(l) === "dold" ? "selected" : ""}>Dold – spelas inte</option>
               </select>
             </label>
           </div>
@@ -832,6 +837,17 @@
       } catch (e) { uppladdning = null; ritaVanner(); status("Loggan kunde inte laddas upp: " + e.message, "fel"); }
     });
 
+    // Låtens läge: demo / kommande (30 s smakprov) / släppt / dold
+    const lage = l => l.dold ? "dold" : l.slappt ? "slappt" : typeof l.klipp === "number" ? "kommande" : "demo";
+    function sattLage(l, v) {
+      l.dold = v === "dold" || undefined;
+      if (v === "dold") return;
+      l.slappt = v === "slappt";
+      if (l.slappt && !l.slapptDatum) l.slapptDatum = new Date().toISOString();
+      if (v === "demo") l.klipp = null;
+      if (v === "kommande" && typeof l.klipp !== "number") { l.klipp = undefined; klippOppen.add(l); setTimeout(() => oppnaKlipp(l)); }
+    }
+
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
       if (e.target.matches("[data-kod]")) { nyKod = e.target.value.trim(); return andrat(); }
@@ -855,6 +871,10 @@
         if (SPOTIFY_RE.test(v)) { e.target.disabled = true; autoSlapp(l, v); }
         else if (v.length > 20 && !v.includes("spotify")) status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/track/", "fel");
         return;
+      }
+      if (e.target.matches("[data-lage]")) {
+        const l = data.latar[+e.target.closest("[data-i]").dataset.i];
+        sattLage(l, e.target.value); rita(); andrat(); return;
       }
       if (e.target.matches("[data-klipp-pa]")) {
         const l = data.latar[+e.target.closest("[data-i]").dataset.i], d = ljudData[l.fil];
