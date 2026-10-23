@@ -32,6 +32,25 @@
       "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
+      "typ": "Demo Extended Radio",
+      "spotify": "",
+      "fil": "vilken-harlig-dag.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      },
+      "datum": "2026-10-23T08:54:56.162Z"
+    },
+    {
+      "slappt": false,
+      "titel": "Vilken härlig dag!",
+      "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
       "spotify": "",
       "fil": "sommargodis.mp3",
