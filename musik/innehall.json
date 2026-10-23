@@ -89,7 +89,7 @@
     },
     {
       "slappt": false,
-      "titel": "En helt jävla värdelös låt som världen egentligen inte behör",
+      "titel": "En helt jävla värdelös låt som världen egentligen inte behöver",
       "info": "En låt om en legend.",
       "typ": "Demo",
       "spotify": "",
@@ -103,7 +103,8 @@
         "mixning": "Stig Lindbom",
         "mastering": "Stig Lindbom",
         "ar": "2026"
-      }
+      },
+      "omslag": "omslag-en-helt-javla-vardelos-lat-som-varlden-egentligen-inte-behover.jpg"
     },
     {
       "slappt": false,
