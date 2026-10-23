@@ -686,7 +686,7 @@
     $("volym").addEventListener("input", e => sattVolymAlla(+e.target.value));
     $("volymIkon").onclick = () => { if (vol > 0) { volFore = vol; sattVolymAlla(0); } else sattVolymAlla(volFore || 1); };
     // iPhone/iPad styr volymen bara med knapparna på sidan av telefonen
-    if (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) $("volymRad").hidden = true;
+    if (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) { $("volymRad").hidden = true; $("mixKnapp").hidden = true; }   // ingen Web Audio där: varken volym eller mix
     sattVolymAlla(vol, false);
     let ljud = spelareEl[0];
     const annan = () => spelareEl[0] === ljud ? spelareEl[1] : spelareEl[0];
@@ -901,11 +901,13 @@
     };
     let upplastStation = false;
     function tona(el, mal, sek = 3, klar) {
-      clearInterval(el._tona); const steg = (mal - el.volume) / (sek * 10); el._tonar = true;
+      clearInterval(el._tona); el._tonar = true;
+      // räkna stegen själv: iPhone låter inte sidan ändra volymen, så el.volume står still där
+      const fran = el.volume, antal = Math.max(1, Math.round(sek * 10)); let k = 0;
       el._tona = setInterval(() => {
-        const v = el.volume + steg;
-        if ((steg >= 0 && v >= mal) || (steg < 0 && v <= mal) || !steg) { el.volume = mal; clearInterval(el._tona); el._tonar = false; if (klar) klar(); }
-        else el.volume = v;
+        k++;
+        if (k >= antal) { el.volume = mal; clearInterval(el._tona); el._tonar = false; if (klar) klar(); }
+        else el.volume = fran + (mal - fran) * k / antal;
       }, 100);
     }
     // en av våra låtar är slut: med vän-mix på går vi över till vännens radio, annars nästa låt
@@ -1038,6 +1040,15 @@
       ljud = ny; uppdatera();
       mixTimer = setTimeout(() => { gammal.pause(); sattVolym(gammal, 1, 0); mixar = false; }, MIX * 1000 + 300);
     }
+    let mediaNyckel = "";
+    function mediaInfo(titel, artist, bild, pa) {
+      if (!("mediaSession" in navigator)) return;
+      try {
+        navigator.mediaSession.playbackState = pa ? "playing" : "paused";
+        if (mediaNyckel === titel + bild) return; mediaNyckel = titel + bild;
+        navigator.mediaSession.metadata = new MediaMetadata({ title: titel, artist, album: "Evigt Ung Radio", artwork: [{ src: new URL(bild, location.href).href, sizes: "512x512" }] });
+      } catch {}
+    }
     function uppdatera() {
       const pa = spelar(), viaSpotify = !station && arSpotify();
       $("studio").classList.toggle("via-station", !!station); visaVanMix();
@@ -1052,6 +1063,7 @@
         $("studio").classList.toggle("spelar", pa); $("studio").classList.remove("via-spotify");
         $("ladda").hidden = true;
         document.title = pa ? `▶︎ ${station.namn} – live` : "De Evigt Unga å Vackra";
+        mediaInfo(stationTitel || station.namn, station.namn, bild, pa);
         ritaLista(); return;
       }
       const l = latar[nu];
@@ -1069,6 +1081,7 @@
       $("studio").classList.toggle("via-spotify", viaSpotify);
       $("ladda").hidden = !(l && l.ladda && l.fil && !l.saknas && (!arSmakprov(l) || L.kodHash || L.server));
       document.title = pa ? `▶︎ ${l.titel} – De Evigt Unga å Vackra` : "De Evigt Unga å Vackra";
+      if (l) mediaInfo(l.titel, "De Evigt Unga å Vackra", omslagFor(l), pa);
       ritaLista();
     }
     // --- Spektrumanalysator: lyssnar på demos via Web Audio. Spotify spelar i en skyddad ruta
@@ -1095,7 +1108,9 @@
     function startaAnalys() {
       lasUpp();
       if (navigator.audioSession) { try { navigator.audioSession.type = "playback"; } catch {} }
-      if (IOS && !navigator.audioSession) return;
+      // iPhone/iPad: spela utan Web Audio. Annars tystnar musiken när skärmen låses eller man byter app,
+      // och volymen följer ljudlös-knappen. Spektrumet visar då en animation i stället.
+      if (IOS) return;
       if (!ac) {
         try {
           ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -1178,6 +1193,22 @@
 
     $("spela").onclick = vaxla; $("miniSpela").onclick = vaxla; $("heroSpela").onclick = () => { const startar = !spelar(); vaxla(); if (startar) $("radio").scrollIntoView({ behavior: "smooth" }); };
     const tillbaka = steg => () => { if (station) { valjStation(null); return vaxla(); } nasta(steg); };
+    // tillbaka till sidan (t.ex. efter låst skärm): väck ljudmotorn igen
+    document.addEventListener("visibilitychange", () => { if (!document.hidden && ac && ac.state !== "running") ac.resume().catch(() => {}); });
+    // Låsskärm, hörlurar och bilens knappar (Media Session)
+    if ("mediaSession" in navigator) {
+      const ms = navigator.mediaSession, h = (typ, fn) => { try { ms.setActionHandler(typ, fn); } catch {} };
+      h("play", () => { if (!spelar()) vaxla(); });
+      h("pause", () => { if (spelar()) vaxla(); });
+      h("nexttrack", () => tillbaka(1)());
+      h("previoustrack", () => tillbaka(-1)());
+    }
+    // iPhone: med vän-mixen påslagen från ett tidigare besök måste stationens spelare låsas upp i första trycket
+    document.addEventListener("click", e => {
+      if (!vanMixPa || upplastStation || station || !vanStation || !e.target.closest(".studio, .minispelare, #heroSpela, .spar")) return;
+      upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
+      stationLjud.play().then(() => { if (!station) { stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load(); } stationLjud.muted = false; }).catch(() => { stationLjud.muted = false; });
+    }, true);
     $("nasta").onclick = tillbaka(1); $("miniNasta").onclick = tillbaka(1); $("forra").onclick = tillbaka(-1);
     $("blanda").onclick = e => { blanda = !blanda; e.currentTarget.classList.toggle("pa", blanda); };
     $("ladda").onclick = () => nu >= 0 ? laddaNer(nu) : null;
