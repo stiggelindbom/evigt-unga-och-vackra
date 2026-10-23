@@ -213,6 +213,11 @@
       .minispelare { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; }
       .minispelare img { width: 44px; height: 44px; }
     }
+    .stationer { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 12px; }
+    .station { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--kant); color: var(--dampad); }
+    .station.pa { border-color: var(--guld); color: var(--svart); background: var(--guld); }
+    .studio.via-station .tidslinje, .studio.via-station .spelar-val, .studio.via-station #blanda, .studio.via-station #delaNu { visibility: hidden; }
+    .studio.via-station .live { color: #ff5a5a; }
     .spelar-val { display: flex; justify-content: flex-end; margin-top: 6px; }
     .mix-knapp { font-size: .72rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--kant); color: var(--dampad); font-family: "Oswald", sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     .mix-knapp.pa { border-color: var(--guld); color: var(--guld); }
@@ -401,6 +406,7 @@
       <p class="ingress">Demos direkt från studion och våra släppta låtar. Tryck play och låt radion rulla – gillar du oss kan du ladda ner demos.</p>
       <div class="radio">
         <div class="studio" id="studio">
+          <div class="stationer" id="stationer" hidden></div>
           <div class="omslag">
             <img src="assets/omslag.jpg" alt="" id="studioBild">
             <div class="live"><i></i>ON AIR</div>
@@ -601,6 +607,7 @@
 
   <audio id="ljud" preload="none"></audio>
   <audio id="ljud2" preload="none"></audio>
+  <audio id="stationLjud" preload="none"></audio>
 
   <script>
   // --- Citat: rullande remsa + citat som byts ut ---
@@ -780,7 +787,7 @@
       $("spRam").scrollIntoView({ behavior: "smooth", block: "center" });   // på mobil ligger rutan ofta under kanten
     }
     let spCtrl = null, spLaddar = null, spPaus = true, spPos = 0, spLang = 0, spStartat = false, spSpelaNarRedo = false;
-    const spelar = () => nu >= 0 && (arSpotify() ? !spPaus : !ljud.paused);
+    const spelar = () => station ? !stationLjud.paused : nu >= 0 && (arSpotify() ? !spPaus : !ljud.paused);
 
     function laddaSpotify(uri) {
       return spLaddar ||= new Promise((ok, fel) => {
@@ -807,7 +814,37 @@
       });
     }
 
+    // --- Radiostationer från vännerna (live-ström). Spelas i en egen spelare utan analys (annan server). ---
+    const stationer = (DATA.vanner || []).filter(v => v.namn && /^https:\/\//.test(v.stream || ""));
+    let station = null;
+    const stationLjud = $("stationLjud");
+    function valjStation(v) {
+      if (!v) {   // tillbaka till Evigt Ung Radio
+        station = null; stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load();
+        uppdatera(); ritaStationer(); return;
+      }
+      if (spCtrl && !spPaus) spCtrl.pause();
+      avbrytMix(); if (!ljud.paused) ljud.pause();
+      $("spRam").hidden = true; $("spTips").hidden = true;
+      station = v; stationLjud.src = v.stream; stationLjud.play().catch(() => { $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
+      uppdatera(); ritaStationer();
+    }
+    function ritaStationer() {
+      if (!stationer.length) return;
+      $("stationer").hidden = false;
+      const knapp = (namn, aktiv, i) => `<button type="button" class="station${aktiv ? " pa" : ""}" data-station="${i}">${aktiv ? "● " : ""}${esc(namn)}</button>`;
+      $("stationer").innerHTML = knapp("Evigt Ung Radio", !station, -1) + stationer.map((v, i) => knapp(v.namn, station === v, i)).join("");
+    }
+    $("stationer").addEventListener("click", e => {
+      const b = e.target.closest("[data-station]"); if (!b) return;
+      const i = +b.dataset.station; valjStation(i < 0 ? null : stationer[i]);
+    });
+    for (const h of ["play", "pause", "playing"]) stationLjud.addEventListener(h, () => uppdatera());
+    stationLjud.addEventListener("error", () => { if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
+    ritaStationer();
+
     async function spela(i) {
+      if (station) valjStation(null);
       if (!tillganglig(i)) return nasta(1, i);
       if (i !== nu) raknadFor = -1;
       nu = i;
@@ -840,6 +877,7 @@
       }
     }
     function vaxla() {
+      if (station) { if (stationLjud.paused) { stationLjud.src = station.stream; stationLjud.play().catch(() => {}); } else { stationLjud.pause(); } return; }
       if (nu < 0 && delad >= 0) return spela(delad);   // kom via en delad länk: spela den låten
       if (nu < 0) {
         // börja med första demon: den spelas från vår server och startar direkt även på iPhone
@@ -894,7 +932,20 @@
       mixTimer = setTimeout(() => { gammal.pause(); sattVolym(gammal, 1, 0); mixar = false; }, MIX * 1000 + 300);
     }
     function uppdatera() {
-      const pa = spelar(), viaSpotify = arSpotify();
+      const pa = spelar(), viaSpotify = !station && arSpotify();
+      $("studio").classList.toggle("via-station", !!station);
+      if (station) {
+        $("nuEtikett").textContent = pa ? "LIVE · DIREKTSÄNDNING" : "LIVE – TRYCK PLAY";
+        $("nuTitel").textContent = station.namn; $("miniTitel").textContent = station.namn; $("nuKredit").hidden = true;
+        const bild = station.logga ? (/^https?:/.test(station.logga) ? station.logga : "musik/" + encodeURI(station.logga)) : "assets/omslag.jpg";
+        if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; }
+        for (const id of ["spelaIkon", "miniIkon", "heroIkon"]) $(id).setAttribute("d", pa ? PAUS : PLAY);
+        $("heroText").textContent = pa ? "Pausa radion" : "Starta radion";
+        $("studio").classList.toggle("spelar", pa); $("studio").classList.remove("via-spotify");
+        $("ladda").hidden = true;
+        document.title = pa ? `▶︎ ${station.namn} – live` : "De Evigt Unga å Vackra";
+        ritaLista(); return;
+      }
       const l = latar[nu];
       $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "30 S SMAKPROV" : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
@@ -958,8 +1009,8 @@
         const dpr = window.devicePixelRatio || 1, B = cv.clientWidth, H = cv.clientHeight;
         if (cv.width !== B * dpr) { cv.width = B * dpr; cv.height = H * dpr; }
         cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, B, H);
-        const demoSpelar = !arSpotify() && nu >= 0 && !ljud.paused && analys && ac && ac.state === "running";
-        const viaSp = arSpotify() ? spelar() : (nu >= 0 && !ljud.paused && !demoSpelar);   // animation när analys saknas
+        const demoSpelar = !station && !arSpotify() && nu >= 0 && !ljud.paused && analys && ac && ac.state === "running";
+        const viaSp = station ? !stationLjud.paused : arSpotify() ? spelar() : (nu >= 0 && !ljud.paused && !demoSpelar);   // animation när analys saknas
         if (demoSpelar) analys.getByteFrequencyData(fdata);
         const farg = cx.createLinearGradient(0, H, 0, 0);
         if (arSpotify()) { farg.addColorStop(0, "#0f7a3a"); farg.addColorStop(1, "#1ed760"); }
@@ -1016,7 +1067,8 @@
     });
 
     $("spela").onclick = vaxla; $("miniSpela").onclick = vaxla; $("heroSpela").onclick = () => { const startar = !spelar(); vaxla(); if (startar) $("radio").scrollIntoView({ behavior: "smooth" }); };
-    $("nasta").onclick = () => nasta(1); $("miniNasta").onclick = () => nasta(1); $("forra").onclick = () => nasta(-1);
+    const tillbaka = steg => () => { if (station) { valjStation(null); return vaxla(); } nasta(steg); };
+    $("nasta").onclick = tillbaka(1); $("miniNasta").onclick = tillbaka(1); $("forra").onclick = tillbaka(-1);
     $("blanda").onclick = e => { blanda = !blanda; e.currentTarget.classList.toggle("pa", blanda); };
     $("ladda").onclick = () => nu >= 0 ? laddaNer(nu) : null;
 

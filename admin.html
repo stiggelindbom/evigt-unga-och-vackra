@@ -246,7 +246,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261023093557";
+    const VERSION = "v20261023112527";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -814,6 +814,7 @@
           <div class="rutnat">
             <label>Namn<input type="text" data-van-falt="namn" value="${esc(v.namn)}" placeholder="t.ex. DJ Stigge"></label>
             <label>Länk<input type="url" data-van-falt="lank" value="${esc(v.lank)}" placeholder="https://…"></label>
+            <label style="grid-column:1/-1">Radiostream-adress (valfritt – gör vännen valbar som station i spelaren)<input type="url" data-van-falt="stream" value="${esc(v.stream)}" placeholder="https://…/stream  (måste börja med https)"></label>
           </div>
         </div>`).join("") : `<div class="tom">Inga projekt än. Klicka + Ny vän.</div>`;
     }
