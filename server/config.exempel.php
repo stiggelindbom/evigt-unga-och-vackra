@@ -14,6 +14,7 @@ return [
   // Hemsidans adress (för CORS). Flera tillåtna, t.ex. GitHub Pages och egen domän.
   'tillatna_ursprung' => [
     'https://stiggelindbom.github.io',
-    'https://deevigtunga.se',
+    'https://devigtunga.se',
+    'https://www.devigtunga.se',
   ],
 ];
