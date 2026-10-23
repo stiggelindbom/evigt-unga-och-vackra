@@ -220,7 +220,15 @@
     .station.pa { border-color: var(--guld); color: var(--svart); background: var(--guld); }
     .studio.via-station .tidslinje, .studio.via-station #mixKnapp, .studio.via-station #blanda, .studio.via-station #delaNu { visibility: hidden; }
     .studio.via-station .live { color: #ff5a5a; }
-    .spelar-val { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+    .spelar-val { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 6px; }
+    .volym { margin-right: auto; flex: 1; min-width: 0; display: flex; align-items: center; gap: 4px; color: var(--dampad); }
+    .volym[hidden] { display: none; }
+    .volym button { display: grid; place-items: center; width: 26px; height: 26px; color: inherit; }
+    .volym button:hover { color: var(--guld); }
+    .volym svg { width: 18px; height: 18px; fill: currentColor; }
+    .volym input { width: 100%; min-width: 40px; max-width: 90px; }
+    .mix-knapp { white-space: nowrap; }
+    .studio.via-spotify .volym { opacity: .35; pointer-events: none; }   /* Spotify-rutan styr sin egen volym */
     .mix-knapp { font-size: .72rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--kant); color: var(--dampad); font-family: "Oswald", sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     .mix-knapp.pa { border-color: var(--guld); color: var(--guld); }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
@@ -417,7 +425,7 @@
           <h3 id="nuTitel">Tryck play</h3>
           <button class="kredit-lank" id="nuKredit" type="button" hidden>Upphovspersoner</button>
           <canvas class="spektrum" id="spektrum" aria-hidden="true"></canvas>
-          <div class="spelar-val"><button class="mix-knapp" id="vanMixKnapp" type="button" aria-pressed="false" hidden></button><button class="mix-knapp" id="mixKnapp" type="button" aria-pressed="true" title="Mixa ihop låtarna i stället för paus">⇄ Mix på</button></div>
+          <div class="spelar-val"><div class="volym" id="volymRad" title="Volym"><button type="button" id="volymIkon" aria-label="Ljud av/på"><svg viewBox="0 0 24 24"><path id="volymBild" d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z"/></svg></button><input type="range" id="volym" min="0" max="1" step="0.01" value="1" aria-label="Volym"></div><button class="mix-knapp" id="vanMixKnapp" type="button" aria-pressed="false" hidden></button><button class="mix-knapp" id="mixKnapp" type="button" aria-pressed="true" title="Mixa ihop låtarna i stället för paus">⇄ Mix på</button></div>
           <div class="tidslinje">
             <span id="tidNu">0:00</span>
             <input type="range" id="sok" min="0" max="100" value="0" step="0.1" aria-label="Spola">
@@ -664,6 +672,22 @@
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     // Två spelare så att låtarna kan mixas (den ena tonas ut medan nästa tonas in)
     const spelareEl = [$("ljud"), $("ljud2")];
+    // --- Volym: gäller demos (via Web Audio) och vännernas radio. Spotify-rutan har sin egen. ---
+    let vol = 1, volFore = 1, huvud = null;
+    try { const v = parseFloat(localStorage.getItem("deu-volym")); if (v >= 0 && v <= 1) vol = v; } catch {}
+    function sattVolymAlla(v, spara = true) {
+      vol = v; $("volym").value = v;
+      if (huvud) huvud.gain.value = v; else for (const el of spelareEl) el.volume = v;
+      const st = $("stationLjud"); if (!st._tonar) st.volume = v;
+      $("volymBild").setAttribute("d", v === 0 ? "M16.5 12A4.5 4.5 0 0 0 14 8v2.2l2.5 2.5V12zM19 12c0 .9-.2 1.8-.5 2.6l1.5 1.5A9 9 0 0 0 14 3.2v2.1a7 7 0 0 1 5 6.7zM4.3 3 3 4.3 7.7 9H3v6h4l5 5v-6.7l4.3 4.3c-.7.5-1.4.9-2.3 1.2v2.1a9 9 0 0 0 3.7-1.8l2 2 1.3-1.3L4.3 3zM12 4 9.9 6.1 12 8.2V4z"
+        : "M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z");
+      if (spara) try { localStorage.setItem("deu-volym", v); } catch {}
+    }
+    $("volym").addEventListener("input", e => sattVolymAlla(+e.target.value));
+    $("volymIkon").onclick = () => { if (vol > 0) { volFore = vol; sattVolymAlla(0); } else sattVolymAlla(volFore || 1); };
+    // iPhone/iPad styr volymen bara med knapparna på sidan av telefonen
+    if (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) $("volymRad").hidden = true;
+    sattVolymAlla(vol, false);
     let ljud = spelareEl[0];
     const annan = () => spelareEl[0] === ljud ? spelareEl[1] : spelareEl[0];
     const PLAY = "M8 5v14l11-7z", PAUS = "M6 5h4v14H6zm8 0h4v14h-4z";
@@ -833,8 +857,8 @@
       if (station !== v) stationTitel = null;
       station = v; stationLjud.src = v.stream;
       clearInterval(latinfoTimer); latinfoTimer = setInterval(lasLatinfo, 15000); lasLatinfo();
-      if (!iPass && vanMixPa && v === vanStation) startaPass(); stationLjud.volume = iPass ? 0 : 1;
-      stationLjud.play().then(() => { if (iPass) tona(stationLjud, 1); }).catch(() => { if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
+      if (!iPass && vanMixPa && v === vanStation) startaPass(); stationLjud.volume = iPass ? 0 : vol;
+      stationLjud.play().then(() => { if (iPass) tona(stationLjud, vol); }).catch(() => { if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
       uppdatera(); ritaStationer();
     }
     function ritaStationer() {
@@ -877,10 +901,10 @@
     };
     let upplastStation = false;
     function tona(el, mal, sek = 3, klar) {
-      clearInterval(el._tona); const steg = (mal - el.volume) / (sek * 10);
+      clearInterval(el._tona); const steg = (mal - el.volume) / (sek * 10); el._tonar = true;
       el._tona = setInterval(() => {
         const v = el.volume + steg;
-        if ((steg >= 0 && v >= mal) || (steg < 0 && v <= mal) || !steg) { el.volume = mal; clearInterval(el._tona); if (klar) klar(); }
+        if ((steg >= 0 && v >= mal) || (steg < 0 && v <= mal) || !steg) { el.volume = mal; clearInterval(el._tona); el._tonar = false; if (klar) klar(); }
         else el.volume = v;
       }, 100);
     }
@@ -907,7 +931,7 @@
     function passFel() { avslutaPass(); valjStation(null); nasta(1); }
     function avslutaPass() {
       if (!pass) return;
-      clearTimeout(pass.tid); clearInterval(stationLjud._tona); stationLjud.volume = 1; pass = null;
+      clearTimeout(pass.tid); clearInterval(stationLjud._tona); stationLjud._tonar = false; stationLjud.volume = vol; pass = null;
     }
     // Icecast-servrar visar vad som spelas: visa låten och, i vän-mixen, räkna låtarna i stället för att gissa på tiden
     let latinfoTimer = null, stationTitel = null;
@@ -1079,7 +1103,8 @@
           for (const el of spelareEl) {   // varje spelare får en egen volym (för mixen)
             const g = ac.createGain(); ac.createMediaElementSource(el).connect(g); g.connect(analys); forstarkning.set(el, g);
           }
-          analys.connect(ac.destination);
+          huvud = ac.createGain(); huvud.gain.value = vol; analys.connect(huvud); huvud.connect(ac.destination);
+          for (const el of spelareEl) el.volume = 1;
           fdata = new Uint8Array(analys.frequencyBinCount);
         } catch (e) { ac = null; analys = null; }
       }
