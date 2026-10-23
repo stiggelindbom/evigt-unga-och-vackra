@@ -897,7 +897,7 @@
     const PASS_LATAR = 3, PASS_MAX = 11 * 60 * 1000;   // utan låtinfo från servern: byt efter ca 3 låtar (11 min)
     const vanStation = stationer.find(v => /hitnet/i.test(v.namn)) || stationer[0];
     let vanMixPa = false, pass = null;
-    try { vanMixPa = !!vanStation && localStorage.getItem("deu-vanmix") === "pa"; } catch {}
+    // vän-mixen sparas inte: varje besök börjar på våra egna låtar, radion väljer man till själv
     function visaVanMix() {
       const b = $("vanMixKnapp"); if (!vanStation) return;
       b.hidden = false; b.classList.toggle("pa", vanMixPa); b.setAttribute("aria-pressed", vanMixPa);
@@ -907,7 +907,7 @@
       b.title = `Varva: ${PASS_LATAR} låtar från ${vanStation.namn}, sedan en av De Evigt Unga å Vackras`;
     }
     $("vanMixKnapp").onclick = () => {
-      vanMixPa = !vanMixPa; try { localStorage.setItem("deu-vanmix", vanMixPa ? "pa" : "av"); } catch {}
+      vanMixPa = !vanMixPa;
       if (vanMixPa) rakna("Vän-mix på", vanStation.namn);
       if (vanMixPa && !upplastStation && !station) {   // iPhone: stationsspelaren måste startas en gång i ett tryck
         upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
