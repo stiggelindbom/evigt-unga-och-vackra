@@ -45,7 +45,8 @@
         "mastering": "Stig Lindbom",
         "ar": "2026"
       },
-      "datum": "2026-10-23T08:54:56.162Z"
+      "datum": "2026-10-23T08:54:56.162Z",
+      "omslag": "omslag-vilken-harlig-dag-extended.jpg"
     },
     {
       "slappt": false,
@@ -64,7 +65,8 @@
         "mastering": "Stig Lindbom",
         "ar": "2026"
       },
-      "klipp": null
+      "klipp": null,
+      "omslag": "omslag-vilken-harlig-dag.jpg"
     },
     {
       "slappt": false,
