@@ -131,6 +131,8 @@
     }
     .studio .omslag { position: relative; border-radius: 10px; overflow: hidden; }
     .studio .omslag img { aspect-ratio: 1; object-fit: cover; width: 100%; }
+    img.som-logga { object-fit: contain !important; padding: 14%; background: radial-gradient(circle at 50% 45%, #2a2418, #0b0a08 75%); }   /* vännens logga visas hel, inte beskuren */
+    #miniBild.som-logga { padding: 4px; }
     .live {
       position: absolute; top: 10px; left: 10px; display: flex; align-items: center; gap: 6px;
       background: rgba(0,0,0,.75); padding: 4px 10px; border-radius: 999px;
@@ -822,12 +824,15 @@
       if (!iPass) avslutaPass();
       if (!v) {   // tillbaka till Evigt Ung Radio
         station = null; stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load();
+        clearInterval(latinfoTimer); stationTitel = null;
         uppdatera(); ritaStationer(); return;
       }
       if (spCtrl && !spPaus) spCtrl.pause();
       avbrytMix(); if (!ljud.paused) ljud.pause();
       $("spRam").hidden = true; $("spTips").hidden = true;
-      station = v; stationLjud.src = v.stream; stationLjud.volume = iPass ? 0 : 1;
+      if (station !== v) stationTitel = null;
+      station = v; stationLjud.src = v.stream;
+      clearInterval(latinfoTimer); latinfoTimer = setInterval(lasLatinfo, 15000); lasLatinfo(); stationLjud.volume = iPass ? 0 : 1;
       stationLjud.play().then(() => { if (iPass) tona(stationLjud, 1); }).catch(() => { if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
       uppdatera(); ritaStationer();
     }
@@ -877,8 +882,8 @@
     // en av våra låtar är slut: med vän-mix på går vi över till vännens radio, annars nästa låt
     function latSlut() {
       if (!vanMixPa || !vanStation) return nasta(1);
-      pass = { latar: 0, titel: null, tid: setTimeout(passSlut, PASS_MAX), fraga: setInterval(lasLatinfo, 15000) };
-      valjStation(vanStation, true); lasLatinfo();
+      pass = { latar: 0, titel: null, tid: setTimeout(passSlut, PASS_MAX) };
+      valjStation(vanStation, true);
     }
     function passSlut() {
       if (!pass) return;
@@ -887,18 +892,22 @@
     function passFel() { avslutaPass(); valjStation(null); nasta(1); }
     function avslutaPass() {
       if (!pass) return;
-      clearTimeout(pass.tid); clearInterval(pass.fraga); clearInterval(stationLjud._tona); stationLjud.volume = 1; pass = null;
+      clearTimeout(pass.tid); clearInterval(stationLjud._tona); stationLjud.volume = 1; pass = null;
     }
-    // Icecast-servrar visar vad som spelas; går det att läsa räknar vi låtarna i stället för att gissa på tiden
+    // Icecast-servrar visar vad som spelas: visa låten och, i vän-mixen, räkna låtarna i stället för att gissa på tiden
+    let latinfoTimer = null, stationTitel = null;
     async function lasLatinfo() {
-      if (!pass) return;
+      const st = station; if (!st) return;
       try {
-        const r = await fetch(new URL("/status-json.xsl", vanStation.stream), { cache: "no-store" });
+        const r = await fetch(new URL("/status-json.xsl", st.stream), { cache: "no-store" });
         const k = [].concat((await r.json()).icestats.source || [])[0] || {};
         const titel = k.title ? (k.artist ? k.artist + " – " + k.title : k.title) : null;
-        if (!pass || !titel) return;
-        if (pass.titel && titel !== pass.titel && ++pass.latar >= PASS_LATAR) return passSlut();
-        pass.titel = titel; uppdatera();
+        if (station !== st || !titel) return;
+        if (pass) {
+          if (pass.titel && titel !== pass.titel && ++pass.latar >= PASS_LATAR) return passSlut();
+          pass.titel = titel;
+        }
+        if (titel !== stationTitel) { stationTitel = titel; uppdatera(); }
       } catch { /* ingen låtinfo: tiden får avgöra */ }
     }
 
@@ -995,9 +1004,10 @@
       $("studio").classList.toggle("via-station", !!station);
       if (station) {
         $("nuEtikett").textContent = !pa ? "LIVE – TRYCK PLAY" : pass ? `LIVE · ${station.namn.toUpperCase()} · SEN EVIGT UNG` : "LIVE · DIREKTSÄNDNING";
-        $("nuTitel").textContent = pass && pass.titel ? pass.titel : station.namn; $("miniTitel").textContent = station.namn; $("nuKredit").hidden = true;
+        $("nuTitel").textContent = stationTitel || station.namn; $("miniTitel").textContent = stationTitel ? `${station.namn} · ${stationTitel}` : station.namn; $("nuKredit").hidden = true;
         const bild = station.logga ? (/^https?:/.test(station.logga) ? station.logga : "musik/" + encodeURI(station.logga)) : "assets/omslag.jpg";
         if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; }
+        for (const id of ["studioBild", "miniBild"]) $(id).classList.toggle("som-logga", !!station.logga);
         for (const id of ["spelaIkon", "miniIkon", "heroIkon"]) $(id).setAttribute("d", pa ? PAUS : PLAY);
         $("heroText").textContent = pa ? "Pausa radion" : "Starta radion";
         $("studio").classList.toggle("spelar", pa); $("studio").classList.remove("via-spotify");
@@ -1010,6 +1020,7 @@
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
+      for (const id of ["studioBild", "miniBild"]) $(id).classList.remove("som-logga");
       $("miniTitel").textContent = l ? l.titel : "Tryck play för att starta";
       $("spelaIkon").setAttribute("d", pa ? PAUS : PLAY);
       $("miniIkon").setAttribute("d", pa ? PAUS : PLAY);
