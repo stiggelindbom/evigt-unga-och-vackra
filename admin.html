@@ -855,9 +855,12 @@
       const ny = e.target.closest("[data-ny]");
       if (ny) {
         const slappt = ny.dataset.ny === "slappt";
-        data.latar.push({ slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
+        // nya låtar hamnar alltid överst i sin lista
+        const forsta = data.latar.findIndex(x => !!x.slappt === slappt), plats = forsta < 0 ? data.latar.length : forsta;
+        data.latar.splice(plats, 0, { slappt, titel: "", info: "", typ: slappt ? "Singel" : "Demo", spotify: "", fil: "", ladda: !slappt, kredit: FORVAL(), datum: new Date().toISOString(), ...(slappt ? { slapptDatum: new Date().toISOString() } : {}) });
         raderaVantar = -1; rita(); andrat();
-        const kort = document.querySelector(`[data-i="${data.latar.length - 1}"] input`); kort && kort.focus();
+        const kort = document.querySelector(`[data-i="${plats}"]`);
+        if (kort) { kort.scrollIntoView({ behavior: "smooth", block: "center" }); kort.querySelector('[data-falt="titel"]')?.focus({ preventScroll: true }); }
         return;
       }
       const kort = e.target.closest("[data-i]"); if (!kort) return;
