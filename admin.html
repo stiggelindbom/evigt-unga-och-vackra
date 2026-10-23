@@ -24,6 +24,8 @@
     :focus-visible { outline: 2px solid var(--guld); outline-offset: 2px; }
     [hidden] { display: none !important; }
 
+    .ny-version { position: sticky; top: 0; z-index: 20; background: var(--guld); color: var(--svart); padding: 10px 16px; text-align: center; font-weight: 600; }
+    .ny-version button { margin-left: 8px; padding: 4px 12px; border-radius: 999px; border: 0; background: var(--svart); color: var(--guld); font-weight: 700; }
     header {
       display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
       padding: 14px 16px; border-bottom: 1px solid var(--kant); background: var(--kol);
@@ -143,6 +145,7 @@
 </head>
 <body>
 
+  <div class="ny-version" id="nyVersion" hidden>Ny version av backoffice finns. <button type="button" onclick="location.reload()">Ladda om</button> (spara dina ändringar först)</div>
   <header>
     <div class="namn"><img src="assets/logo.png" alt=""><h1>Backoffice</h1></div>
     <nav>
@@ -242,6 +245,19 @@
   <input type="file" id="loggval" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden>
 
   <script>
+    // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
+    const VERSION = "v20261023093557";
+    // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
+    async function kollaVersion() {
+      try {
+        const text = await (await fetch("admin.html?k=" + Date.now(), { cache: "no-store" })).text();
+        const ny = (text.match(/const VERSION = "([^"]+)"/) || [])[1];
+        if (ny && ny !== VERSION) $("nyVersion").hidden = false;
+      } catch {}
+    }
+    setInterval(kollaVersion, 60000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) kollaVersion(); });
+
     // ===== Inställningar =====
     const AGARE = "stiggelindbom", REPO = "evigt-unga-och-vackra", GREN = "main";
     const DATAFIL = "musik/innehall.json";
