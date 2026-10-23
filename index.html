@@ -216,9 +216,9 @@
     .stationer { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 12px; }
     .station { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--kant); color: var(--dampad); }
     .station.pa { border-color: var(--guld); color: var(--svart); background: var(--guld); }
-    .studio.via-station .tidslinje, .studio.via-station .spelar-val, .studio.via-station #blanda, .studio.via-station #delaNu { visibility: hidden; }
+    .studio.via-station .tidslinje, .studio.via-station #mixKnapp, .studio.via-station #blanda, .studio.via-station #delaNu { visibility: hidden; }
     .studio.via-station .live { color: #ff5a5a; }
-    .spelar-val { display: flex; justify-content: flex-end; margin-top: 6px; }
+    .spelar-val { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
     .mix-knapp { font-size: .72rem; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--kant); color: var(--dampad); font-family: "Oswald", sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     .mix-knapp.pa { border-color: var(--guld); color: var(--guld); }
     .kredit-lank { margin-top: 4px; font-size: .78rem; color: var(--dampad); text-decoration: underline; text-underline-offset: 3px; }
@@ -415,7 +415,7 @@
           <h3 id="nuTitel">Tryck play</h3>
           <button class="kredit-lank" id="nuKredit" type="button" hidden>Upphovspersoner</button>
           <canvas class="spektrum" id="spektrum" aria-hidden="true"></canvas>
-          <div class="spelar-val"><button class="mix-knapp" id="mixKnapp" type="button" aria-pressed="true" title="Mixa ihop låtarna i stället för paus">⇄ Mix på</button></div>
+          <div class="spelar-val"><button class="mix-knapp" id="vanMixKnapp" type="button" aria-pressed="false" hidden></button><button class="mix-knapp" id="mixKnapp" type="button" aria-pressed="true" title="Mixa ihop låtarna i stället för paus">⇄ Mix på</button></div>
           <div class="tidslinje">
             <span id="tidNu">0:00</span>
             <input type="range" id="sok" min="0" max="100" value="0" step="0.1" aria-label="Spola">
@@ -800,7 +800,7 @@
               const d = e.data; spPaus = d.isPaused; spPos = d.position / 1000; spLang = d.duration / 1000;
               if (!d.isPaused && d.position > 0) { spStartat = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka"); }
               // låten slut: spela nästa
-              if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return nasta(1); }
+              if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return latSlut(); }
               if (arSpotify()) { visaTid(spPos, spLang); kollaRakna(spPos); }
               uppdatera();
             });
@@ -818,7 +818,8 @@
     const stationer = (DATA.vanner || []).filter(v => v.namn && /^https:\/\//.test(v.stream || ""));
     let station = null;
     const stationLjud = $("stationLjud");
-    function valjStation(v) {
+    function valjStation(v, iPass = false) {
+      if (!iPass) avslutaPass();
       if (!v) {   // tillbaka till Evigt Ung Radio
         station = null; stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load();
         uppdatera(); ritaStationer(); return;
@@ -826,7 +827,8 @@
       if (spCtrl && !spPaus) spCtrl.pause();
       avbrytMix(); if (!ljud.paused) ljud.pause();
       $("spRam").hidden = true; $("spTips").hidden = true;
-      station = v; stationLjud.src = v.stream; stationLjud.play().catch(() => { $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
+      station = v; stationLjud.src = v.stream; stationLjud.volume = iPass ? 0 : 1;
+      stationLjud.play().then(() => { if (iPass) tona(stationLjud, 1); }).catch(() => { if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
       uppdatera(); ritaStationer();
     }
     function ritaStationer() {
@@ -840,8 +842,65 @@
       const i = +b.dataset.station; valjStation(i < 0 ? null : stationer[i]);
     });
     for (const h of ["play", "pause", "playing"]) stationLjud.addEventListener(h, () => uppdatera());
-    stationLjud.addEventListener("error", () => { if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
+    stationLjud.addEventListener("error", () => { if (pass) return passFel(); if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
     ritaStationer();
+
+    // --- Vän-mix: tre låtar från vännens radio (t.ex. HitNet), sedan en av våra, och så vidare ---
+    const PASS_LATAR = 3, PASS_MAX = 11 * 60 * 1000;   // utan låtinfo från servern: byt efter ca 3 låtar (11 min)
+    const vanStation = stationer.find(v => /hitnet/i.test(v.namn)) || stationer[0];
+    let vanMixPa = false, pass = null;
+    try { vanMixPa = !!vanStation && localStorage.getItem("deu-vanmix") === "pa"; } catch {}
+    function visaVanMix() {
+      const b = $("vanMixKnapp"); if (!vanStation) return;
+      b.hidden = false; b.classList.toggle("pa", vanMixPa); b.setAttribute("aria-pressed", vanMixPa);
+      b.textContent = (vanMixPa ? "✓ " : "+ ") + vanStation.namn;
+      b.title = `Blanda in ${vanStation.namn}: ${PASS_LATAR} låtar därifrån, sedan en av våra`;
+    }
+    $("vanMixKnapp").onclick = () => {
+      vanMixPa = !vanMixPa; try { localStorage.setItem("deu-vanmix", vanMixPa ? "pa" : "av"); } catch {}
+      if (vanMixPa && !upplastStation) {   // iPhone: stationsspelaren måste startas en gång i ett tryck
+        upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
+        stationLjud.play().then(() => { if (!station) { stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load(); } stationLjud.muted = false; }).catch(() => { stationLjud.muted = false; });
+      }
+      if (!vanMixPa && pass) { valjStation(null); nasta(1); }
+      visaVanMix(); uppdatera();
+    };
+    let upplastStation = false;
+    function tona(el, mal, sek = 3, klar) {
+      clearInterval(el._tona); const steg = (mal - el.volume) / (sek * 10);
+      el._tona = setInterval(() => {
+        const v = el.volume + steg;
+        if ((steg >= 0 && v >= mal) || (steg < 0 && v <= mal) || !steg) { el.volume = mal; clearInterval(el._tona); if (klar) klar(); }
+        else el.volume = v;
+      }, 100);
+    }
+    // en av våra låtar är slut: med vän-mix på går vi över till vännens radio, annars nästa låt
+    function latSlut() {
+      if (!vanMixPa || !vanStation) return nasta(1);
+      pass = { latar: 0, titel: null, tid: setTimeout(passSlut, PASS_MAX), fraga: setInterval(lasLatinfo, 15000) };
+      valjStation(vanStation, true); lasLatinfo();
+    }
+    function passSlut() {
+      if (!pass) return;
+      tona(stationLjud, 0, 3, () => { avslutaPass(); valjStation(null); nasta(1); });
+    }
+    function passFel() { avslutaPass(); valjStation(null); nasta(1); }
+    function avslutaPass() {
+      if (!pass) return;
+      clearTimeout(pass.tid); clearInterval(pass.fraga); clearInterval(stationLjud._tona); stationLjud.volume = 1; pass = null;
+    }
+    // Icecast-servrar visar vad som spelas; går det att läsa räknar vi låtarna i stället för att gissa på tiden
+    async function lasLatinfo() {
+      if (!pass) return;
+      try {
+        const r = await fetch(new URL("/status-json.xsl", vanStation.stream), { cache: "no-store" });
+        const k = [].concat((await r.json()).icestats.source || [])[0] || {};
+        const titel = k.title ? (k.artist ? k.artist + " – " + k.title : k.title) : null;
+        if (!pass || !titel) return;
+        if (pass.titel && titel !== pass.titel && ++pass.latar >= PASS_LATAR) return passSlut();
+        pass.titel = titel; uppdatera();
+      } catch { /* ingen låtinfo: tiden får avgöra */ }
+    }
 
     async function spela(i) {
       if (station) valjStation(null);
@@ -914,7 +973,7 @@
     try { mixPa = localStorage.getItem("deu-mix") !== "av"; } catch {}
     function visaMixKnapp() { $("mixKnapp").classList.toggle("pa", mixPa); $("mixKnapp").setAttribute("aria-pressed", mixPa); $("mixKnapp").textContent = mixPa ? "⇄ Mix på" : "⇄ Mix av"; }
     $("mixKnapp").onclick = () => { mixPa = !mixPa; try { localStorage.setItem("deu-mix", mixPa ? "pa" : "av"); } catch {} visaMixKnapp(); };
-    visaMixKnapp();
+    visaMixKnapp(); visaVanMix();
     function avbrytMix() {
       clearTimeout(mixTimer); mixar = false;
       const o = annan(); if (!o.paused) o.pause();
@@ -935,8 +994,8 @@
       const pa = spelar(), viaSpotify = !station && arSpotify();
       $("studio").classList.toggle("via-station", !!station);
       if (station) {
-        $("nuEtikett").textContent = pa ? "LIVE · DIREKTSÄNDNING" : "LIVE – TRYCK PLAY";
-        $("nuTitel").textContent = station.namn; $("miniTitel").textContent = station.namn; $("nuKredit").hidden = true;
+        $("nuEtikett").textContent = !pa ? "LIVE – TRYCK PLAY" : pass ? `LIVE · ${station.namn.toUpperCase()} · SEN EVIGT UNG` : "LIVE · DIREKTSÄNDNING";
+        $("nuTitel").textContent = pass && pass.titel ? pass.titel : station.namn; $("miniTitel").textContent = station.namn; $("nuKredit").hidden = true;
         const bild = station.logga ? (/^https?:/.test(station.logga) ? station.logga : "musik/" + encodeURI(station.logga)) : "assets/omslag.jpg";
         if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; }
         for (const id of ["spelaIkon", "miniIkon", "heroIkon"]) $(id).setAttribute("d", pa ? PAUS : PLAY);
@@ -1049,15 +1108,15 @@
         if (klipp != null) { const rel = Math.max(0, ljud.currentTime - klipp); visaTid(rel, 30); kollaRakna(rel >= 29 ? 30 : rel); }
         else { visaTid(ljud.currentTime, ljud.duration); kollaRakna(ljud.currentTime); }
         // mixa in nästa demo de sista sekunderna (kräver Web Audio; Spotify-låtar kan inte mixas)
-        if (mixPa && !mixar && forstarkning.size && isFinite(slut) && slut - ljud.currentTime <= MIX && !ljud.paused) {
+        if (mixPa && !vanMixPa && !mixar && forstarkning.size && isFinite(slut) && slut - ljud.currentTime <= MIX && !ljud.paused) {
           const n = nastaIndex(1);
           if (n >= 0 && n !== nu && !latar[n].slappt) return startaMix(n);
         }
-        if (klipp != null && ljud.currentTime >= klipp + 30 && !mixar) { ljud.pause(); nasta(1); }   // klippet slut: nästa låt
+        if (klipp != null && ljud.currentTime >= klipp + 30 && !mixar) { ljud.pause(); latSlut(); }   // klippet slut: nästa låt
       }));
       el.addEventListener("play", paAktiv(uppdatera));
       el.addEventListener("pause", paAktiv(uppdatera));
-      el.addEventListener("ended", paAktiv(() => { if (!mixar) nasta(1); }));   // radion rullar vidare
+      el.addEventListener("ended", paAktiv(() => { if (!mixar) latSlut(); }));   // radion rullar vidare
       el.addEventListener("error", paAktiv(() => { if (nu >= 0 && !arSpotify() && ljud.getAttribute("src")) { latar[nu].saknas = true; nasta(1); } }));
     }
     $("sok").addEventListener("input", e => {
