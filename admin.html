@@ -254,6 +254,7 @@
     $("repoNamn").textContent = `${AGARE}/${REPO}`;
 
     let flodeSha = null, fyllda = [], nyKod = "";
+    const attRadera = new Set();   // låtfiler som ersatts – raderas från GitHub efter Spara
     // Koden sparas aldrig i klartext – bara dess SHA-256 (hemsidan jämför mot den)
     const sha256 = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
     let token = "", data = null, sha = null, filer = new Set(), osparat = false, uppladdning = null, raderaVantar = -1, slappOppen = -1;
@@ -1116,7 +1117,8 @@
       const arWav = /\.wav$/i.test(fil.name), arMp3 = /\.mp3$/i.test(fil.name);
       if (!arWav && !arMp3) return status("Välj en mp3- eller wav-fil.", "fel");
       if (!l.titel) return status("Skriv en titel på låten innan du laddar upp.", "fel");
-      const namn = l.fil || filnamn(l.titel);
+      // alltid ett nytt filnamn efter titeln: rätt namn syns, och ingen cache spelar den gamla versionen
+      const namn = filnamn(l.titel).replace(/\.mp3$/, "-" + Date.now().toString(36).slice(-4) + ".mp3");
       uppladdning = i; rita();
       try {
         if (arWav) {
@@ -1136,7 +1138,8 @@
         });
         filer.add(namn);
         if (l.slappt && !l.fil) l.ladda = true;   // släppt låt som får en fil: gör den nedladdningsbar direkt
-        if (l.fil !== namn) { l.fil = namn; andrat(); }
+        if (l.fil && l.fil !== namn) attRadera.add(l.fil);   // gamla filen tas bort när du sparar
+        l.fil = namn; taggAndrad.delete(l); andrat();
         uppladdning = null; rita();
         status(osparat ? `✓ ${namn} uppladdad. Glöm inte att spara.` : `✓ ${namn} uppladdad.`, osparat ? "osparat" : "ok");
       } catch (e) {
@@ -1217,6 +1220,15 @@ ${poster.slice(0, 20).map(p => `<item>
           } catch (e) { console.warn("Taggar kunde inte uppdateras", l.fil, e); }
         }
         try { await sparaFlode(); } catch (e) { console.warn("Flödet kunde inte sparas", e); }
+        for (const f of [...attRadera]) {
+          if (data.latar.some(x => x.fil === f)) { attRadera.delete(f); continue; }   // används fortfarande
+          try {
+            const fsha = (await gh(`/contents/musik/${encodeURIComponent(f)}?ref=${GREN}`)).sha;
+            await gh(`/contents/musik/${encodeURIComponent(f)}`, { method: "DELETE", body: JSON.stringify({ message: `Ta bort ersatt låtfil ${f}`, sha: fsha, branch: GREN }) });
+            filer.delete(f);
+          } catch (e) { console.warn("Kunde inte ta bort", f, e); }
+          attRadera.delete(f);
+        }
         status("✓ Sparat! Hemsidan uppdateras inom någon minut.", "ok");
       } catch (e) {
         $("spara").disabled = false;
