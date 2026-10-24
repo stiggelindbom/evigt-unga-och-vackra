@@ -143,6 +143,31 @@
     },
     {
       "slappt": false,
+      "titel": "Remember Me - Radio",
+      "info": "",
+      "typ": "Demo Radio",
+      "spotify": "",
+      "fil": "remember-me-razor-di-di-di-masterchannel-2026-05-05-ojga.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T12:02:15.581Z",
+      "niva": {
+        "lufs": -11.3,
+        "topp": -0.2
+      },
+      "omslag": "omslag-remember-me-razor.jpg"
+    },
+    {
+      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
