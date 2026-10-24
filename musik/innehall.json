@@ -143,6 +143,31 @@
     },
     {
       "slappt": false,
+      "titel": "Vart tog den söta lilla flickan vägen (Epa Demo)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "vart-tog-den-sota-lilla-flickan-vagen-epa-demo-7v63.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Just D",
+        "textforfattare": "Just D",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T15:56:00.302Z",
+      "klipp": 59.5,
+      "niva": {
+        "lufs": -12.1,
+        "topp": -0.8
+      }
+    },
+    {
+      "slappt": false,
       "titel": "Jag är inte som dom andra (Club VIP)",
       "info": "",
       "typ": "Demo",
