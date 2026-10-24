@@ -812,8 +812,8 @@
         return rader.length ? `<div><div class="listrubrik"><h3>${rubrik}</h3><small>${under}</small></div>
           <ol class="lista">${rader.map(([l, i]) => rad(l, i)).join("")}</ol></div>` : "";
       };
-      $("lista").innerHTML = grupp("Kommande", "30 s smakprov på nästa släpp", l => !l.slappt && typeof l.klipp === "number", demoRad)
-        + grupp("Demos", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt && typeof l.klipp !== "number", demoRad)
+      $("lista").innerHTML = grupp("Demos", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt && typeof l.klipp !== "number", demoRad)
+        + grupp("Kommande", "30 s smakprov på nästa släpp", l => !l.slappt && typeof l.klipp === "number", demoRad)
         || `<div class="tomt">Inga demos uppladdade än.</div>`;
       $("slapptLista").innerHTML = grupp("Släppta låtar", "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
     }
