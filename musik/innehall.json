@@ -240,6 +240,25 @@
     },
     {
       "slappt": false,
+      "titel": "Svenne G",
+      "info": "Han skulle bara softa och spela spel …",
+      "typ": "Singel",
+      "spotify": "",
+      "fil": "svenne-g.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026"
+      },
+      "omslag": "omslag-svenne-g.jpg"
+    },
+    {
+      "slappt": false,
       "titel": "Remember Me - Radio",
       "info": "",
       "typ": "Demo Radio",
@@ -265,7 +284,7 @@
     },
     {
       "slappt": false,
-      "titel": "Remember Me",
+      "titel": "Remember Me - Rickolitos Mix",
       "info": "",
       "typ": "Demo Rickolitos Mix",
       "spotify": "",
@@ -314,25 +333,6 @@
       "klipp": 56.5,
       "omslag": "omslag-dj-stigge-vilse-bland-miljoner-dance-mix.jpg",
       "klippLangd": 43
-    },
-    {
-      "slappt": false,
-      "titel": "Svenne G",
-      "info": "Han skulle bara softa och spela spel …",
-      "typ": "Singel",
-      "spotify": "",
-      "fil": "svenne-g.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026"
-      },
-      "omslag": "omslag-svenne-g.jpg"
     },
     {
       "slappt": false,
