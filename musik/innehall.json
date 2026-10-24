@@ -143,6 +143,33 @@
     },
     {
       "slappt": false,
+      "titel": "Dj Stigge - Sånt är livet",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-sant-ar-livet-2b4n.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Bill Cook ",
+        "textforfattare": "Bill Cook",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T16:20:18.437Z",
+      "klipp": 0,
+      "klippAuto": true,
+      "niva": {
+        "lufs": -10.1,
+        "topp": -0.3
+      },
+      "omslag": "omslag-dj-stigge-vilse-bland-miljoner-dance-mix.jpg"
+    },
+    {
+      "slappt": false,
       "titel": "Vart tog den söta lilla flickan vägen (Epa Demo)",
       "info": "",
       "typ": "Demo",
