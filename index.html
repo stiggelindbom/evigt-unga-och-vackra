@@ -273,6 +273,13 @@
     /* Spotify */
     #spotify { background: var(--kol); text-align: center; }
     #socialt { background: var(--svart); }
+    .inlagg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 18px; margin-bottom: 28px; }
+    .inlagg { background: var(--yta); border: 1px solid var(--kant); border-radius: 14px; overflow: hidden; display: grid; align-content: start; }
+    .inlagg video, .inlagg img { width: 100%; max-height: 460px; object-fit: contain; background: #000; display: block; }
+    .inlagg div { padding: 12px 14px 14px; display: grid; gap: 6px; }
+    .inlagg p { white-space: pre-line; font-size: .95rem; }
+    .inlagg small { color: var(--dampad); font-size: .78rem; }
+    .inlagg a { color: var(--guld); font-size: .85rem; }
     .socialt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; align-items: start; }
     .fb-ram iframe { width: 100%; height: 640px; border: 0; border-radius: 12px; background: #fff; display: block; }
     .kol { display: grid; gap: 24px; min-width: 0; }
@@ -524,6 +531,7 @@
       <h2>Senaste nytt</h2>
       <div class="delare">★</div>
       <p class="ingress">Det vi lägger upp på Facebook, Instagram och SoundCloud dyker upp här.</p>
+      <div class="inlagg-grid" id="inlagg" hidden></div>
       <div class="socialt-grid">
         <div class="fb-ram" id="fbFlode"></div>
         <div class="kol">
@@ -713,6 +721,22 @@
     const latar = (DATA.latar || []).filter(l => !l.dold).map(l => ({ ...l, titel: rensaTitel(l.titel), saknas: !l.fil }));
     const $ = id => document.getElementById(id);
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    // --- Egna inlägg från backoffice (video/bild + text) ---
+    (() => {
+      const poster = (DATA.inlagg || []).slice(0, 6); if (!poster.length) return;
+      const media = p => !p.media ? "" : p.typ === "video"
+        ? `<video src="${esc(p.media)}#t=0.1" controls playsinline preload="metadata"></video>`
+        : `<img src="${esc(p.media)}" alt="" loading="lazy">`;
+      $("inlagg").innerHTML = poster.map(p => `<article class="inlagg">${media(p)}<div><p>${esc(p.text)}</p>
+        <small>${new Date(p.datum).toLocaleDateString("sv-SE", { day: "numeric", month: "long", year: "numeric" })}</small>
+        ${p.lank && !/^https:\/\/devigtunga\.se\/?$/.test(p.lank) ? `<a href="${esc(p.lank)}"${/^https:\/\/devigtunga\.se/.test(p.lank) ? "" : ' target="_blank" rel="noopener"'}>Lyssna →</a>` : ""}</div></article>`).join("");
+      $("inlagg").hidden = false;
+      // en video i taget: när en startar pausas radion och övriga videor
+      $("inlagg").addEventListener("play", e => {
+        document.querySelectorAll("#inlagg video").forEach(v => { if (v !== e.target) v.pause(); });
+        if (typeof spelar === "function" && spelar()) vaxla();
+      }, true);
+    })();
     // Två spelare så att låtarna kan mixas (den ena tonas ut medan nästa tonas in)
     const spelareEl = [$("ljud"), $("ljud2")];
     // --- Volym: gäller demos (via Web Audio) och vännernas radio. Spotify-rutan har sin egen. ---

@@ -39,6 +39,13 @@
     h2 { font-family: "Yellowtail", cursive; font-weight: 400; color: var(--guld); font-size: 2.2rem; line-height: 1.1; }
     h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--guld); font-size: 1rem; }
     .kort { background: var(--yta); border: 1px solid var(--kant); border-radius: 12px; padding: 20px; }
+    .inlagg-kort { display: grid; gap: 12px; }
+    .inlagg-rad { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    #inlaggForhand video, #inlaggForhand img { max-width: 220px; max-height: 260px; border-radius: 10px; display: block; }
+    .inlagg-post { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; border-top: 1px solid var(--kant); padding-top: 10px; }
+    .inlagg-post .tumme { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #2a2418; display: grid; place-items: center; font-size: 1.4rem; }
+    .inlagg-post p { font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .inlagg-post small { color: var(--dampad); }
     .hjalp { color: var(--dampad); font-size: .9rem; }
     .hjalp ol { padding-left: 20px; margin-top: 6px; display: grid; gap: 4px; }
 
@@ -181,6 +188,27 @@
   <!-- Admin -->
   <main id="adminVy" hidden>
     <div>
+      <h2>📣 Nytt inlägg</h2>
+      <p class="hjalp">Skriv, välj en video eller bild och tryck Skicka. Inlägget hamnar direkt under <b>Senaste nytt</b> på hemsidan och i flödet <code>inlagg.xml</code> – som Make läser och lägger ut på Facebook, Instagram och YouTube.</p>
+    </div>
+    <div class="kort inlagg-kort">
+      <textarea id="inlaggText" rows="4" placeholder="Vad vill du berätta? T.ex. Ny video till Vilken härlig dag! 🌞 Lyssna på radion – länk i bion."></textarea>
+      <div class="inlagg-rad">
+        <button class="knapp kontur liten" type="button" id="inlaggValj">🎬 Välj video eller bild</button>
+        <span class="hjalp" id="inlaggFilNamn">Ingen fil vald (går att skicka bara text)</span>
+      </div>
+      <div id="inlaggForhand" hidden></div>
+      <label>Länk i inlägget
+        <select id="inlaggLank"></select>
+      </label>
+      <div class="inlagg-rad">
+        <button class="knapp" type="button" id="inlaggSkicka">📣 Skicka inlägget</button>
+      </div>
+      <input type="file" id="inlaggFil" accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp" hidden>
+      <div id="inlaggLista"></div>
+    </div>
+
+    <div>
       <h2>Låtar</h2>
       <p class="hjalp">Släppta låtar spelas via Spotify på hemsidan så att lyssningarna räknas. Demos spelas i radion och kan laddas ner. Ordningen här är ordningen på hemsidan.</p>
     </div>
@@ -255,7 +283,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261024155145";
+    const VERSION = "v20261024205338";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -398,7 +426,7 @@
       const f = await gh(`/contents/${DATAFIL}?ref=${GREN}`);
       sha = f.sha;
       data = JSON.parse(franBase64(f.content));
-      data.lankar ||= {}; data.latar ||= []; data.vanner ||= [];
+      data.lankar ||= {}; data.latar ||= []; data.vanner ||= []; data.inlagg ||= [];
       for (const l of data.latar) if (!l.kredit) { l.kredit = FORVAL(); fyllda.push(l); }
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
@@ -567,6 +595,7 @@
       $("kommandeLista").innerHTML = lista("kommande");
       $("demoLista").innerHTML = lista("demo");
       ritaVanner();
+      ritaInlagg();
       ritaEngangsDel();
       setTimeout(ritaAllaVagformer);
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
@@ -1311,6 +1340,93 @@ ${poster.slice(0, 20).map(p => `<item>
       flodeSha = svar.content.sha;
     }
 
+    // ===== Nytt inlägg: hemsidan + inlagg.xml (Make lägger ut på Facebook, Instagram, YouTube) =====
+    const INLAGG_FLODE = "inlagg.xml";
+    let inlaggFil = null, inlaggSha = null, inlaggFlodeSha = null;
+    const mediaUrl = m => /^https?:/.test(m) ? m : SIDA + m.split("/").map(encodeURIComponent).join("/");
+    function ritaInlagg() {
+      const val = $("inlaggLank").value;
+      $("inlaggLank").innerHTML = `<option value="${SIDA}">Hemsidan (devigtunga.se)</option><option value="${SIDA}#radio">Radion</option><option value="${SIDA}lankar/">Länksidan (alla länkar)</option>`
+        + data.latar.filter(l => !l.dold && l.titel).map(l => `<option value="${esc(l.slappt && l.spotify ? l.spotify : SIDA + "#lat-" + slugga(l.titel))}">${esc(l.titel)}${l.slappt ? " (Spotify)" : ""}</option>`).join("");
+      if (val) $("inlaggLank").value = val;
+      $("inlaggLista").innerHTML = data.inlagg.length ? `<h3 style="margin-top:6px">Skickade inlägg</h3>` + data.inlagg.map((p, k) => `
+        <div class="inlagg-post">
+          ${p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
+          <div><p>${esc(p.text)}</p><small>${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
+          <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
+        </div>`).join("") : "";
+    }
+    const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    $("inlaggValj").onclick = () => { $("inlaggFil").value = ""; $("inlaggFil").click(); };
+    $("inlaggFil").addEventListener("change", () => {
+      const f = $("inlaggFil").files[0]; if (!f) return;
+      if (f.size > 45 * 1048576) { inlaggFil = null; return status(`Filen är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB. Exportera videon lite mindre.`, "fel"); }
+      inlaggFil = f;
+      $("inlaggFilNamn").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
+      const url = URL.createObjectURL(f);
+      $("inlaggForhand").innerHTML = f.type.startsWith("video") ? `<video src="${url}" controls playsinline muted></video>` : `<img src="${url}" alt="">`;
+      $("inlaggForhand").hidden = false;
+    });
+    $("inlaggSkicka").onclick = async () => {
+      const text = $("inlaggText").value.trim();
+      if (!text && !inlaggFil) return status("Skriv något eller välj en video/bild först.", "fel");
+      $("inlaggSkicka").disabled = true;
+      try {
+        const nu = new Date(), id = nu.toISOString().slice(0, 10) + "-" + (slugga(text.split("\n")[0]).slice(0, 40) || "inlagg") + "-" + nu.getTime().toString(36).slice(-4);
+        const post = { id, datum: nu.toISOString(), text, lank: $("inlaggLank").value || SIDA, typ: "text" };
+        if (inlaggFil) {
+          const ext = (inlaggFil.name.match(/\.(mp4|mov|webm|jpe?g|png|webp)$/i) || [, inlaggFil.type.split("/")[1]])[1].toLowerCase().replace("jpeg", "jpg");
+          post.typ = inlaggFil.type.startsWith("video") ? "video" : "bild";
+          post.media = `inlagg/${id}.${ext}`; post.mime = inlaggFil.type || (post.typ === "video" ? "video/mp4" : "image/jpeg"); post.storlek = inlaggFil.size;
+          status(`Laddar upp ${post.typ === "video" ? "videon" : "bilden"} (${(inlaggFil.size / 1048576).toFixed(1)} MB)…`);
+          await gh(`/contents/${post.media}`, { method: "PUT", body: JSON.stringify({ message: `Inlägg: ${post.typ} ${id}`, content: bytesTillBase64(new Uint8Array(await inlaggFil.arrayBuffer())), branch: GREN }) });
+          forhands[post.media] = URL.createObjectURL(inlaggFil);
+        }
+        data.inlagg.unshift(post);
+        $("inlaggText").value = ""; inlaggFil = null; $("inlaggFilNamn").textContent = "Ingen fil vald (går att skicka bara text)"; $("inlaggForhand").hidden = true; $("inlaggForhand").innerHTML = "";
+        ritaInlagg(); andrat();
+        await $("spara").onclick();   // sparar låtlistan, nyhetsflödet och inläggsflödet
+        status("📣 Inlägget är skickat! Det syns på hemsidan om en minut" + (data.lankar.make ? " och Make lägger ut det på sociala medier." : ". Koppla Make så hamnar det även på Facebook, Instagram och YouTube."), "ok");
+      } catch (e) { status("Inlägget kunde inte skickas: " + e.message, "fel"); }
+      $("inlaggSkicka").disabled = false;
+    };
+    $("inlaggLista").addEventListener("click", async e => {
+      const b = e.target.closest("[data-inlagg-bort]"); if (!b) return;
+      const k = +b.dataset.inlaggBort, p = data.inlagg[k];
+      if (!confirm("Ta bort inlägget från hemsidan? (Det som redan lagts ut på Facebook/Instagram tas bort där.)")) return;
+      data.inlagg.splice(k, 1); ritaInlagg(); andrat();
+      if (p.media && !/^https?:/.test(p.media)) {
+        try { const fsha = (await gh(`/contents/${p.media}?ref=${GREN}`)).sha; await gh(`/contents/${p.media}`, { method: "DELETE", body: JSON.stringify({ message: `Ta bort inlägg ${p.id}`, sha: fsha, branch: GREN }) }); } catch (err) { console.warn(err); }
+      }
+      await $("spara").onclick();
+    });
+    function byggInlaggFlode() {
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
+<channel>
+<title>De Evigt Unga å Vackra – inlägg</title>
+<link>${SIDA}</link>
+<description>Inlägg från De Evigt Unga å Vackra (för Facebook, Instagram och YouTube via Make)</description>
+<language>sv</language>
+${data.inlagg.slice(0, 20).map(p => `<item>
+  <title>${x((p.text.split("\n")[0] || "Nytt från De Evigt Unga å Vackra").slice(0, 90))}</title>
+  <description>${x(p.text)}</description>
+  <link>${x(p.lank || SIDA)}</link>
+  <guid isPermaLink="false">${x(p.id)}</guid>
+  <pubDate>${new Date(p.datum).toUTCString()}</pubDate>${p.media ? `
+  <enclosure url="${x(mediaUrl(p.media))}" type="${x(p.mime)}" length="${p.storlek || 0}"/>
+  <media:content url="${x(mediaUrl(p.media))}" medium="${p.typ === "video" ? "video" : "image"}" type="${x(p.mime)}"/>` : ""}
+</item>`).join("\n")}
+</channel>
+</rss>
+`;
+    }
+    async function sparaInlaggFlode() {
+      if (inlaggFlodeSha === null) inlaggFlodeSha = await gh(`/contents/${INLAGG_FLODE}?ref=${GREN}`).then(f => f.sha).catch(() => "");
+      const svar = await gh(`/contents/${INLAGG_FLODE}`, { method: "PUT", body: JSON.stringify({ message: "Uppdatera inläggsflödet", content: tillBase64(byggInlaggFlode()), branch: GREN, ...(inlaggFlodeSha ? { sha: inlaggFlodeSha } : {}) }) });
+      inlaggFlodeSha = svar.content.sha;
+    }
+
     // ===== Spara =====
     $("spara").onclick = async () => {
       for (const l of data.latar.filter(l => !l.titel.trim() && SPOTIFY_RE.test(l.spotify || ""))) await hamtaSpotifyInfo(l, l.spotify);
@@ -1336,6 +1452,7 @@ ${poster.slice(0, 20).map(p => `<item>
           } catch (e) { console.warn("Taggar kunde inte uppdateras", l.fil, e); }
         }
         try { await sparaFlode(); } catch (e) { console.warn("Flödet kunde inte sparas", e); }
+        try { await sparaInlaggFlode(); } catch (e) { console.warn("Inläggsflödet kunde inte sparas", e); }
         for (const f of [...attRadera]) {
           if (data.latar.some(x => x.fil === f)) { attRadera.delete(f); continue; }   // används fortfarande
           try {
