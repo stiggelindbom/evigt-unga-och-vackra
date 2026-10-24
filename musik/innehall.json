@@ -143,6 +143,32 @@
     },
     {
       "slappt": false,
+      "titel": "Jag är inte som dom andra (Club VIP)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "jag-ar-inte-som-dom-andra-club-vip-t3zf.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge ",
+        "kompositor": "Nik Kershaw",
+        "textforfattare": "Nik Kershaw",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T15:50:39.166Z",
+      "klipp": 48,
+      "niva": {
+        "lufs": -11,
+        "topp": -0.2
+      },
+      "klippLangd": 35
+    },
+    {
+      "slappt": false,
       "titel": "Jag är inte som dom andra (Radio)",
       "info": "",
       "typ": "Demo",
