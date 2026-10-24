@@ -1051,7 +1051,8 @@
         klipp = typeof l.klipp === "number" ? l.klipp : null;
         avbrytMix();
         ljud.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
-        startaAnalys();
+        startaAnalys(); ljud._utTonad = false;
+        if (klipp != null) { sattVolym(ljud, 0, 0); sattVolym(ljud, 1, KLIPP_IN); }   // klippet tonas in
         ljud.play().catch(() => {});
         uppdatera();
       }
@@ -1092,7 +1093,7 @@
     }
 
     // --- Mix: de sista sekunderna tonas den spelande låten ut medan nästa tonas in ---
-    const MIX = 5;
+    const MIX = 5, KLIPP_IN = 1.5, KLIPP_UT = 3;   // sekunder
     let mixPa = true, mixar = false, mixTimer = null;
     try { mixPa = localStorage.getItem("deu-mix") !== "av"; } catch {}
     function visaMixKnapp() { $("mixKnapp").classList.toggle("pa", mixPa); $("mixKnapp").setAttribute("aria-pressed", mixPa); $("mixKnapp").textContent = mixPa ? "⇄ Mix på" : "⇄ Mix av"; }
@@ -1106,7 +1107,7 @@
     function startaMix(i) {
       mixar = true;
       const gammal = ljud, ny = annan(), l = latar[i];
-      nu = i; raknadFor = -1; viaFil = !!l.slappt; klipp = typeof l.klipp === "number" ? l.klipp : null;
+      nu = i; raknadFor = -1; viaFil = !!l.slappt; ny._utTonad = false; klipp = typeof l.klipp === "number" ? l.klipp : null;
       sattVolym(ny, 0, 0);
       ny.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
       ny.play().catch(() => {});
@@ -1276,7 +1277,12 @@
       el.addEventListener("timeupdate", paAktiv(() => {
         if (arSpotify()) return;
         const slut = klipp != null ? klipp + 30 : ljud.duration;
-        if (klipp != null) { const rel = Math.max(0, ljud.currentTime - klipp); visaTid(rel, 30); kollaRakna(rel >= 29 ? 30 : rel); }
+        if (klipp != null) {
+          const rel = Math.max(0, ljud.currentTime - klipp); visaTid(rel, 30); kollaRakna(rel >= 29 ? 30 : rel);
+          // klippet tonas ut de sista sekunderna (mixen sköter övergången själv när den är på)
+          if (!mixar && rel >= 30 - KLIPP_UT && !ljud._utTonad && !ljud.paused) { ljud._utTonad = true; sattVolym(ljud, 0, Math.max(0.2, 30 - rel)); }
+          else if (ljud._utTonad && rel < 30 - KLIPP_UT - 0.5) { ljud._utTonad = false; sattVolym(ljud, 1, 0.3); }   // spolat tillbaka
+        }
         else { visaTid(ljud.currentTime, ljud.duration); kollaRakna(ljud.currentTime); }
         // mixa in nästa demo de sista sekunderna (kräver Web Audio; Spotify-låtar kan inte mixas)
         if (mixPa && !vanMixPa && !mixar && forstarkning.size && isFinite(slut) && slut - ljud.currentTime <= MIX && !ljud.paused) {
