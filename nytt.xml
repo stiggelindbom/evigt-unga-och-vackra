@@ -6,6 +6,15 @@
 <description>Nya låtar och demos från De Evigt Unga å Vackra</description>
 <language>sv</language>
 <item>
+  <title>Ny demo: Jag är inte som dom andra (Club VIP)</title>
+  <description>Ny demo på Evigt Ung Radio: Jag är inte som dom andra (Club VIP). Lyssna och ladda ner på vår sida!</description>
+  <link>https://devigtunga.se/#radio</link>
+  <guid isPermaLink="false">demo-Jag är inte som dom andra (Club VIP)</guid>
+  <pubDate>Sat, 24 Oct 2026 15:50:39 GMT</pubDate>
+  <enclosure url="https://devigtunga.se/assets/omslag.jpg" type="image/jpeg" length="0"/>
+  <media:content url="https://devigtunga.se/assets/omslag.jpg" medium="image"/>
+</item>
+<item>
   <title>Ny demo: Jag är inte som dom andra (Radio)</title>
   <description>Ny demo på Evigt Ung Radio: Jag är inte som dom andra (Radio). Lyssna och ladda ner på vår sida!</description>
   <link>https://devigtunga.se/#radio</link>
@@ -175,15 +184,6 @@
   <pubDate>Thu, 22 Oct 2026 17:16:37 GMT</pubDate>
   <enclosure url="https://devigtunga.se/musik/omslag-1987-radio-edit.jpg" type="image/jpeg" length="0"/>
   <media:content url="https://devigtunga.se/musik/omslag-1987-radio-edit.jpg" medium="image"/>
-</item>
-<item>
-  <title>Ute nu på Spotify: Vi älskar Siwan</title>
-  <description>Vi älskar Siwan är ute nu! Lyssna på Spotify – varje lyssning räknas.</description>
-  <link>https://open.spotify.com/track/6azQbuhnwTOZaukjEQTQG0</link>
-  <guid isPermaLink="false">slappt-Vi älskar Siwan</guid>
-  <pubDate>Thu, 22 Oct 2026 17:16:08 GMT</pubDate>
-  <enclosure url="https://devigtunga.se/musik/omslag-vi-alskar-siwan-radio-edit.jpg" type="image/jpeg" length="0"/>
-  <media:content url="https://devigtunga.se/musik/omslag-vi-alskar-siwan-radio-edit.jpg" medium="image"/>
 </item>
 </channel>
 </rss>
