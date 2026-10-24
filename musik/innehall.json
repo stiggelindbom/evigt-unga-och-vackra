@@ -265,7 +265,7 @@
     },
     {
       "slappt": false,
-      "titel": "Remember Me ",
+      "titel": "Remember Me",
       "info": "",
       "typ": "Demo Rickolitos Mix",
       "spotify": "",
@@ -341,7 +341,7 @@
       "typ": "Demo",
       "spotify": "",
       "fil": "dj-stigge-catch-the-moon-radio-edit-uzx7.mp3",
-      "ladda": false,
+      "ladda": true,
       "kredit": {
         "artist": "DJ Stigge",
         "kompositor": "Stefan Andersson",
