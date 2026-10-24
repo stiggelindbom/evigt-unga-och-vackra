@@ -143,31 +143,6 @@
     },
     {
       "slappt": false,
-      "titel": "Remember Me ",
-      "info": "",
-      "typ": "Demo Rickolitos Mix",
-      "spotify": "",
-      "fil": "remember-me-dark-rickolitos-mix-masterchannel-2026-05-05-rkv9.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "Torpa Boys ",
-        "kompositor": "Stig Lindbom / Rickard Ivarsson",
-        "textforfattare": "Stig Lindbom / Rickard Ivarsson",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026",
-        "genre": "Dance"
-      },
-      "datum": "2026-10-24T12:05:27.103Z",
-      "niva": {
-        "lufs": -9.9,
-        "topp": -0.2
-      },
-      "omslag": "omslag-remember-me.jpg"
-    },
-    {
-      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
@@ -273,13 +248,13 @@
       "ladda": true,
       "kredit": {
         "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
+        "kompositor": "Stig Lindbom / Rickard Ivarsson",
+        "textforfattare": "Stig Lindbom / Rickard Ivarsson",
         "producent": "Stig Lindbom",
         "mixning": "Stig Lindbom",
         "mastering": "Stig Lindbom",
         "ar": "2026",
-        "genre": "Reggae swing"
+        "genre": "Dance"
       },
       "datum": "2026-10-24T12:02:15.581Z",
       "niva": {
@@ -287,6 +262,31 @@
         "topp": -0.2
       },
       "omslag": "omslag-remember-me-razor.jpg"
+    },
+    {
+      "slappt": false,
+      "titel": "Remember Me ",
+      "info": "",
+      "typ": "Demo Rickolitos Mix",
+      "spotify": "",
+      "fil": "remember-me-dark-rickolitos-mix-masterchannel-2026-05-05-rkv9.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "Torpa Boys ",
+        "kompositor": "Stig Lindbom / Rickard Ivarsson",
+        "textforfattare": "Stig Lindbom / Rickard Ivarsson",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Dance"
+      },
+      "datum": "2026-10-24T12:05:27.103Z",
+      "niva": {
+        "lufs": -9.9,
+        "topp": -0.2
+      },
+      "omslag": "omslag-remember-me.jpg"
     },
     {
       "slappt": false,
