@@ -246,7 +246,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261024092432";
+    const VERSION = "v20261024103731";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1168,7 +1168,12 @@
       if (!fil || !l) return;
       const arWav = /\.wav$/i.test(fil.name), arMp3 = /\.mp3$/i.test(fil.name);
       if (!arWav && !arMp3) return status("Välj en mp3- eller wav-fil.", "fel");
-      if (!l.titel) return status("Skriv en titel på låten innan du laddar upp.", "fel");
+      if (!l.titel) {   // ingen titel än: ta den från filnamnet (går att ändra efteråt)
+        let t = fil.name.replace(/\.(mp3|wav)$/i, "").replace(/[_]+/g, " ").replace(/\s*-\s*(master(ed)?|final|mix|v\d+)\b.*$/i, "").replace(/\s+/g, " ").replace(/ v\d+$/i, "").trim();
+        if (/^[a-z0-9-]+$/.test(t) && t.includes("-")) t = t.replace(/-+/g, " ");
+        if (!t) return status("Skriv en titel på låten innan du laddar upp.", "fel");
+        l.titel = t.charAt(0).toUpperCase() + t.slice(1); andrat(); rita();
+      }
       // alltid ett nytt filnamn efter titeln: rätt namn syns, och ingen cache spelar den gamla versionen
       const namn = filnamn(l.titel).replace(/\.mp3$/, "-" + Date.now().toString(36).slice(-4) + ".mp3");
       uppladdning = i; rita();
