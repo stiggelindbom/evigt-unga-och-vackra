@@ -150,7 +150,7 @@
       "fil": "dj-stigge-catch-the-moon-radio-edit-uzx7.mp3",
       "ladda": false,
       "kredit": {
-        "artist": "De Evigt Unga å Vackra",
+        "artist": "DJ Stigge",
         "kompositor": "Stefan Andersson",
         "textforfattare": "Stefan Andersson",
         "producent": "Stig Lindbom",
@@ -164,7 +164,8 @@
       "niva": {
         "lufs": -9.4,
         "topp": -0.1
-      }
+      },
+      "omslag": "omslag-dj-stigge-catch-the-moon-radio-edit.jpg"
     },
     {
       "slappt": false,
