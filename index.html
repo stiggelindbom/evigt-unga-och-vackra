@@ -867,6 +867,7 @@
             c.addListener("ready", () => { if (spSpelaNarRedo) { spSpelaNarRedo = false; c.play(); } });
             c.addListener("playback_update", e => {
               const d = e.data; spPaus = d.isPaused; spPos = d.position / 1000; spLang = d.duration / 1000;
+              if (!d.isPaused && !arSpotify()) { spSpelaNarRedo = false; c.pause(); return; }   // bara en sak åt gången
               if (!d.isPaused && d.position > 0) { spStartat = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka"); }
               // låten slut: spela nästa
               if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return latSlut(); }
@@ -917,7 +918,7 @@
         clearInterval(latinfoTimer); stationTitel = null;
         uppdatera(); ritaStationer(); return;
       }
-      if (spCtrl && !spPaus) spCtrl.pause();
+      if (spCtrl) { spSpelaNarRedo = false; spCtrl.pause(); }
       avbrytMix(); if (!ljud.paused) ljud.pause();
       $("spRam").hidden = true; $("spTips").hidden = true;
       if (station !== v) stationTitel = null;
@@ -1022,7 +1023,9 @@
       } catch { /* ingen låtinfo: tiden får avgöra */ }
     }
 
+    let spelTur = 0;   // räknas upp vid varje låtbyte, så att en sen Spotify-start kan se att den blivit inaktuell
     async function spela(i) {
+      spelTur++;
       if (station) valjStation(null);
       if (!tillganglig(i)) return nasta(1, i);
       if (i !== nu) raknadFor = -1;
@@ -1037,8 +1040,10 @@
         uppdatera();
         const uri = spotifyUri(l.spotify);
         try {
+          const tur = spelTur;
           if (!spCtrl) { spSpelaNarRedo = true; await laddaSpotify(uri); }
           else { spSpelaNarRedo = true; spCtrl.loadUri(uri); }
+          if (tur !== spelTur || !arSpotify()) { spSpelaNarRedo = false; spCtrl.pause(); return; }   // annan låt valdes medan Spotify laddade
           spCtrl.play();
           // iOS (och vissa webbläsare) tillåter bara start med ett tryck direkt i Spotify-rutan
           clearTimeout(spTipsTimer);
@@ -1047,7 +1052,7 @@
           window.open(l.spotify, "_blank", "noopener");   // Spotify gick inte att ladda: öppna låten där i stället
         }
       } else {
-        if (spCtrl && !spPaus) spCtrl.pause();
+        if (spCtrl) { spSpelaNarRedo = false; spCtrl.pause(); }
         $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
         // demo med lyssningsklipp: spela bara de utvalda 30 sekunderna (#t= hoppar direkt dit)
         klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
@@ -1296,7 +1301,11 @@
           ljud._klippSlut = true; if (!(PEKPLATTA && document.hidden)) ljud.pause(); latSlut();
         }
       }));
-      el.addEventListener("play", paAktiv(uppdatera));
+      el.addEventListener("play", paAktiv(() => {   // vår spelare startar: se till att inget annat låter samtidigt
+        if (spCtrl && !spPaus) spCtrl.pause();
+        if (!station && !stationLjud.paused) stationLjud.pause();
+        uppdatera();
+      }));
       el.addEventListener("pause", paAktiv(uppdatera));
       el.addEventListener("ended", paAktiv(() => { if (!mixar) latSlut(); }));   // radion rullar vidare
       el.addEventListener("error", paAktiv(() => { if (nu >= 0 && !arSpotify() && ljud.getAttribute("src")) { latar[nu].saknas = true; nasta(1); } }));
