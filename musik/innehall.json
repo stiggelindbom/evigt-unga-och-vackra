@@ -143,32 +143,6 @@
     },
     {
       "slappt": false,
-      "titel": "Dj Stigge Catch the moon (funk Edit)",
-      "info": "It's about him trying to catch the moon",
-      "typ": "Demo",
-      "spotify": "",
-      "fil": "dj-stigge-catch-the-moon-funk-edit-55qg.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "DJ Stigge",
-        "kompositor": "Stefan Andersson",
-        "textforfattare": "Stefan Andersson",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026",
-        "genre": "Reggae swing"
-      },
-      "datum": "2026-10-24T10:52:28.731Z",
-      "niva": {
-        "lufs": -9.7,
-        "topp": -0.2
-      },
-      "klipp": 15,
-      "omslag": "omslag-dj-stigge-catch-the-moon-funk-edit.jpg"
-    },
-    {
-      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
@@ -308,6 +282,32 @@
         "topp": -0.1
       },
       "omslag": "omslag-dj-stigge-catch-the-moon.jpg"
+    },
+    {
+      "slappt": false,
+      "titel": "Dj Stigge Catch the moon (funk Edit)",
+      "info": "It's about him trying to catch the moon",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-catch-the-moon-funk-edit-55qg.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": "Stefan Andersson",
+        "textforfattare": "Stefan Andersson",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T10:52:28.731Z",
+      "niva": {
+        "lufs": -9.7,
+        "topp": -0.2
+      },
+      "klipp": 15,
+      "omslag": "omslag-dj-stigge-catch-the-moon-funk-edit.jpg"
     },
     {
       "slappt": true,
