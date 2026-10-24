@@ -6,6 +6,15 @@
 <description>Nya låtar och demos från De Evigt Unga å Vackra</description>
 <language>sv</language>
 <item>
+  <title>Ny demo: Vart tog den söta lilla flickan vägen (Epa Demo)</title>
+  <description>Ny demo på Evigt Ung Radio: Vart tog den söta lilla flickan vägen (Epa Demo). Lyssna och ladda ner på vår sida!</description>
+  <link>https://devigtunga.se/#radio</link>
+  <guid isPermaLink="false">demo-Vart tog den söta lilla flickan vägen (Epa Demo)</guid>
+  <pubDate>Sat, 24 Oct 2026 15:56:00 GMT</pubDate>
+  <enclosure url="https://devigtunga.se/assets/omslag.jpg" type="image/jpeg" length="0"/>
+  <media:content url="https://devigtunga.se/assets/omslag.jpg" medium="image"/>
+</item>
+<item>
   <title>Ny demo: Jag är inte som dom andra (Club VIP)</title>
   <description>Ny demo på Evigt Ung Radio: Jag är inte som dom andra (Club VIP). Lyssna och ladda ner på vår sida!</description>
   <link>https://devigtunga.se/#radio</link>
@@ -175,15 +184,6 @@
   <pubDate>Thu, 22 Oct 2026 17:17:08 GMT</pubDate>
   <enclosure url="https://devigtunga.se/musik/omslag-oops-i-did-it-again-radio-edit.jpg" type="image/jpeg" length="0"/>
   <media:content url="https://devigtunga.se/musik/omslag-oops-i-did-it-again-radio-edit.jpg" medium="image"/>
-</item>
-<item>
-  <title>Ute nu på Spotify: 1987</title>
-  <description>1987 är ute nu! Lyssna på Spotify – varje lyssning räknas.</description>
-  <link>https://open.spotify.com/track/6J3w6wL5nbgs3qGATXMF1I</link>
-  <guid isPermaLink="false">slappt-1987</guid>
-  <pubDate>Thu, 22 Oct 2026 17:16:37 GMT</pubDate>
-  <enclosure url="https://devigtunga.se/musik/omslag-1987-radio-edit.jpg" type="image/jpeg" length="0"/>
-  <media:content url="https://devigtunga.se/musik/omslag-1987-radio-edit.jpg" medium="image"/>
 </item>
 </channel>
 </rss>
