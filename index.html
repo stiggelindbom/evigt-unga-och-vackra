@@ -866,8 +866,9 @@
             clearTimeout(tid); spCtrl = c;
             c.addListener("ready", () => { if (spSpelaNarRedo) { spSpelaNarRedo = false; c.play(); } });
             c.addListener("playback_update", e => {
-              const d = e.data; spPaus = d.isPaused; spPos = d.position / 1000; spLang = d.duration / 1000;
+              const d = e.data, varPaus = spPaus; spPaus = d.isPaused; spPos = d.position / 1000; spLang = d.duration / 1000;
               if (!d.isPaused && !arSpotify()) { spSpelaNarRedo = false; c.pause(); return; }   // bara en sak åt gången
+              if (!d.isPaused && varPaus) sagTillAndraFlikar();
               if (!d.isPaused && d.position > 0) { spStartat = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka"); }
               // låten slut: spela nästa
               if (spStartat && d.isPaused && d.duration > 0 && (d.position === 0 || d.position >= d.duration - 1000)) { spStartat = false; return latSlut(); }
@@ -941,6 +942,16 @@
       rakna("Station", i < 0 ? "Evigt Ung Radio" : stationer[i].namn);
     });
     for (const h of ["play", "pause", "playing"]) stationLjud.addEventListener(h, () => uppdatera());
+    stationLjud.addEventListener("play", () => { if (!stationLjud.muted) sagTillAndraFlikar(); });
+    // Sidan öppen i flera flikar: när en börjar spela tystnar de andra
+    const flikId = Math.random().toString(36).slice(2);
+    let flikKanal = null; try { flikKanal = new BroadcastChannel("deu-radio"); } catch {}
+    function sagTillAndraFlikar() { try { flikKanal && flikKanal.postMessage({ spelar: flikId }); } catch {} }
+    if (flikKanal) flikKanal.onmessage = e => {
+      if (!e.data || e.data.spelar === flikId) return;
+      for (const el of [...spelareEl, stationLjud]) if (!el.paused) el.pause();
+      if (spCtrl && !spPaus) spCtrl.pause();
+    };
     stationLjud.addEventListener("error", () => { if (corsForsok) return; if (pass) return passFel(); if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
     ritaStationer();
 
@@ -1301,6 +1312,12 @@
           ljud._klippSlut = true; if (!(PEKPLATTA && document.hidden)) ljud.pause(); latSlut();
         }
       }));
+      // aldrig två demos samtidigt (utom under mixens övertoning och den tysta upplåsningen på iPhone)
+      el.addEventListener("play", () => {
+        const o = el === spelareEl[0] ? spelareEl[1] : spelareEl[0];
+        if (!mixar && !el.muted && !o.muted && !o.paused) o.pause();
+        if (!el.muted) sagTillAndraFlikar();
+      });
       el.addEventListener("play", paAktiv(() => {   // vår spelare startar: se till att inget annat låter samtidigt
         if (spCtrl && !spPaus) spCtrl.pause();
         if (!station && !stationLjud.paused) stationLjud.pause();
