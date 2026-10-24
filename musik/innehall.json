@@ -160,13 +160,13 @@
         "genre": "Reggae swing"
       },
       "datum": "2026-10-24T16:20:18.437Z",
-      "klipp": 0,
-      "klippAuto": true,
+      "klipp": 15,
       "niva": {
         "lufs": -10.1,
         "topp": -0.3
       },
-      "omslag": "omslag-dj-stigge-vilse-bland-miljoner-dance-mix.jpg"
+      "omslag": "omslag-dj-stigge-vilse-bland-miljoner-dance-mix.jpg",
+      "klippLangd": 63
     },
     {
       "slappt": false,
