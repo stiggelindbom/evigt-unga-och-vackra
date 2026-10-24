@@ -255,7 +255,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261024153810";
+    const VERSION = "v20261024155145";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -478,7 +478,7 @@
           <div class="omslag-rad">
             <img src="${omslagUrl(l)}" alt="" class="omslag-tumme">
             <div class="omslag-info">
-              <span>${l.omslag ? "Eget omslag" : "Bandets omslag (standard)"}</span>
+              <select data-omslag-val aria-label="Välj omslag" style="max-width:260px">${omslagVal(l)}</select>
               <div class="omslag-knappar">
                 <button class="knapp kontur liten" type="button" data-omslag ${uppladdning !== null ? "disabled" : ""}>${uppladdning === "bild" + i ? "Laddar upp…" : l.omslag ? "Byt omslag" : "Ladda upp omslag"}</button>
                 ${l.omslag ? `<button class="knapp kontur liten" type="button" data-omslag-bort>Använd bandets</button>` : ""}
@@ -905,6 +905,12 @@
 
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
+      if (e.target.matches("[data-omslag-val]")) {
+        const l = data.latar[+e.target.closest("[data-i]").dataset.i], v = e.target.value;
+        if (v) l.omslag = v; else delete l.omslag;
+        if (l.fil) taggAndrad.add(l);   // omslaget bäddas in i ljudfilen när du sparar
+        rita(); andrat(); return;
+      }
       if (e.target.matches("[data-kod]")) { nyKod = e.target.value.trim(); return andrat(); }
       const lank = e.target.dataset.lank;
       if (lank) { data.lankar[lank] = e.target.value.trim(); if (lank === "server") { ritaEngangsDel(); hamtaKoder(); } return andrat(); }
@@ -1080,6 +1086,18 @@
     // Bilden beskärs till kvadrat, skalas till 1000×1000 och sparas som jpg i musik/
     let bildFor = -1;
     const forhands = {};   // nyss uppladdade bilder visas direkt, innan hemsidan hunnit uppdateras
+    // Rullista med de vanligaste omslagen: bandets, DJ Stigge och de som redan används på andra låtar
+    const DJ_OMSLAG = "omslag-dj-stigge.jpg";
+    function omslagVal(l) {
+      const antal = new Map();
+      data.latar.forEach(x => { if (x.omslag && x.omslag !== DJ_OMSLAG) antal.set(x.omslag, (antal.get(x.omslag) || 0) + 1); });
+      const ovriga = [...antal.keys()].sort((a, b) => antal.get(b) - antal.get(a)).slice(0, 25);
+      if (l.omslag && l.omslag !== DJ_OMSLAG && !ovriga.includes(l.omslag)) ovriga.unshift(l.omslag);
+      const namnFor = o => { const x = data.latar.find(y => y.omslag === o); return x ? (x.titel || "Ny låt") : o; };
+      const opt = (v, t) => `<option value="${esc(v)}"${(l.omslag || "") === v ? " selected" : ""}>${esc(t)}</option>`;
+      return opt("", "De Evigt Unga å Vackra (bandets)") + opt(DJ_OMSLAG, "DJ Stigge")
+        + (ovriga.length ? `<optgroup label="Från låtarna">${ovriga.map(o => opt(o, (o === l.omslag ? "Eget: " : "") + namnFor(o))).join("")}</optgroup>` : "");
+    }
     const omslagUrl = l => !l.omslag ? "assets/omslag.jpg" : /^https?:/.test(l.omslag) ? l.omslag : (forhands[l.omslag] || "musik/" + encodeURI(l.omslag));
     async function tillKvadratJpg(fil) {
       const bild = await createImageBitmap(fil);
