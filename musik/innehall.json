@@ -143,6 +143,33 @@
     },
     {
       "slappt": false,
+      "titel": "Jag är inte som dom andra (Radio)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "jag-ar-inte-som-dom-andra-radio-ic8j.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": "Nik Kershaw ",
+        "textforfattare": "Nik Kershaw ",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T15:40:38.038Z",
+      "klipp": 108.5,
+      "niva": {
+        "lufs": -10.2,
+        "topp": -0.2
+      },
+      "omslag": "omslag-jag-ar-inte-som-dom-andra-radio.jpg",
+      "klippLangd": 34
+    },
+    {
+      "slappt": false,
       "titel": "Dj Stigge - I'm gettin' up (radio)",
       "info": "",
       "typ": "Demo",
