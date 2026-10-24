@@ -6,6 +6,15 @@
 <description>Nya låtar och demos från De Evigt Unga å Vackra</description>
 <language>sv</language>
 <item>
+  <title>Ny demo: Jag är inte som dom andra (Radio)</title>
+  <description>Ny demo på Evigt Ung Radio: Jag är inte som dom andra (Radio). Lyssna och ladda ner på vår sida!</description>
+  <link>https://devigtunga.se/#radio</link>
+  <guid isPermaLink="false">demo-Jag är inte som dom andra (Radio)</guid>
+  <pubDate>Sat, 24 Oct 2026 15:40:38 GMT</pubDate>
+  <enclosure url="https://devigtunga.se/musik/omslag-jag-ar-inte-som-dom-andra-radio.jpg" type="image/jpeg" length="0"/>
+  <media:content url="https://devigtunga.se/musik/omslag-jag-ar-inte-som-dom-andra-radio.jpg" medium="image"/>
+</item>
+<item>
   <title>Ny demo: Dj Stigge - I&apos;m gettin&apos; up (radio)</title>
   <description>Ny demo på Evigt Ung Radio: Dj Stigge - I&apos;m gettin&apos; up (radio). Lyssna och ladda ner på vår sida!</description>
   <link>https://devigtunga.se/#radio</link>
@@ -175,15 +184,6 @@
   <pubDate>Thu, 22 Oct 2026 17:16:08 GMT</pubDate>
   <enclosure url="https://devigtunga.se/musik/omslag-vi-alskar-siwan-radio-edit.jpg" type="image/jpeg" length="0"/>
   <media:content url="https://devigtunga.se/musik/omslag-vi-alskar-siwan-radio-edit.jpg" medium="image"/>
-</item>
-<item>
-  <title>Ute nu på Spotify: Kom och värm dej</title>
-  <description>Kom och värm dej är ute nu! Lyssna på Spotify – varje lyssning räknas.</description>
-  <link>https://open.spotify.com/track/66r4DllqMVnMPjl3vGnn6z</link>
-  <guid isPermaLink="false">slappt-Kom och värm dej</guid>
-  <pubDate>Thu, 22 Oct 2026 17:12:58 GMT</pubDate>
-  <enclosure url="https://devigtunga.se/musik/omslag-kom-och-varm-dej.jpg" type="image/jpeg" length="0"/>
-  <media:content url="https://devigtunga.se/musik/omslag-kom-och-varm-dej.jpg" medium="image"/>
 </item>
 </channel>
 </rss>
