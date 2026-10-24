@@ -119,6 +119,29 @@
       "omslag": "omslag-oops-i-did-it-again-radio-edit.jpg"
     },
     {
+      "slappt": true,
+      "titel": "Himlen Runt Hörnet",
+      "info": "",
+      "typ": "VIP Mix",
+      "spotify": "https://open.spotify.com/track/3VReAEOLJBMG5QDC9YcVIC",
+      "fil": "himlen-runt-hornet-avbw.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": "Mauro Scocco",
+        "textforfattare": "Mauro Scocco",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing",
+        "isrc": ""
+      },
+      "datum": "2026-10-22T17:37:24.007Z",
+      "slapptDatum": "2026-10-22T17:37:24.007Z",
+      "omslag": "omslag-himlen-runt-hornet-vip-mix.jpg"
+    },
+    {
       "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
@@ -238,29 +261,6 @@
       "slappt": true,
       "titel": "Himlen Runt Hörnet",
       "info": "",
-      "typ": "VIP Mix",
-      "spotify": "https://open.spotify.com/track/3VReAEOLJBMG5QDC9YcVIC",
-      "fil": "himlen-runt-hornet-avbw.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "DJ Stigge",
-        "kompositor": "Mauro Scocco",
-        "textforfattare": "Mauro Scocco",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026",
-        "genre": "Reggae swing",
-        "isrc": ""
-      },
-      "datum": "2026-10-22T17:37:24.007Z",
-      "slapptDatum": "2026-10-22T17:37:24.007Z",
-      "omslag": "omslag-himlen-runt-hornet-vip-mix.jpg"
-    },
-    {
-      "slappt": true,
-      "titel": "Himlen Runt Hörnet",
-      "info": "",
       "typ": " Radio Edit",
       "spotify": "https://open.spotify.com/track/6kxkMcIG3iQbledbxXXtkA",
       "fil": "himlen-runt-hornet-k3w9.mp3",
@@ -366,6 +366,28 @@
       },
       "datum": "2026-10-24T10:31:22.898Z",
       "slapptDatum": "2026-10-24T10:31:22.898Z",
+      "omslag": "omslag-tre-brudar.jpg"
+    },
+    {
+      "slappt": true,
+      "titel": "Tre brudar - Neon Mix",
+      "info": "",
+      "typ": "Singel",
+      "spotify": "https://open.spotify.com/track/1UPr39kDAQLmviaqteJwiJ",
+      "fil": "tre-brudar-neon-mix-hvdb.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Wille Crafoord",
+        "textforfattare": "Wille Crafoord",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T10:33:53.641Z",
+      "slapptDatum": "2026-10-24T10:33:53.641Z",
       "omslag": "omslag-tre-brudar.jpg"
     }
   ],
