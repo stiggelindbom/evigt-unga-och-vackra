@@ -246,7 +246,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261024103731";
+    const VERSION = "v20261024110913";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -516,7 +516,7 @@
             </div>
             ${l.fil && filer.has(l.fil) ? `
             <details class="klipp" data-klipp-ruta${klippOppen.has(l) ? " open" : ""}>
-              <summary>🎧 30 s lyssningsklipp – ${l.klipp != null ? `spelar ${mmss(l.klipp)}–${mmss(l.klipp + KLIPP)} på hemsidan` : "av (hela låten spelas)"}</summary>
+              <summary>${klippRubrik(l)}</summary>
               <div class="klipp-yta"><canvas class="vagform" data-vagform></canvas><div class="klipp-laddar">Laddar ljudgrafen…</div></div>
               <div class="klipp-knappar">
                 <button class="knapp kontur liten" type="button" data-klipp-lyssna>▶ Lyssna på klippet</button>
@@ -524,7 +524,7 @@
                 <label class="kryss"><input type="checkbox" data-klipp-pa ${l.klipp != null ? "checked" : ""}> Spela bara klippet på hemsidan</label>
                 <button class="knapp kontur liten" type="button" data-klipp-forslag>✨ Föreslå bästa delen</button>
               </div>
-              <p class="hjalp">Dra den gula rutan till den del av låten besökarna ska höra. Med klippet påslaget är låten ett <b>smakprov</b>: hela låten kan bara laddas ner med koden (sätts under Länkar).</p>
+              <p class="hjalp">Dra den gula rutan till den del av låten besökarna ska höra. Dra i <b>högra kanten</b> (eller vänstra) för att göra klippet längre eller kortare (${KLIPP_MIN}–${KLIPP_MAX} s). Med klippet påslaget är låten ett <b>smakprov</b>: hela låten kan bara laddas ner med koden (sätts under Länkar).</p>
             </details>` : ""}
             <label class="snabb-spotify">Spotify-länk – klistra in när låten är ute, så flyttas den direkt till Släppta
               <input type="url" data-snabb-spotify placeholder="https://open.spotify.com/track/…">
@@ -644,7 +644,9 @@
     $("adminVy").addEventListener("pointercancel", slappDra);
 
     // ===== 30 s lyssningsklipp för demos =====
-    const KLIPP = 30;
+    const KLIPP = 30, KLIPP_MIN = 10, KLIPP_MAX = 90;   // standardlängd och gränser (sekunder)
+    const langd = l => l.klippLangd || KLIPP;
+    const klippRubrik = l => `🎧 ${langd(l)} s lyssningsklipp – ` + (l.klipp != null ? `spelar ${mmss(l.klipp)}–${mmss(l.klipp + langd(l))} på hemsidan` : "av (hela låten spelas)");
     const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
     const klippOppen = new WeakSet(), ljudData = {};   // fil -> { buffer, toppar }
     let klippAc = null, klippKalla = null, klippStart = 0, klippSpelar = null;
@@ -660,10 +662,10 @@
       return (ljudData[l.fil] = { buffer, toppar });
     }
     // starkaste 30 sekunderna (RMS) – ofta refrängen eller droppet
-    function bastaDelen(d) {
+    function bastaDelen(d, sek = KLIPP) {
       const { buffer } = d, kanal = buffer.getChannelData(0), sr = buffer.sampleRate, fon = Math.floor(sr / 2);
       const block = []; for (let i = 0; i + fon <= kanal.length; i += fon) { let s = 0; for (let j = i; j < i + fon; j += 16) s += kanal[j] * kanal[j]; block.push(s); }
-      const w = KLIPP * 2; if (block.length <= w) return 0;
+      const w = Math.round(sek * 2); if (block.length <= w) return 0;
       // leta mellan 10 % och 80 % av låten – där brukar refräng/drop ligga (inte intro eller outro)
       const fran = Math.floor(block.length * 0.1), till = Math.max(fran, Math.floor(block.length * 0.8) - w);
       let bast = -1, bastI = fran;
@@ -681,7 +683,7 @@
       if (cv.width !== B * dpr) { cv.width = B * dpr; cv.height = H * dpr; }
       const cx = cv.getContext("2d"); cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, B, H);
       const dur = d.buffer.duration, x = t => t / dur * B;
-      const a = l.klipp ?? null, ax = a != null ? x(a) : null, bx = a != null ? x(Math.min(dur, a + KLIPP)) : null;
+      const a = l.klipp ?? null, ax = a != null ? x(a) : null, bx = a != null ? x(Math.min(dur, a + langd(l))) : null;
       // vågform
       for (let px = 0; px < B; px++) {
         const v = d.toppar[Math.floor(px / B * d.toppar.length)], h = Math.max(1, v * (H - 6));
@@ -693,13 +695,13 @@
         cx.strokeStyle = "#f5c518"; cx.lineWidth = 2; cx.strokeRect(ax + 1, 1, bx - ax - 2, H - 2);
         cx.fillStyle = "#f5c518"; cx.fillRect(ax, 0, 6, H); cx.fillRect(bx - 6, 0, 6, H);   // tydliga kanter
         cx.fillStyle = "#0b0b0b"; cx.font = "bold 12px Inter, sans-serif"; cx.textBaseline = "top";
-        const etikett = "30 s"; const tw = cx.measureText(etikett).width;
+        const etikett = `${langd(l)} s`; const tw = cx.measureText(etikett).width;
         cx.fillStyle = "#f5c518"; cx.fillRect((ax + bx) / 2 - tw / 2 - 6, 4, tw + 12, 18);
         cx.fillStyle = "#0b0b0b"; cx.fillText(etikett, (ax + bx) / 2 - tw / 2, 7);
       }
       if (spelhuvud != null) { cx.fillStyle = "#fff"; cx.fillRect(x(spelhuvud), 0, 2, H); }
       const tidEl = kort.querySelector("[data-klipp-tid]");
-      if (tidEl) tidEl.textContent = a != null ? `${mmss(a)} – ${mmss(Math.min(dur, a + KLIPP))} av ${mmss(dur)}` : `Hela låten (${mmss(dur)})`;
+      if (tidEl) tidEl.textContent = a != null ? `${mmss(a)} – ${mmss(Math.min(dur, a + langd(l)))} av ${mmss(dur)}` : `Hela låten (${mmss(dur)})`;
     }
     function ritaAllaVagformer() { data.latar.forEach(l => { if (klippOppen.has(l) && ljudData[l.fil]) ritaVagform(l); }); }
 
@@ -707,7 +709,7 @@
       klippOppen.add(l);
       try {
         const d = await laddaVagform(l);
-        if (l.klipp === undefined) { l.klipp = bastaDelen(d); andrat(); rita(); status(`✨ Föreslog ${mmss(l.klipp)}–${mmss(l.klipp + KLIPP)} i ${l.titel} – den starkaste delen. Dra rutan om du vill ha en annan del, och tryck Spara.`, "osparat"); }
+        if (l.klipp === undefined) { l.klipp = bastaDelen(d, langd(l)); andrat(); rita(); status(`✨ Föreslog ${mmss(l.klipp)}–${mmss(l.klipp + langd(l))} i ${l.titel} – den starkaste delen. Dra rutan om du vill ha en annan del, och tryck Spara.`, "osparat"); }
         ritaVagform(l);
       } catch (e) {
         const k = kortFor(l); if (k) k.querySelector(".klipp-laddar").textContent = "Kunde inte läsa ljudfilen: " + e.message;
@@ -721,7 +723,7 @@
       klippAc.resume();
       const start = l.klipp ?? 0;
       klippKalla = klippAc.createBufferSource(); klippKalla.buffer = d.buffer; klippKalla.connect(klippAc.destination);
-      klippKalla.start(0, start, KLIPP); klippStart = klippAc.currentTime - start; klippSpelar = l;
+      klippKalla.start(0, start, langd(l)); klippStart = klippAc.currentTime - start; klippSpelar = l;
       klippKalla.onended = () => { if (klippSpelar === l) stoppaKlipp(); };
       const b = kortFor(l)?.querySelector("[data-klipp-lyssna]"); if (b) b.textContent = "■ Stoppa";
       const animera = () => { if (klippSpelar !== l) return; ritaVagform(l, klippAc.currentTime - klippStart); requestAnimationFrame(animera); };
@@ -739,20 +741,37 @@
       const cv = e.target.closest("[data-vagform]"); if (!cv) return;
       const l = data.latar[+cv.closest("[data-i]").dataset.i], d = ljudData[l.fil]; if (!d) return;
       const r = cv.getBoundingClientRect(), dur = d.buffer.duration, t = (e.clientX - r.left) / r.width * dur;
-      const a = l.klipp ?? 0;
-      dra = { l, cv, dur, grepp: t >= a && t <= a + KLIPP ? t - a : KLIPP / 2 };
+      const a = l.klipp ?? 0, b = a + langd(l), kant = dur * 10 / r.width;   // 10 px runt kanterna = ändra längden
+      dra = l.klipp != null && Math.abs(t - b) <= kant ? { l, cv, dur, kant: "hoger" }
+        : l.klipp != null && Math.abs(t - a) <= kant ? { l, cv, dur, kant: "vanster", slut: b }
+        : { l, cv, dur, grepp: t >= a && t <= b ? t - a : langd(l) / 2 };
       cv.setPointerCapture(e.pointerId); flytta(e); e.preventDefault();
     });
     function flytta(e) {
       if (!dra) return;
       const { l, cv, dur, grepp } = dra, r = cv.getBoundingClientRect();
-      const t = (e.clientX - r.left) / r.width * dur;
-      l.klipp = Math.round(Math.max(0, Math.min(dur - KLIPP, t - grepp)) * 2) / 2;
+      const t = Math.max(0, Math.min(dur, (e.clientX - r.left) / r.width * dur));
+      const satt = s => Math.round(Math.max(KLIPP_MIN, Math.min(KLIPP_MAX, s)));
+      if (dra.kant === "hoger") {
+        const ny = satt(Math.min(dur - l.klipp, t - l.klipp)); if (ny === KLIPP) delete l.klippLangd; else l.klippLangd = ny;
+      } else if (dra.kant === "vanster") {
+        const ny = satt(dra.slut - t); l.klipp = Math.max(0, dra.slut - ny); const ln = Math.round(dra.slut - l.klipp);
+        if (ln === KLIPP) delete l.klippLangd; else l.klippLangd = ln;
+      } else {
+        l.klipp = Math.round(Math.max(0, Math.min(dur - langd(l), t - grepp)) * 2) / 2;
+      }
       ritaVagform(l, klippSpelar === l ? klippAc.currentTime - klippStart : null);
-      const sum = kortFor(l)?.querySelector("[data-klipp-ruta] summary"); if (sum) sum.textContent = `🎧 30 s lyssningsklipp – spelar ${mmss(l.klipp)}–${mmss(l.klipp + KLIPP)} på hemsidan`;
+      const sum = kortFor(l)?.querySelector("[data-klipp-ruta] summary"); if (sum) sum.textContent = klippRubrik(l);
       const pa = kortFor(l)?.querySelector("[data-klipp-pa]"); if (pa) pa.checked = true;
     }
     $("adminVy").addEventListener("pointermove", flytta);
+    // visa ↔-markör vid kanterna så att man ser att de går att dra
+    $("adminVy").addEventListener("pointermove", e => {
+      if (dra) return; const cv = e.target.closest && e.target.closest("[data-vagform]"); if (!cv) return;
+      const l = data.latar[+cv.closest("[data-i]").dataset.i], d = ljudData[l.fil]; if (!d || l.klipp == null) { cv.style.cursor = "pointer"; return; }
+      const r = cv.getBoundingClientRect(), dur = d.buffer.duration, t = (e.clientX - r.left) / r.width * dur, kant = dur * 10 / r.width;
+      cv.style.cursor = Math.abs(t - l.klipp) <= kant || Math.abs(t - l.klipp - langd(l)) <= kant ? "ew-resize" : "grab";
+    });
     const slapp = () => { if (!dra) return; const l = dra.l; dra = null; andrat(); if (klippSpelar === l) lyssnaKlipp(l), lyssnaKlipp(l); };
     $("adminVy").addEventListener("pointerup", slapp);
     $("adminVy").addEventListener("pointercancel", slapp);
@@ -970,8 +989,8 @@
       if (e.target.closest("[data-klipp-lyssna]")) { lyssnaKlipp(data.latar[i]); return; }
       if (e.target.closest("[data-klipp-forslag]")) {
         const l = data.latar[i], d = ljudData[l.fil]; if (!d) return;
-        l.klipp = bastaDelen(d); ritaVagform(l); andrat(); rita();
-        status(`✨ Föreslog ${mmss(l.klipp)}–${mmss(l.klipp + KLIPP)} – den starkaste delen. Tryck Spara.`, "osparat"); return;
+        l.klipp = bastaDelen(d, langd(l)); ritaVagform(l); andrat(); rita();
+        status(`✨ Föreslog ${mmss(l.klipp)}–${mmss(l.klipp + langd(l))} – den starkaste delen. Tryck Spara.`, "osparat"); return;
       }
       if (e.target.closest("[data-hamta-spotify]")) {
         const l = data.latar[i]; if (hamtar) return; hamtar = true;

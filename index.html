@@ -780,7 +780,7 @@
           <button class="rund spela" type="button" data-spela="${i}" aria-label="Spela ${esc(l.titel)}" ${l.saknas ? "disabled" : ""}>
             <svg viewBox="0 0 24 24"><path d="${i === nu && spelar() ? PAUS : PLAY}"/></svg>
           </button>
-          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : (typeof l.klipp === "number" ? "30 s smakprov · " : "") + esc(l.info)}</small></div></div>
+          <div class="namn med-bild"><img class="tumme" src="${omslagFor(l)}" alt="" loading="lazy"><div><b>${esc(l.titel)}</b><small>${l.saknas ? "Kommer snart" : (typeof l.klipp === "number" ? `${l.klippLangd || 30} s smakprov · ` : "") + esc(l.info)}</small></div></div>
           <div class="hoger">
             <button class="info-knapp dela-knapp" type="button" data-dela="${i}" aria-label="Dela ${esc(l.titel)}" title="Dela"><svg viewBox="0 0 24 24"><path d="M18 16.1c-.8 0-1.4.3-2 .8l-7.1-4.2c.1-.2.1-.5.1-.7s0-.5-.1-.7L16 7.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .5.1.7L8 9.8C7.5 9.3 6.8 9 6 9c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.8l7.1 4.2c-.1.2-.1.4-.1.6 0 1.6 1.3 2.9 2.9 2.9s2.9-1.3 2.9-2.9-1.2-2.9-2.8-2.9z"/></svg></button>
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
@@ -813,7 +813,7 @@
           <ol class="lista">${rader.map(([l, i]) => rad(l, i)).join("")}</ol></div>` : "";
       };
       $("lista").innerHTML = grupp("Demos", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt && typeof l.klipp !== "number", demoRad)
-        + grupp("Kommande", "30 s smakprov på nästa släpp", l => !l.slappt && typeof l.klipp === "number", demoRad)
+        + grupp("Kommande", "Smakprov på nästa släpp", l => !l.slappt && typeof l.klipp === "number", demoRad)
         || `<div class="tomt">Inga demos uppladdade än.</div>`;
       $("slapptLista").innerHTML = grupp("Släppta låtar", "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
     }
@@ -848,7 +848,7 @@
     let viaFil = false;
     const harFil = l => !!(l && l.fil && !l.saknas);
     const arSpotify = () => !!(latar[nu] && latar[nu].slappt && !viaFil);
-    let klipp = null;   // start (sek) för aktuell demos lyssningsklipp, annars null
+    let klipp = null, klippLen = 30;   // start (sek) och längd för aktuell demos lyssningsklipp, annars null
     let spTipsTimer = null, raknadFor = -1, raknaLat = () => {};
     function kollaRakna(pos) { if (nu >= 0 && raknadFor !== nu && pos >= 30) { raknadFor = nu; raknaLat(); } }
     function visaSpTips() {
@@ -1048,7 +1048,7 @@
         if (spCtrl && !spPaus) spCtrl.pause();
         $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
         // demo med lyssningsklipp: spela bara de utvalda 30 sekunderna (#t= hoppar direkt dit)
-        klipp = typeof l.klipp === "number" ? l.klipp : null;
+        klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
         avbrytMix();
         ljud.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
         startaAnalys(); ljud._utTonad = false;
@@ -1107,7 +1107,7 @@
     function startaMix(i) {
       mixar = true;
       const gammal = ljud, ny = annan(), l = latar[i];
-      nu = i; raknadFor = -1; viaFil = !!l.slappt; ny._utTonad = false; klipp = typeof l.klipp === "number" ? l.klipp : null;
+      nu = i; raknadFor = -1; viaFil = !!l.slappt; ny._utTonad = false; klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
       sattVolym(ny, 0, 0);
       ny.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
       ny.play().catch(() => {});
@@ -1142,7 +1142,7 @@
         ritaLista(); return;
       }
       const l = latar[nu];
-      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? "30 S SMAKPROV" : "NU SPELAS";
+      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? `${l.klippLangd || 30} S SMAKPROV` : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
@@ -1276,12 +1276,12 @@
       el.addEventListener("loadedmetadata", paAktiv(() => { if (klipp != null && Math.abs(ljud.currentTime - klipp) > 1) ljud.currentTime = klipp; }));
       el.addEventListener("timeupdate", paAktiv(() => {
         if (arSpotify()) return;
-        const slut = klipp != null ? klipp + 30 : ljud.duration;
+        const slut = klipp != null ? klipp + klippLen : ljud.duration;
         if (klipp != null) {
-          const rel = Math.max(0, ljud.currentTime - klipp); visaTid(rel, 30); kollaRakna(rel >= 29 ? 30 : rel);
+          const rel = Math.max(0, ljud.currentTime - klipp); visaTid(rel, klippLen); kollaRakna(rel >= klippLen - 1 ? Math.max(30, rel) : rel);
           // klippet tonas ut de sista sekunderna (mixen sköter övergången själv när den är på)
-          if (!mixar && rel >= 30 - KLIPP_UT && !ljud._utTonad && !ljud.paused) { ljud._utTonad = true; sattVolym(ljud, 0, Math.max(0.2, 30 - rel)); }
-          else if (ljud._utTonad && rel < 30 - KLIPP_UT - 0.5) { ljud._utTonad = false; sattVolym(ljud, 1, 0.3); }   // spolat tillbaka
+          if (!mixar && rel >= klippLen - KLIPP_UT && !ljud._utTonad && !ljud.paused) { ljud._utTonad = true; sattVolym(ljud, 0, Math.max(0.2, klippLen - rel)); }
+          else if (ljud._utTonad && rel < klippLen - KLIPP_UT - 0.5) { ljud._utTonad = false; sattVolym(ljud, 1, 0.3); }   // spolat tillbaka
         }
         else { visaTid(ljud.currentTime, ljud.duration); kollaRakna(ljud.currentTime); }
         // mixa in nästa demo de sista sekunderna (kräver Web Audio; Spotify-låtar kan inte mixas)
@@ -1289,7 +1289,7 @@
           const n = nastaIndex(1);
           if (n >= 0 && n !== nu && (!latar[n].slappt || (document.hidden && harFil(latar[n])))) return startaMix(n);
         }
-        if (klipp != null && ljud.currentTime >= klipp + 30 && !mixar) { ljud.pause(); latSlut(); }   // klippet slut: nästa låt
+        if (klipp != null && ljud.currentTime >= klipp + klippLen && !mixar) { ljud.pause(); latSlut(); }   // klippet slut: nästa låt
       }));
       el.addEventListener("play", paAktiv(uppdatera));
       el.addEventListener("pause", paAktiv(uppdatera));
@@ -1298,7 +1298,7 @@
     }
     $("sok").addEventListener("input", e => {
       if (arSpotify()) { if (spCtrl && spLang) spCtrl.seek(e.target.value / 100 * spLang); }
-      else if (klipp != null) ljud.currentTime = klipp + e.target.value / 100 * 30;
+      else if (klipp != null) ljud.currentTime = klipp + e.target.value / 100 * klippLen;
       else if (ljud.duration) ljud.currentTime = e.target.value / 100 * ljud.duration;
     });
 
