@@ -143,6 +143,31 @@
     },
     {
       "slappt": false,
+      "titel": "Dj Stigge - Catch the moon (Radio Edit)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-catch-the-moon-radio-edit-uzx7.mp3",
+      "ladda": false,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stefan Andersson",
+        "textforfattare": "Stefan Andersson",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T10:44:34.955Z",
+      "klipp": 14,
+      "niva": {
+        "lufs": -9.4,
+        "topp": -0.1
+      }
+    },
+    {
+      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
