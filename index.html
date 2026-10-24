@@ -942,7 +942,7 @@
       rakna("Station", i < 0 ? "Evigt Ung Radio" : stationer[i].namn);
     });
     for (const h of ["play", "pause", "playing"]) stationLjud.addEventListener(h, () => uppdatera());
-    stationLjud.addEventListener("play", () => { if (!stationLjud.muted) sagTillAndraFlikar(); });
+    stationLjud.addEventListener("play", () => { if (!stationLjud.muted && !stationLjud.paused) sagTillAndraFlikar(); });
     // Sidan öppen i flera flikar: när en börjar spela tystnar de andra
     const flikId = Math.random().toString(36).slice(2);
     let flikKanal = null; try { flikKanal = new BroadcastChannel("deu-radio"); } catch {}
@@ -972,8 +972,7 @@
       vanMixPa = !vanMixPa;
       if (vanMixPa) rakna("Vän-mix på", vanStation.namn);
       if (vanMixPa && !upplastStation && !station) {   // iPhone: stationsspelaren måste startas en gång i ett tryck
-        upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
-        stationLjud.play().then(() => { if (!station) { stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load(); } stationLjud.muted = false; }).catch(() => { stationLjud.muted = false; });
+        upplastStation = true; lasUppEl(stationLjud, vanStation.stream, true);
       }
       if (station === vanStation) {
         if (vanMixPa) { lasUppEgen(); startaPass(); } else avslutaPass();   // stannar på vännens radio
@@ -1005,8 +1004,7 @@
     function lasUppEgen() {
       if (ljud.getAttribute("src")) return;
       const d = latar.find((l, i) => !l.slappt && tillganglig(i)); if (!d) return;
-      ljud.muted = true; ljud.src = "musik/" + encodeURI(d.fil);
-      ljud.play().then(() => { ljud.pause(); ljud.muted = false; }).catch(() => { ljud.muted = false; });
+      lasUppEl(ljud, "musik/" + encodeURI(d.fil), false);
     }
     function passSlut() {
       if (!pass) return;
@@ -1192,11 +1190,17 @@
     // iPhone kräver att varje ljudelement startas en gång i ett tryck – "lås upp" den andra spelaren direkt
     let upplast = false;
     function lasUpp() {
-      if (upplast) return; upplast = true;
-      const o = annan(); o.muted = true;
-      if (!ljud.src) { upplast = false; return; }
-      o.src = ljud.src;
-      o.play().then(() => { o.pause(); o.muted = false; }).catch(() => { o.muted = false; });
+      if (upplast || PEKPLATTA) return;   // iPhone mixar inte, så där behövs ingen andra spelare
+      if (!ljud.src) return; upplast = true;
+      lasUppEl(annan(), ljud.src, false);
+    }
+    // "Lås upp" en spelare i ett tryck: starta och pausa direkt (iPhone ignorerar ibland muted – då får inget höras)
+    function lasUppEl(el, src, rensa) {
+      if (!el.paused) return;
+      el.muted = true; el.src = src;
+      const lofte = el.play(); el.pause(); if (lofte) lofte.catch(() => {});
+      el.muted = false;
+      if (rensa) { el.removeAttribute("src"); el.load(); }
     }
     // --- Nivåanpassning: HitNets ljudnivå mäts när den spelas; våra låtar justeras långsamt mot samma nivå ---
     const STANDARDNIVA = -14;   // dB (RMS) – typisk radionivå, används tills HitNet har mätts
@@ -1314,11 +1318,13 @@
       }));
       // aldrig två demos samtidigt (utom under mixens övertoning och den tysta upplåsningen på iPhone)
       el.addEventListener("play", () => {
+        if (el.paused) return;   // upplåsning som redan pausats
         const o = el === spelareEl[0] ? spelareEl[1] : spelareEl[0];
         if (!mixar && !el.muted && !o.muted && !o.paused) o.pause();
         if (!el.muted) sagTillAndraFlikar();
       });
       el.addEventListener("play", paAktiv(() => {   // vår spelare startar: se till att inget annat låter samtidigt
+        if (ljud.paused) return uppdatera();
         if (spCtrl && !spPaus) spCtrl.pause();
         if (!station && !stationLjud.paused) stationLjud.pause();
         uppdatera();
@@ -1348,8 +1354,7 @@
     // iPhone: med vän-mixen påslagen från ett tidigare besök måste stationens spelare låsas upp i första trycket
     document.addEventListener("click", e => {
       if (!vanMixPa || upplastStation || station || !vanStation || !e.target.closest(".studio, .minispelare, #heroSpela, .spar")) return;
-      upplastStation = true; stationLjud.muted = true; stationLjud.src = vanStation.stream;
-      stationLjud.play().then(() => { if (!station) { stationLjud.pause(); stationLjud.removeAttribute("src"); stationLjud.load(); } stationLjud.muted = false; }).catch(() => { stationLjud.muted = false; });
+      upplastStation = true; lasUppEl(stationLjud, vanStation.stream, true);
     }, true);
     $("nasta").onclick = tillbaka(1); $("miniNasta").onclick = tillbaka(1); $("forra").onclick = tillbaka(-1);
     $("blanda").onclick = e => { blanda = !blanda; e.currentTarget.classList.toggle("pa", blanda); };
