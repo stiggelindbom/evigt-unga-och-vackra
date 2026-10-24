@@ -143,6 +143,31 @@
     },
     {
       "slappt": false,
+      "titel": "Dj Stigge - Vilse bland miljoner (Dance mix)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-vilse-bland-miljoner-dance-mix-l2q6.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T11:04:35.013Z",
+      "niva": {
+        "lufs": -10.9,
+        "topp": -0.4
+      },
+      "klipp": 27.5
+    },
+    {
+      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
