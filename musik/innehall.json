@@ -143,6 +143,33 @@
     },
     {
       "slappt": false,
+      "titel": "Dj Stigge  - I'm gettin' up (Stigges VIP)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-feat-jonna-i-m-gettin-up-stigges-vip-2jyj.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": " Bruce Belland, Glen Larson och Stu Phillips. ",
+        "textforfattare": " Bruce Belland, Glen Larson och Stu Phillips. ",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T15:28:53.969Z",
+      "niva": {
+        "lufs": -10,
+        "topp": -0.2
+      },
+      "omslag": "omslag-dj-stigge-vilse-bland-miljoner-dance-mix.jpg",
+      "klipp": 16.5,
+      "klippLangd": 33
+    },
+    {
+      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
