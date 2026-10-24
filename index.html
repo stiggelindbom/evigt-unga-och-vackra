@@ -1157,8 +1157,15 @@
         try {
           ac = new (window.AudioContext || window.webkitAudioContext)();
           analys = ac.createAnalyser(); analys.fftSize = 512; analys.smoothingTimeConstant = 0.78;
+          // Kompressor: jämnar ut nivån så att alla låtar låter ungefär lika starka, sedan en begränsare mot spik
+          const komp = ac.createDynamicsCompressor();
+          komp.threshold.value = -26; komp.knee.value = 12; komp.ratio.value = 4; komp.attack.value = 0.006; komp.release.value = 0.3;
+          const lyft = ac.createGain(); lyft.gain.value = 1.6;   // ca +4 dB tillbaka efter kompressionen
+          const begr = ac.createDynamicsCompressor();
+          begr.threshold.value = -1.5; begr.knee.value = 0; begr.ratio.value = 20; begr.attack.value = 0.001; begr.release.value = 0.1;
+          komp.connect(lyft); lyft.connect(begr); begr.connect(analys);
           for (const el of spelareEl) {   // varje spelare får en egen volym (för mixen)
-            const g = ac.createGain(); ac.createMediaElementSource(el).connect(g); g.connect(analys); forstarkning.set(el, g);
+            const g = ac.createGain(); ac.createMediaElementSource(el).connect(g); g.connect(komp); forstarkning.set(el, g);
           }
           huvud = ac.createGain(); huvud.gain.value = vol; analys.connect(huvud); huvud.connect(ac.destination);
           for (const el of spelareEl) el.volume = 1;
