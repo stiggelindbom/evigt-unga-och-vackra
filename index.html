@@ -717,7 +717,7 @@
     function sattVolymAlla(v, spara = true) {
       vol = v; $("volym").value = v;
       if (huvud) huvud.gain.value = v; else for (const el of spelareEl) el.volume = v;
-      const st = $("stationLjud"); if (!st._tonar) st.volume = v;
+      const st = $("stationLjud"); if (!st._tonar) st.volume = st._via ? 1 : v;
       $("volymBild").setAttribute("d", v === 0 ? "M16.5 12A4.5 4.5 0 0 0 14 8v2.2l2.5 2.5V12zM19 12c0 .9-.2 1.8-.5 2.6l1.5 1.5A9 9 0 0 0 14 3.2v2.1a7 7 0 0 1 5 6.7zM4.3 3 3 4.3 7.7 9H3v6h4l5 5v-6.7l4.3 4.3c-.7.5-1.4.9-2.3 1.2v2.1a9 9 0 0 0 3.7-1.8l2 2 1.3-1.3L4.3 3zM12 4 9.9 6.1 12 8.2V4z"
         : "M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4zM14 3.2v2.1a7 7 0 0 1 0 13.4v2.1a9 9 0 0 0 0-17.6z");
       if (spara) try { localStorage.setItem("deu-volym", v); } catch {}
@@ -883,6 +883,29 @@
     const stationer = (DATA.vanner || []).filter(v => v.namn && /^https:\/\//.test(v.stream || ""));
     let station = null;
     const stationLjud = $("stationLjud");
+    const stBas = () => stationLjud._via ? 1 : vol;
+    // HitNet bestämmer nivån: går strömmen att läsa (CORS) kopplas den genom Web Audio, mäts och visas i spektrumet.
+    // Annars spelas den som vanligt. iPhone använder aldrig Web Audio.
+    const PEKPLATTA = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    let corsNej = PEKPLATTA, corsForsok = false;
+    function spelaStation(iPass) {
+      corsForsok = !corsNej && !stationLjud._via;
+      if (!stationLjud._via) stationLjud.crossOrigin = corsNej ? null : "anonymous";
+      stationLjud.src = station.stream;
+      stationLjud.play().then(() => { corsForsok = false; if (iPass) tona(stationLjud, stBas()); }).catch(() => {
+        if (corsForsok) { corsForsok = false; corsNej = true; return spelaStation(iPass); }   // strömmen tillåter inte läsning: spela utan
+        if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE";
+      });
+    }
+    stationLjud.addEventListener("playing", () => {
+      if (stationLjud._via || corsNej || !stationLjud.crossOrigin) return;
+      startaAnalys(); if (!ac || !analys) return;
+      try {
+        const kalla = ac.createMediaElementSource(stationLjud);
+        kalla.connect(stationMatare()); kalla.connect(analys);
+        stationLjud._via = true; if (!stationLjud._tonar) stationLjud.volume = 1;
+      } catch {}
+    });
     function valjStation(v, iPass = false) {
       if (!iPass) avslutaPass();
       if (!v) {   // tillbaka till Evigt Ung Radio
@@ -894,10 +917,11 @@
       avbrytMix(); if (!ljud.paused) ljud.pause();
       $("spRam").hidden = true; $("spTips").hidden = true;
       if (station !== v) stationTitel = null;
-      station = v; stationLjud.src = v.stream;
+      station = v;
       clearInterval(latinfoTimer); latinfoTimer = setInterval(lasLatinfo, 15000); lasLatinfo();
-      if (!iPass && vanMixPa && v === vanStation) startaPass(); stationLjud.volume = iPass ? 0 : vol;
-      stationLjud.play().then(() => { if (iPass) tona(stationLjud, vol); }).catch(() => { if (iPass) return passFel(); $("nuEtikett").textContent = "STATIONEN SVARAR INTE"; });
+      if (!iPass && vanMixPa && v === vanStation) startaPass();
+      stationLjud.volume = iPass ? 0 : stBas();
+      spelaStation(iPass);
       uppdatera(); ritaStationer();
     }
     function ritaStationer() {
@@ -912,7 +936,7 @@
       rakna("Station", i < 0 ? "Evigt Ung Radio" : stationer[i].namn);
     });
     for (const h of ["play", "pause", "playing"]) stationLjud.addEventListener(h, () => uppdatera());
-    stationLjud.addEventListener("error", () => { if (pass) return passFel(); if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
+    stationLjud.addEventListener("error", () => { if (corsForsok) return; if (pass) return passFel(); if (station && stationLjud.getAttribute("src")) { $("nuEtikett").textContent = "STATIONEN SVARAR INTE – FÖRSÖK IGEN"; } });
     ritaStationer();
 
     // --- Vän-mix: tre låtar från vännens radio (t.ex. HitNet), sedan en av våra, och så vidare ---
@@ -974,7 +998,7 @@
     function passFel() { avslutaPass(); valjStation(null); nasta(1); }
     function avslutaPass() {
       if (!pass) return;
-      clearTimeout(pass.tid); clearInterval(stationLjud._tona); stationLjud._tonar = false; stationLjud.volume = vol; pass = null;
+      clearTimeout(pass.tid); clearInterval(stationLjud._tona); stationLjud._tonar = false; stationLjud.volume = stBas(); pass = null;
     }
     // Icecast-servrar visar vad som spelas: visa låten och, i vän-mixen, räkna låtarna i stället för att gissa på tiden
     let latinfoTimer = null, stationTitel = null;
@@ -1028,7 +1052,7 @@
       }
     }
     function vaxla() {
-      if (station) { if (stationLjud.paused) { stationLjud.src = station.stream; stationLjud.play().catch(() => {}); } else { stationLjud.pause(); } return; }
+      if (station) { if (stationLjud.paused) spelaStation(false); else stationLjud.pause(); return; }
       if (nu < 0 && delad >= 0) return spela(delad);   // kom via en delad länk: spela den låten
       if (nu < 0) {
         // börja med första demon: den spelas från vår server och startar direkt även på iPhone
@@ -1147,6 +1171,29 @@
       o.src = ljud.src;
       o.play().then(() => { o.pause(); o.muted = false; }).catch(() => { o.muted = false; });
     }
+    // --- Nivåanpassning: HitNets ljudnivå mäts när den spelas; våra låtar justeras långsamt mot samma nivå ---
+    const STANDARDNIVA = -14;   // dB (RMS) – typisk radionivå, används tills HitNet har mätts
+    let lyft = null, egenMatare = null, stMatare = null, egenSnitt = null, matTick = 0;
+    let hitnetNiva = null; try { const n = parseFloat(localStorage.getItem("deu-hitnet-niva")); if (n < 0 && n > -40) hitnetNiva = n; } catch {}
+    function stationMatare() { if (!stMatare) { stMatare = ac.createAnalyser(); stMatare.fftSize = 2048; } return stMatare; }
+    const buf = new Float32Array(2048);
+    function rmsDb(m) { m.getFloatTimeDomainData(buf); let s = 0; for (const x of buf) s += x * x; return 10 * Math.log10(s / buf.length + 1e-12); }
+    setInterval(() => {
+      if (!ac || ac.state !== "running") return;
+      if (station && stationLjud._via && stMatare && !stationLjud.paused && !stationLjud._tonar) {
+        const db = rmsDb(stMatare); if (db < -50) return;
+        hitnetNiva = hitnetNiva == null ? db : hitnetNiva * 0.97 + db * 0.03;
+        if (++matTick % 20 === 0) try { localStorage.setItem("deu-hitnet-niva", hitnetNiva.toFixed(1)); } catch {}
+      } else if (!station && lyft && egenMatare && nu >= 0 && !arSpotify() && !ljud.paused) {
+        const db = rmsDb(egenMatare); if (db < -45) return;   // tyst parti: rör inte nivån
+        egenSnitt = egenSnitt == null ? db : egenSnitt * 0.8 + db * 0.2;
+        const fel = (hitnetNiva ?? STANDARDNIVA) - egenSnitt;
+        if (Math.abs(fel) < 0.75) return;
+        const steg = Math.max(-1, Math.min(1, fel * 0.2));
+        const ny = Math.max(0.5, Math.min(4, lyft.gain.value * Math.pow(10, steg / 20)));
+        lyft.gain.setTargetAtTime(ny, ac.currentTime, 0.4); egenSnitt += steg;
+      }
+    }, 500);
     function startaAnalys() {
       lasUpp();
       if (navigator.audioSession) { try { navigator.audioSession.type = "playback"; } catch {} }
@@ -1160,7 +1207,8 @@
           // Kompressor: jämnar ut nivån så att alla låtar låter ungefär lika starka, sedan en begränsare mot spik
           const komp = ac.createDynamicsCompressor();
           komp.threshold.value = -26; komp.knee.value = 12; komp.ratio.value = 4; komp.attack.value = 0.006; komp.release.value = 0.3;
-          const lyft = ac.createGain(); lyft.gain.value = 1.6;   // ca +4 dB tillbaka efter kompressionen
+          lyft = ac.createGain(); lyft.gain.value = 1.6;   // ca +4 dB tillbaka; justeras sedan mot HitNets nivå
+          egenMatare = ac.createAnalyser(); egenMatare.fftSize = 2048; lyft.connect(egenMatare);
           const begr = ac.createDynamicsCompressor();
           begr.threshold.value = -1.5; begr.knee.value = 0; begr.ratio.value = 20; begr.attack.value = 0.001; begr.release.value = 0.1;
           komp.connect(lyft); lyft.connect(begr); begr.connect(analys);
@@ -1183,8 +1231,8 @@
         const dpr = window.devicePixelRatio || 1, B = cv.clientWidth, H = cv.clientHeight;
         if (cv.width !== B * dpr) { cv.width = B * dpr; cv.height = H * dpr; }
         cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, B, H);
-        const demoSpelar = !station && !arSpotify() && nu >= 0 && !ljud.paused && analys && ac && ac.state === "running";
-        const viaSp = station ? !stationLjud.paused : arSpotify() ? spelar() : (nu >= 0 && !ljud.paused && !demoSpelar);   // animation när analys saknas
+        const demoSpelar = analys && ac && ac.state === "running" && (station ? stationLjud._via && !stationLjud.paused : !arSpotify() && nu >= 0 && !ljud.paused);
+        const viaSp = station ? !stationLjud.paused && !demoSpelar : arSpotify() ? spelar() : (nu >= 0 && !ljud.paused && !demoSpelar);   // animation när analys saknas
         if (demoSpelar) analys.getByteFrequencyData(fdata);
         const farg = cx.createLinearGradient(0, H, 0, 0);
         if (arSpotify()) { farg.addColorStop(0, "#0f7a3a"); farg.addColorStop(1, "#1ed760"); }
