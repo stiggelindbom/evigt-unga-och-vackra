@@ -143,6 +143,33 @@
     },
     {
       "slappt": false,
+      "titel": "Dj Stigge - I'm gettin' up (radio)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-feat-jonna-i-m-gettin-up-radio-b9hb.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": " Bruce Belland, Glen Larson och Stu Phillips. ",
+        "textforfattare": " Bruce Belland, Glen Larson och Stu Phillips. ",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T15:36:45.776Z",
+      "omslag": "omslag-dj-stigge-vilse-bland-miljoner-dance-mix.jpg",
+      "niva": {
+        "lufs": -10.1,
+        "topp": -0.2
+      },
+      "klipp": 13.5,
+      "klippLangd": 40
+    },
+    {
+      "slappt": false,
       "titel": "Dj Stigge  - I'm gettin' up (Stigges VIP)",
       "info": "",
       "typ": "Demo",
