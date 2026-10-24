@@ -143,28 +143,28 @@
     },
     {
       "slappt": false,
-      "titel": "Remember Me - Radio",
+      "titel": "Remember Me ",
       "info": "",
-      "typ": "Demo Radio",
+      "typ": "Demo Rickolitos Mix",
       "spotify": "",
-      "fil": "remember-me-razor-di-di-di-masterchannel-2026-05-05-ojga.mp3",
+      "fil": "remember-me-dark-rickolitos-mix-masterchannel-2026-05-05-rkv9.mp3",
       "ladda": true,
       "kredit": {
-        "artist": "De Evigt Unga å Vackra",
-        "kompositor": "Stig Lindbom",
-        "textforfattare": "Stig Lindbom",
+        "artist": "Torpa Boys ",
+        "kompositor": "Stig Lindbom / Rickard Ivarsson",
+        "textforfattare": "Stig Lindbom / Rickard Ivarsson",
         "producent": "Stig Lindbom",
         "mixning": "Stig Lindbom",
         "mastering": "Stig Lindbom",
         "ar": "2026",
         "genre": "Reggae swing"
       },
-      "datum": "2026-10-24T12:02:15.581Z",
+      "datum": "2026-10-24T12:05:27.103Z",
       "niva": {
-        "lufs": -11.3,
+        "lufs": -9.9,
         "topp": -0.2
       },
-      "omslag": "omslag-remember-me-razor.jpg"
+      "omslag": "omslag-remember-me.jpg"
     },
     {
       "slappt": false,
@@ -262,6 +262,31 @@
         "ar": "2026"
       },
       "omslag": "omslag-sista-kalla-flaskan.jpg"
+    },
+    {
+      "slappt": false,
+      "titel": "Remember Me - Radio",
+      "info": "",
+      "typ": "Demo Radio",
+      "spotify": "",
+      "fil": "remember-me-razor-di-di-di-masterchannel-2026-05-05-ojga.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "De Evigt Unga å Vackra",
+        "kompositor": "Stig Lindbom",
+        "textforfattare": "Stig Lindbom",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T12:02:15.581Z",
+      "niva": {
+        "lufs": -11.3,
+        "topp": -0.2
+      },
+      "omslag": "omslag-remember-me-razor.jpg"
     },
     {
       "slappt": false,
