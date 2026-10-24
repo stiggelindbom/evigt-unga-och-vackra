@@ -50,7 +50,9 @@
       display: flex; justify-content: space-between; align-items: center;
       padding: 12px 16px;
       background: linear-gradient(to bottom, rgba(0,0,0,.9), rgba(0,0,0,0));
+      transition: background .25s, box-shadow .25s;
     }
+    nav.skrollad { background: rgba(11,10,8,.94); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 1px 0 #2a2418; }   /* fast mörk meny när man scrollat */
     nav .brand { font-family: "Yellowtail", cursive; font-size: 1.6rem; color: var(--guld); text-decoration: none; }
     nav ul { list-style: none; display: flex; gap: 20px; }
     nav ul a {
@@ -211,6 +213,8 @@
       .studio .rund.stor { width: 56px; height: 56px; }
       .spar { padding: 10px; gap: 10px; }
       .spar .hoger { flex-wrap: wrap; gap: 6px; }
+      .spar .hoger .spotify-lank, .spar .hoger .ladda { padding: 5px 10px; font-size: .75rem; }
+      .mobil-dold, .spar.slappt .tagg { display: none; }
       .listrubrik { flex-wrap: wrap; }
       .minispelare { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 10px; }
       .minispelare img { width: 44px; height: 44px; }
@@ -802,7 +806,7 @@
             <button class="info-knapp dela-knapp" type="button" data-dela="${i}" aria-label="Dela ${esc(l.titel)}" title="Dela"><svg viewBox="0 0 24 24"><path d="M18 16.1c-.8 0-1.4.3-2 .8l-7.1-4.2c.1-.2.1-.5.1-.7s0-.5-.1-.7L16 7.2c.5.5 1.2.8 2 .8 1.7 0 3-1.3 3-3s-1.3-3-3-3-3 1.3-3 3c0 .2 0 .5.1.7L8 9.8C7.5 9.3 6.8 9 6 9c-1.7 0-3 1.3-3 3s1.3 3 3 3c.8 0 1.5-.3 2-.8l7.1 4.2c-.1.2-.1.4-.1.6 0 1.6 1.3 2.9 2.9 2.9s2.9-1.3 2.9-2.9-1.2-2.9-2.8-2.9z"/></svg></button>
             ${harKredit(l) ? `<button class="info-knapp" type="button" data-kredit="${i}" aria-label="Upphovspersoner för ${esc(l.titel)}" title="Upphovspersoner">i</button>` : ""}
             ${l.typ ? `<span class="tagg">${esc(l.typ)}</span>` : ""}
-            ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener">Öppna i Spotify</a>` : ""}
+            ${lank ? `<a class="spotify-lank" href="${esc(lank)}" target="_blank" rel="noopener"><span class="mobil-dold">Öppna i </span>Spotify</a>` : ""}
             ${l.ladda && l.fil && !l.saknas ? ladd(i) : ""}
           </div>
         </li>`;
@@ -815,7 +819,8 @@
       $("lista").innerHTML = grupp("Demos", "Direkt från studion – gilla oss och ladda ner", l => !l.slappt && typeof l.klipp !== "number", demoRad)
         + grupp("Kommande", "Smakprov på nästa släpp", l => !l.slappt && typeof l.klipp === "number", demoRad)
         || `<div class="tomt">Inga demos uppladdade än.</div>`;
-      $("slapptLista").innerHTML = grupp("Släppta låtar", "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
+      $("slapptLista").innerHTML = grupp("Släppta låtar", /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+        ? "Tryck på Spotify-knappen så räknas lyssningen" : "Spelas via Spotify – varje lyssning räknas", l => l.slappt, slapptRad);
     }
     const listKlick = e => {
       const dl = e.target.closest("[data-dela]");
@@ -1522,6 +1527,9 @@
     // --- Dela: telefonens delningsmeny, annars en ruta med länkar ---
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const latLank = l => location.origin + location.pathname + (l ? "#lat-" + slugga(l.titel) : "");
+    const navEl = document.querySelector("nav");
+    const kollaNav = () => navEl.classList.toggle("skrollad", scrollY > 40);
+    addEventListener("scroll", kollaNav, { passive: true }); kollaNav();
     $("qrOppna").onclick = () => { rakna("Delad", "QR-rutan"); $("qrRuta").showModal(); };
     $("qrKryss").onclick = () => $("qrRuta").close();
     $("qrRuta").addEventListener("click", e => { if (e.target === $("qrRuta")) $("qrRuta").close(); });   // klick utanför stänger
