@@ -246,7 +246,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261023162741";
+    const VERSION = "v20261024092432";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -450,7 +450,9 @@
         const forsta = data.latar.findIndex(x => !!x.slappt === !!l.slappt) === i;
         const sista = data.latar.map(x => !!x.slappt).lastIndexOf(!!l.slappt) === i;
         const filStatus = uppladdning === i ? `<span class="status laddar">Laddar upp…</span>`
-          : l.fil && filer.has(l.fil) ? `<span class="status ok">✓ ${esc(l.fil)}</span>`
+          : l.fil && filer.has(l.fil) ? `<span class="status ok">✓ ${esc(l.fil)}</span>` + (l.niva ? (l.niva.lufs < MASTRAD_MIN
+              ? ` <span class="status saknas" title="Mastrade låtar ligger runt −9 till −11 LUFS">⚠️ ej mastrad? ${dB(l.niva.lufs)} LUFS</span>`
+              : ` <span class="status ok" title="Upplevd ljudstyrka">${dB(l.niva.lufs)} LUFS</span>`) : "")
           : l.fil ? `<span class="status saknas">${esc(l.fil)} saknas</span>` : `<span class="status saknas">Ingen fil</span>`;
         return `
         <div class="lat ${l.slappt ? "slappt" : "demo"}${l.dold ? " ar-dold" : ""}" data-i="${i}">
@@ -1128,6 +1130,38 @@
       return new Blob(delar, { type: "audio/mpeg" });
     }
 
+    // ===== Mastringskoll: mät upplevd ljudstyrka (LUFS, enligt EBU R128 / ITU BS.1770) och toppnivå =====
+    const MASTRAD_MIN = -13;   // svagare än så: troligen inte mastrad (mastrad pop ligger runt −8 till −11 LUFS)
+    async function matLjud(fil) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const ljud = await ctx.decodeAudioData(await fil.arrayBuffer());
+      ctx.close && ctx.close();
+      let topp = 0;
+      for (let c = 0; c < ljud.numberOfChannels; c++) { const d = ljud.getChannelData(c); for (let k = 0; k < d.length; k++) { const a = Math.abs(d[k]); if (a > topp) topp = a; } }
+      // K-vägning (hörselkurva) i en offline-kontext
+      const off = new OfflineAudioContext(ljud.numberOfChannels, ljud.length, ljud.sampleRate);
+      const kalla = off.createBufferSource(); kalla.buffer = ljud;
+      const hylla = off.createBiquadFilter(); hylla.type = "highshelf"; hylla.frequency.value = 1681.97; hylla.gain.value = 4;
+      const hogpass = off.createBiquadFilter(); hogpass.type = "highpass"; hogpass.frequency.value = 38.13; hogpass.Q.value = 0.5;
+      kalla.connect(hylla); hylla.connect(hogpass); hogpass.connect(off.destination); kalla.start();
+      const k = await off.startRendering();
+      // 400 ms block med 75 % överlapp, absolut grind −70 LUFS och relativ grind −10 LU
+      const blk = Math.round(0.4 * k.sampleRate), hopp = Math.round(0.1 * k.sampleRate), kanaler = Math.min(2, k.numberOfChannels), z = [];
+      const data = [...Array(kanaler)].map((_, c) => k.getChannelData(c));
+      for (let start = 0; start + blk <= k.length; start += hopp) {
+        let sum = 0;
+        for (const d of data) { let s = 0; for (let n = start; n < start + blk; n++) s += d[n] * d[n]; sum += s / blk; }
+        z.push(sum);
+      }
+      // −1,5 dB: webbläsarens hyllfilter lyfter diskanten lite mer än standardens; kalibrerat mot ffmpeg (ebur128)
+      const lufs = arr => -0.691 - 1.5 + 10 * Math.log10(arr.reduce((a, b) => a + b, 0) / arr.length);
+      const over70 = z.filter(v => -0.691 + 10 * Math.log10(v) > -70);
+      if (!over70.length) return { lufs: -70, topp: 20 * Math.log10(topp || 1e-9) };
+      const grans = lufs(over70) - 10;
+      return { lufs: lufs(over70.filter(v => -0.691 + 10 * Math.log10(v) > grans)), topp: 20 * Math.log10(topp || 1e-9) };
+    }
+    const dB = v => v.toFixed(1).replace(".", ",").replace("-", "−");
+
     $("filval").addEventListener("change", async () => {
       let fil = $("filval").files[0];
       const i = filFor, l = data.latar[i];
@@ -1138,7 +1172,13 @@
       // alltid ett nytt filnamn efter titeln: rätt namn syns, och ingen cache spelar den gamla versionen
       const namn = filnamn(l.titel).replace(/\.mp3$/, "-" + Date.now().toString(36).slice(-4) + ".mp3");
       uppladdning = i; rita();
+      let niva = null;
       try {
+        status("Mäter ljudnivån…");
+        try { niva = await matLjud(fil); } catch { niva = null; }
+        if (niva && niva.lufs < MASTRAD_MIN && !confirm(`⚠️ ${l.titel} verkar inte vara mastrad.\n\nLjudstyrka: ${dB(niva.lufs)} LUFS – mastrade låtar ligger runt −9 till −11 LUFS, så den kommer att låta svagare än de andra.\n\nVill du ladda upp den ändå?`)) {
+          uppladdning = null; rita(); return status("Uppladdningen avbröts – mastra låten och försök igen.", "fel");
+        }
         if (arWav) {
           status(`Gör om ${fil.name} till mp3… 0 %`);
           fil = await wavTillMp3(fil, p => status(`Gör om till mp3… ${Math.round(p * 100)} %`));
@@ -1157,9 +1197,12 @@
         filer.add(namn);
         if (l.slappt && !l.fil) l.ladda = true;   // släppt låt som får en fil: gör den nedladdningsbar direkt
         if (l.fil && l.fil !== namn) attRadera.add(l.fil);   // gamla filen tas bort när du sparar
-        l.fil = namn; taggAndrad.delete(l); andrat();
+        l.fil = namn; taggAndrad.delete(l);
+        if (niva) l.niva = { lufs: +niva.lufs.toFixed(1), topp: +niva.topp.toFixed(1) }; else delete l.niva;
+        andrat();
         uppladdning = null; rita();
-        status(osparat ? `✓ ${namn} uppladdad. Glöm inte att spara.` : `✓ ${namn} uppladdad.`, osparat ? "osparat" : "ok");
+        const tips = niva && niva.topp > -1 ? ` Tips: toppen ligger på ${dB(niva.topp)} dB – sätt begränsaren på −1 dB nästa gång så slipper du sprak.` : "";
+        status((osparat ? `✓ ${namn} uppladdad. Glöm inte att spara.` : `✓ ${namn} uppladdad.`) + tips, osparat ? "osparat" : "ok");
       } catch (e) {
         uppladdning = null; rita(); status("Uppladdningen misslyckades: " + e.message, "fel");
       }
