@@ -143,32 +143,6 @@
     },
     {
       "slappt": false,
-      "titel": "Dj Stigge - Rytmen av ett regn (Neon Mix)",
-      "info": "",
-      "typ": "Demo",
-      "spotify": "",
-      "fil": "dj-stigge-rytmen-av-ett-regn-neon-mix-dpfp.mp3",
-      "ladda": true,
-      "kredit": {
-        "artist": "DJ Stigge",
-        "kompositor": "Camilla Andersson / Morgan Hjalmarsson",
-        "textforfattare": "Camilla Andersson / Morgan Hjalmarsson",
-        "producent": "Stig Lindbom",
-        "mixning": "Stig Lindbom",
-        "mastering": "Stig Lindbom",
-        "ar": "2026",
-        "genre": "Reggae swing"
-      },
-      "datum": "2026-10-24T10:58:46.395Z",
-      "klipp": 35,
-      "niva": {
-        "lufs": -11.8,
-        "topp": -0.2
-      },
-      "omslag": "omslag-dj-stigge-rytmen-av-ett-regn-neon-mix.jpg"
-    },
-    {
-      "slappt": false,
       "titel": "Vilken härlig dag!",
       "info": "Reggaepop med strandkänsla.",
       "typ": "Demo Radio",
@@ -334,6 +308,32 @@
       },
       "klipp": 15,
       "omslag": "omslag-dj-stigge-catch-the-moon-funk-edit.jpg"
+    },
+    {
+      "slappt": false,
+      "titel": "Dj Stigge - Rytmen av ett regn (Neon Mix)",
+      "info": "",
+      "typ": "Demo",
+      "spotify": "",
+      "fil": "dj-stigge-rytmen-av-ett-regn-neon-mix-dpfp.mp3",
+      "ladda": true,
+      "kredit": {
+        "artist": "DJ Stigge",
+        "kompositor": "Camilla Andersson / Morgan Hjalmarsson",
+        "textforfattare": "Camilla Andersson / Morgan Hjalmarsson",
+        "producent": "Stig Lindbom",
+        "mixning": "Stig Lindbom",
+        "mastering": "Stig Lindbom",
+        "ar": "2026",
+        "genre": "Reggae swing"
+      },
+      "datum": "2026-10-24T10:58:46.395Z",
+      "klipp": 35,
+      "niva": {
+        "lufs": -11.8,
+        "topp": -0.2
+      },
+      "omslag": "omslag-dj-stigge-rytmen-av-ett-regn-neon-mix.jpg"
     },
     {
       "slappt": true,
