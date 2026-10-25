@@ -36,6 +36,16 @@
     header nav { display: flex; gap: 14px; align-items: center; font-size: .9rem; }
 
     main { max-width: 900px; margin: 0 auto; padding: 24px 16px; display: grid; gap: 28px; }
+    .flikar { position: sticky; top: 0; z-index: 20; display: flex; gap: 6px; overflow-x: auto; padding: 10px 0; background: var(--svart); border-bottom: 1px solid var(--kant); scrollbar-width: none; }
+    .flikar button { flex: none; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--kant); background: transparent; color: var(--dampad); font-family: "Oswald", sans-serif; letter-spacing: .06em; white-space: nowrap; }
+    .flikar button.aktiv { background: var(--guld); border-color: var(--guld); color: #111; }
+    .flik { display: grid; gap: 28px; }
+    .flik[hidden] { display: none; }
+    .valv-kort { display: grid; gap: 12px; }
+    .valv-post { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; border-top: 1px solid var(--kant); padding-top: 10px; }
+    .valv-post .knappar { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    .valv-post small { color: var(--dampad); }
+    .valv-post code { font-size: .85rem; word-break: break-all; }
     h2 { font-family: "Yellowtail", cursive; font-weight: 400; color: var(--guld); font-size: 2.2rem; line-height: 1.1; }
     h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--guld); font-size: 1rem; }
     .kort { background: var(--yta); border: 1px solid var(--kant); border-radius: 12px; padding: 20px; }
@@ -181,6 +191,13 @@
     <img class="loggo" src="assets/logo.png" alt="De Evigt Unga å Vackra">
     <div class="kort" style="display:grid;gap:14px">
       <h3>Logga in</h3>
+      <div id="valvLogin" hidden style="display:grid;gap:10px">
+        <label>🔐 Lösenfras till nyckelvalvet
+          <input type="password" id="valvLoginFras" autocomplete="current-password">
+        </label>
+        <button class="knapp" id="valvLoginKnapp" type="button">Lås upp & logga in</button>
+        <div class="hjalp">…eller logga in med GitHub-nyckeln:</div>
+      </div>
       <label>GitHub-nyckel (token)
         <input type="password" id="token" autocomplete="off" placeholder="github_pat_…">
       </label>
@@ -202,27 +219,14 @@
 
   <!-- Admin -->
   <main id="adminVy" hidden>
-    <div>
-      <h2>📣 Nytt inlägg</h2>
-      <p class="hjalp">Skriv, välj en video eller bild och tryck Skicka. Inlägget hamnar direkt under <b>Senaste nytt</b> på hemsidan och i flödet <code>inlagg.xml</code> – som Make läser och lägger ut på Facebook, Instagram och YouTube.</p>
-    </div>
-    <div class="kort inlagg-kort">
-      <textarea id="inlaggText" rows="4" placeholder="Vad vill du berätta? T.ex. Ny video till Vilken härlig dag! 🌞 Lyssna på radion – länk i bion."></textarea>
-      <div class="inlagg-rad">
-        <button class="knapp kontur liten" type="button" id="inlaggValj">🎬 Välj video eller bild</button>
-        <span class="hjalp" id="inlaggFilNamn">Ingen fil vald (går att skicka bara text)</span>
-      </div>
-      <div id="inlaggForhand" hidden></div>
-      <label>Länk i inlägget
-        <select id="inlaggLank"></select>
-      </label>
-      <div class="inlagg-rad">
-        <button class="knapp" type="button" id="inlaggSkicka">📣 Skicka inlägget</button>
-      </div>
-      <input type="file" id="inlaggFil" accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp" hidden>
-      <div id="inlaggLista"></div>
-    </div>
-
+    <nav class="flikar" id="flikar" role="tablist">
+      <button type="button" data-flik="oversikt">📊 Översikt</button>
+      <button type="button" data-flik="latar">🎵 Låtar</button>
+      <button type="button" data-flik="inlagg">📣 Inlägg</button>
+      <button type="button" data-flik="artister">🎤 Artister & länkar</button>
+      <button type="button" data-flik="valv">🔐 Valv & koder</button>
+    </nav>
+    <section class="flik" data-flik-del="oversikt">
     <div>
       <h2>📊 Statistik</h2>
     </div>
@@ -241,6 +245,8 @@
       </details>
     </div>
 
+    </section>
+    <section class="flik" data-flik-del="latar">
     <div>
       <h2>Låtar</h2>
       <p class="hjalp">Släppta låtar spelas via Spotify på hemsidan så att lyssningarna räknas. Demos spelas i radion och kan laddas ner. Ordningen här är ordningen på hemsidan.</p>
@@ -271,11 +277,72 @@
       <div class="latlista" id="slapptLista"></div>
     </div>
 
+    </section>
+    <section class="flik" data-flik-del="inlagg">
+    <div>
+      <h2>📣 Nytt inlägg</h2>
+      <p class="hjalp">Skriv, välj en video eller bild och tryck Skicka. Inlägget hamnar direkt under <b>Senaste nytt</b> på hemsidan och i flödet <code>inlagg.xml</code> – som Make läser och lägger ut på Facebook, Instagram och YouTube.</p>
+    </div>
+    <div class="kort inlagg-kort">
+      <textarea id="inlaggText" rows="4" placeholder="Vad vill du berätta? T.ex. Ny video till Vilken härlig dag! 🌞 Lyssna på radion – länk i bion."></textarea>
+      <div class="inlagg-rad">
+        <button class="knapp kontur liten" type="button" id="inlaggValj">🎬 Välj video eller bild</button>
+        <span class="hjalp" id="inlaggFilNamn">Ingen fil vald (går att skicka bara text)</span>
+      </div>
+      <div id="inlaggForhand" hidden></div>
+      <div class="rutnat">
+        <label>Från artist (styr vilka kanaler det läggs ut på)
+          <select id="inlaggArtist"></select>
+        </label>
+        <label>Länk i inlägget
+          <select id="inlaggLank"></select>
+        </label>
+      </div>
+      <div class="inlagg-rad">
+        <button class="knapp" type="button" id="inlaggSkicka">📣 Skicka inlägget</button>
+      </div>
+      <input type="file" id="inlaggFil" accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp" hidden>
+      <div id="inlaggLista"></div>
+    </div>
+
+    </section>
+    <section class="flik" data-flik-del="artister">
+    <div>
+      <h2>🎤 Artister & kanaler</h2>
+      <p class="hjalp">Artister med egna kanaler, t.ex. DJ Stigge. Inlägg och videor märks med artisten, så att Make kan lägga ut dem på rätt konton.</p>
+    </div>
+    <div class="kort">
+      <div class="listhuvud">
+        <h3>Artister</h3>
+        <button class="knapp liten" type="button" id="nyArtist">+ Ny artist</button>
+      </div>
+      <div class="latlista" id="artistLista"></div>
+    </div>
+
     <div>
       <h2>Länkar</h2>
       <p class="hjalp">Tomma fält döljs på hemsidan.</p>
     </div>
     <div class="kort rutnat" id="lankar"></div>
+
+    <div>
+      <h2>Med vänner</h2>
+      <p class="hjalp">Visas som en rad med loggor under logon på startsidan. Ladda upp en logga (gärna png med genomskinlig bakgrund).</p>
+    </div>
+    <div class="kort">
+      <div class="listhuvud">
+        <h3>Med vänner</h3>
+        <button class="knapp liten" type="button" id="nyVan">+ Ny vän</button>
+      </div>
+      <div class="latlista" id="vannerLista"></div>
+    </div>
+    </section>
+    <section class="flik" data-flik-del="valv">
+    <div>
+      <h2>🔐 Nyckelvalv</h2>
+      <p class="hjalp">Alla nycklar och inloggningar på ett ställe, låsta med en lösenfras. Valvet sparas krypterat (AES-256) bara i den här webbläsaren – aldrig på GitHub. Spara en säkerhetskopia om du vill använda det på en annan dator.</p>
+    </div>
+    <div class="kort valv-kort" id="valvKort"></div>
 
     <div id="engangsDel" hidden>
       <h2>Engångskoder</h2>
@@ -292,17 +359,7 @@
       </div>
     </div>
 
-    <div>
-      <h2>Med vänner</h2>
-      <p class="hjalp">Visas som en rad med loggor under logon på startsidan. Ladda upp en logga (gärna png med genomskinlig bakgrund).</p>
-    </div>
-    <div class="kort">
-      <div class="listhuvud">
-        <h3>Med vänner</h3>
-        <button class="knapp liten" type="button" id="nyVan">+ Ny vän</button>
-      </div>
-      <div class="latlista" id="vannerLista"></div>
-    </div>
+    </section>
   </main>
   <div class="video-ruta" id="videoRuta" hidden>
     <div class="video-panel">
@@ -335,7 +392,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025065016";
+    const VERSION = "v20261025065459";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -479,6 +536,7 @@
       sha = f.sha;
       data = JSON.parse(franBase64(f.content));
       data.lankar ||= {}; data.latar ||= []; data.vanner ||= []; data.inlagg ||= [];
+      data.artister ||= [{ namn: "DJ Stigge", spotify: "", youtube: "", instagram: "", facebook: "", tiktok: "", soundcloud: "", webb: "https://stigges.se" }];
       for (const l of data.latar) if (!l.kredit) { l.kredit = FORVAL(); fyllda.push(l); }
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
@@ -486,7 +544,7 @@
     }
 
     // ===== Inloggning =====
-    async function loggaIn(t) {
+    async function loggaIn(t, viaValv = false) {
       token = t.replace(/[\s"']+/g, "");   // ta bort mellanslag, radbrytningar och citattecken
       const knapp = $("loggaIn"), fel = $("loginFel");
       fel.textContent = "";
@@ -500,7 +558,7 @@
         const repo = await gh("");
         if (!repo.permissions || !repo.permissions.push) throw new Error("Nyckeln saknar skrivrättighet (Contents: Read and write).");
         await hamta();
-        try { localStorage.setItem("deu-admin-token", token); } catch {}
+        if (!viaValv) try { localStorage.setItem("deu-admin-token", token); } catch {}
         $("loginVy").hidden = true; $("adminVy").hidden = false; $("sparrad").hidden = false; $("loggaUt").hidden = false;
         rita(); status("Inloggad. Inga ändringar än."); hamtaKoder();
         // Låtar som bara har förval: hämta uppgifter från en annan mix av samma låt
@@ -532,7 +590,7 @@
     try { const t = localStorage.getItem("deu-admin-token"); if (t) loggaIn(t); } catch {}
 
     // ===== Rita =====
-    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["mejl", "Mejl för bokning", "email"], ["server", "Server för engångskoder (Freddes server, t.ex. https://…/server/)", "url"], ["statistik", "Statistik – GoatCounter-kod (t.ex. devigtunga)", "text"]];
+    const LANKFALT = [["spotify", "Spotify (artistsida)", "url"], ["facebook", "Facebook", "url"], ["instagram", "Instagram", "url"], ["soundcloud", "SoundCloud", "url"], ["youtube", "YouTube", "url"], ["tiktok", "TikTok", "url"], ["mejl", "Mejl för bokning", "email"], ["server", "Server för engångskoder (Freddes server, t.ex. https://…/server/)", "url"], ["statistik", "Statistik – GoatCounter-kod (t.ex. devigtunga)", "text"]];
 
     // vilken avdelning i backoffice låten hör till (dolda låtar stannar i sin avdelning, gråade)
     const grupp = l => l.slappt ? "slappt" : typeof l.klipp === "number" || ("klipp" in l && l.klipp === undefined) ? "kommande" : "demo";
@@ -649,6 +707,7 @@
       $("kommandeLista").innerHTML = lista("kommande");
       $("demoLista").innerHTML = lista("demo");
       ritaVanner();
+      ritaArtister();
       ritaInlagg();
       if (!statVisad) { statVisad = true; visaStatistik(); }
       ritaEngangsDel();
@@ -874,7 +933,7 @@
 
     // ===== Engångskoder (via Freddes server) =====
     const serverBas = () => (data.lankar.server || "").replace(/\/?$/, "/");
-    const serverNyckel = () => $("serverNyckel").value.trim();
+    const serverNyckel = () => $("serverNyckel").value.trim() || hemlighet("server");
     try { $("serverNyckel").value = localStorage.getItem("deu-server-nyckel") || ""; } catch {}
     $("serverNyckel").addEventListener("change", () => { try { localStorage.setItem("deu-server-nyckel", serverNyckel()); } catch {} hamtaKoder(); });
     async function serverAnrop(metod, kropp) {
@@ -989,6 +1048,12 @@
 
     // ===== Redigering =====
     $("adminVy").addEventListener("input", e => {
+      if (e.target.matches("[data-artist-falt]")) {
+        const k = +e.target.closest("[data-artist]").dataset.artist, f = e.target.dataset.artistFalt;
+        data.artister[k][f] = e.target.value.trim();
+        if (f === "namn") e.target.closest("[data-artist]").querySelector(".titel-rad b").textContent = e.target.value || "Ny artist";
+        return andrat();
+      }
       if (e.target.matches("[data-omslag-val]")) {
         const l = data.latar[+e.target.closest("[data-i]").dataset.i], v = e.target.value;
         if (v) l.omslag = v; else delete l.omslag;
@@ -1548,17 +1613,191 @@ ${poster.slice(0, 20).map(p => `<item>
       $("inlaggText").value = `${t.artist} – ${titel}${l.slappt ? "" : " (demo)"} 🎶\n${l.info ? l.info + "\n" : ""}\n🎧 Lyssna och ladda ner gratis på devigtunga.se${upphov ? "\n" + upphov : ""}\n\n${t.tagg} #DeEvigtUngaÅVackraMedVänner #svenskmusik`;
       ritaInlagg();
       const lank = [...$("inlaggLank").options].find(o => o.textContent.startsWith(ren(l.titel))); if (lank) $("inlaggLank").value = lank.value;
-      $("videoRuta").hidden = true;
+      $("videoRuta").hidden = true; visaFlik("inlagg");
+      if ([...$("inlaggArtist").options].some(o => o.value === t.artist)) $("inlaggArtist").value = t.artist;
       $("inlaggText").scrollIntoView({ behavior: "smooth", block: "center" });
       status("🎬 Videon ligger i Nytt inlägg – kolla texten och tryck Skicka.", "osparat");
     };
+
+    // ===== Flikar =====
+    function visaFlik(n) {
+      if (!document.querySelector(`[data-flik-del="${n}"]`)) n = "latar";
+      document.querySelectorAll("[data-flik-del]").forEach(x => x.hidden = x.dataset.flikDel !== n);
+      document.querySelectorAll("#flikar [data-flik]").forEach(b => b.classList.toggle("aktiv", b.dataset.flik === n));
+      try { localStorage.setItem("deu-admin-flik", n); } catch {}
+      if (n === "latar" && data) setTimeout(ritaAllaVagformer);
+      if (n === "valv") ritaValv();
+    }
+    $("flikar").onclick = e => { const b = e.target.closest("[data-flik]"); if (b) { visaFlik(b.dataset.flik); scrollTo({ top: 0 }); } };
+
+    // ===== Artister med egna kanaler =====
+    const ARTIST_FALT = [["spotify", "Spotify"], ["youtube", "YouTube"], ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["soundcloud", "SoundCloud"], ["webb", "Webbsida"]];
+    function ritaArtister() {
+      $("artistLista").innerHTML = data.artister.map((a, k) => `
+        <div class="lat" data-artist="${k}">
+          <div class="topp"><div class="titel-rad"><b>${esc(a.namn) || "Ny artist"}</b></div>
+            <div class="verktyg"><button class="knapp kontur liten" type="button" data-artist-bort>Ta bort</button></div></div>
+          <div class="rutnat">
+            <label>Namn<input type="text" data-artist-falt="namn" value="${esc(a.namn)}"></label>
+            ${ARTIST_FALT.map(([f, n]) => `<label>${n}<input type="url" data-artist-falt="${f}" value="${esc(a[f])}" placeholder="https://…"></label>`).join("")}
+          </div>
+        </div>`).join("") || `<div class="tom">Inga artister än.</div>`;
+    }
+    $("nyArtist").onclick = () => { data.artister.push({ namn: "" }); ritaArtister(); ritaInlagg(); andrat(); $("artistLista").lastElementChild.querySelector("input").focus(); };
+    $("artistLista").addEventListener("click", e => {
+      const b = e.target.closest("[data-artist-bort]"); if (!b) return;
+      const k = +b.closest("[data-artist]").dataset.artist;
+      if (!confirm(`Ta bort ${data.artister[k].namn || "artisten"}?`)) return;
+      data.artister.splice(k, 1); ritaArtister(); ritaInlagg(); andrat();
+    });
+
+    // ===== 🔐 Nyckelvalv: krypterat med lösenfrasen (PBKDF2 + AES-256-GCM), bara i den här webbläsaren =====
+    const VALV = "deu-valv";
+    const VALV_FAST = [
+      ["github", "GitHub-nyckel", "Inloggningen till backoffice", "https://github.com/settings/personal-access-tokens"],
+      ["goatcounter", "GoatCounter API-nyckel", "Statistiken under Översikt", "https://devigtunga.goatcounter.com/user/api"],
+      ["server", "Server-adminnyckel", "Engångskoder för smakprov", ""],
+      ["make", "Make", "Automatisk publicering på sociala medier", "https://www.make.com/"],
+      ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"]
+    ];
+    let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
+    const tillB64 = u8 => bytesTillBase64(u8), franB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+    const hemlighet = id => (valv && valv.fast[id]) || "";
+    const harValv = () => !!las(VALV);
+    async function valvHarled(fras, salt) {
+      const bas = await crypto.subtle.importKey("raw", new TextEncoder().encode(fras), "PBKDF2", false, ["deriveKey"]);
+      return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 310000, hash: "SHA-256" }, bas, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    }
+    async function valvOppna(fras) {
+      const lagrat = JSON.parse(las(VALV));
+      const salt = franB64(lagrat.salt), nyckel = await valvHarled(fras, salt);
+      const klar = await crypto.subtle.decrypt({ name: "AES-GCM", iv: franB64(lagrat.iv) }, nyckel, franB64(lagrat.data));   // fel lösenfras = undantag
+      valv = JSON.parse(new TextDecoder().decode(klar)); valv.fast ||= {}; valv.poster ||= [];
+      valvKey = nyckel; valvSalt = salt; valvAktiv();
+    }
+    async function valvSpara() {
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const data2 = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, valvKey, new TextEncoder().encode(JSON.stringify(valv))));
+      localStorage.setItem(VALV, JSON.stringify({ v: 1, salt: tillB64(valvSalt), iv: tillB64(iv), data: tillB64(data2) }));
+    }
+    async function valvSkapa(fras) {
+      valvSalt = crypto.getRandomValues(new Uint8Array(16)); valvKey = await valvHarled(fras, valvSalt);
+      valv = { fast: {}, poster: [] };
+      // flytta in nycklar som redan finns i webbläsaren (och ta bort klartextkopiorna utom inloggningen)
+      if (token) valv.fast.github = token;
+      for (const [id, k] of [["goatcounter", "deu-gc-nyckel"], ["server", "deu-server-nyckel"]]) { const v = las(k); if (v) { valv.fast[id] = v; try { localStorage.removeItem(k); } catch {} } }
+      await valvSpara(); valvAktiv();
+    }
+    function valvLas() { valv = null; valvKey = null; valvVisa.clear(); clearTimeout(valvTimer); ritaValv(); }
+    function valvAktiv() { clearTimeout(valvTimer); valvTimer = setTimeout(valvLas, 15 * 60 * 1000); }   // låses efter 15 min utan aktivitet
+    document.addEventListener("click", () => { if (valv) valvAktiv(); }, true);
+    function ritaValv() {
+      const k = $("valvKort"); if (!k) return;
+      if (!harValv()) {
+        k.innerHTML = `<h3>Skapa ditt nyckelvalv</h3>
+          <p class="hjalp">Välj en lösenfras du kommer ihåg, gärna en hel mening (minst 10 tecken). <b>Glömmer du den går valvet inte att öppna</b> – då får nycklarna skapas om hos varje tjänst.</p>
+          <div class="rutnat"><label>Lösenfras<input type="password" id="valvFras1" autocomplete="new-password"></label><label>Samma igen<input type="password" id="valvFras2" autocomplete="new-password"></label></div>
+          <div><button class="knapp" type="button" id="valvSkapa">🔐 Skapa valvet</button></div>`;
+        return;
+      }
+      if (!valv) {
+        k.innerHTML = `<h3>🔒 Valvet är låst</h3>
+          <div class="inlagg-rad"><input type="password" id="valvFras" placeholder="Lösenfras" autocomplete="current-password" style="flex:1;min-width:200px"><button class="knapp" type="button" id="valvOppna">Lås upp</button></div>
+          <div class="inlagg-rad"><button class="knapp kontur liten" type="button" id="valvExport">⬇ Säkerhetskopia</button><button class="knapp kontur liten" type="button" id="valvImport">⬆ Läs in kopia</button></div>`;
+        return;
+      }
+      const dold = (id, v) => !v ? `<small>– inte sparad</small>` : valvVisa.has(id) ? `<code>${esc(v)}</code>` : `<small>✓ sparad ••••${esc(v.slice(-4))}</small>`;
+      k.innerHTML = `<div class="inlagg-rad"><h3 style="margin-right:auto">🔓 Valvet är öppet</h3>
+          <button class="knapp kontur liten" type="button" id="valvExport">⬇ Säkerhetskopia</button>
+          <button class="knapp kontur liten" type="button" id="valvImport">⬆ Läs in kopia</button>
+          <button class="knapp liten" type="button" id="valvLasKnapp">🔒 Lås</button></div>
+        <h4>Nycklar som backoffice använder</h4>
+        ${VALV_FAST.map(([id, namn, bruk, lank]) => `<div class="valv-post" data-valv-fast="${id}">
+          <div><b>${namn}</b><br><small>${bruk}</small><br>${dold("f:" + id, valv.fast[id] || "")}</div>
+          <div class="knappar">
+            ${valv.fast[id] ? `<button class="knapp kontur liten" type="button" data-valv-visa="f:${id}">${valvVisa.has("f:" + id) ? "Dölj" : "Visa"}</button><button class="knapp kontur liten" type="button" data-valv-kopiera="${id}">Kopiera</button>` : ""}
+            <button class="knapp kontur liten" type="button" data-valv-andra="${id}">${valv.fast[id] ? "Ändra" : "Lägg in"}</button>
+            ${lank ? `<a class="knapp kontur liten" href="${lank}" target="_blank" rel="noopener">Öppna ↗</a>` : ""}
+          </div></div>`).join("")}
+        ${valv.fast.github && las("deu-admin-token") ? `<p class="hjalp">GitHub-nyckeln ligger också okrypterad i webbläsaren för automatisk inloggning. <button class="knapp kontur liten" type="button" id="valvGlomToken">Logga in med valvet i stället</button></p>` : ""}
+        <h4 style="margin-top:8px">Inloggningar och anteckningar</h4>
+        ${valv.poster.map((p, i) => `<div class="valv-post" data-valv-post="${i}">
+          <div><b>${esc(p.tjanst)}</b>${p.anvandare ? ` · ${esc(p.anvandare)}` : ""}<br>${dold("p:" + i, p.losen || "")}${p.not ? `<br><small>${esc(p.not)}</small>` : ""}</div>
+          <div class="knappar">
+            ${p.losen ? `<button class="knapp kontur liten" type="button" data-valv-visa="p:${i}">${valvVisa.has("p:" + i) ? "Dölj" : "Visa"}</button><button class="knapp kontur liten" type="button" data-valv-kopiera-post="${i}">Kopiera</button>` : ""}
+            ${p.lank ? `<a class="knapp kontur liten" href="${esc(p.lank)}" target="_blank" rel="noopener">Öppna ↗</a>` : ""}
+            <button class="knapp kontur liten" type="button" data-valv-bort="${i}">Ta bort</button>
+          </div></div>`).join("") || `<p class="hjalp">Inga än – t.ex. one.com, Spotify for Artists, Meta, TikTok, YouTube, SoundCloud.</p>`}
+        <details><summary class="hjalp" style="cursor:pointer">+ Ny inloggning</summary>
+          <div class="rutnat" style="margin-top:8px">
+            <label>Tjänst<input type="text" id="vpTjanst" placeholder="t.ex. one.com"></label>
+            <label>Användarnamn / e-post<input type="text" id="vpAnv" autocomplete="off"></label>
+            <label>Lösenord / nyckel<input type="password" id="vpLosen" autocomplete="new-password"></label>
+            <label>Länk<input type="url" id="vpLank" placeholder="https://…"></label>
+            <label style="grid-column:1/-1">Anteckning<input type="text" id="vpNot"></label>
+          </div>
+          <button class="knapp liten" type="button" id="vpSpara" style="margin-top:8px">Spara i valvet</button>
+        </details>`;
+    }
+    const valvFil = Object.assign(document.createElement("input"), { type: "file", accept: "application/json,.json" });
+    valvFil.addEventListener("change", async () => {
+      const f = valvFil.files[0]; if (!f) return;
+      try {
+        const t = await f.text(), j = JSON.parse(t); if (!j.salt || !j.iv || !j.data) throw new Error("ingen valvfil");
+        if (harValv() && !confirm("Ersätta valvet i den här webbläsaren med kopian?")) return;
+        localStorage.setItem(VALV, t); valvLas(); status("✓ Valvet är inläst – lås upp med lösenfrasen.", "ok");
+      } catch (e) { status("Kunde inte läsa valvfilen: " + e.message, "fel"); }
+    });
+    $("valvKort").addEventListener("click", async e => {
+      const id = e.target.id, t = e.target;
+      try {
+        if (id === "valvSkapa") {
+          const a = $("valvFras1").value, b = $("valvFras2").value;
+          if (a.length < 10) return status("Lösenfrasen måste vara minst 10 tecken.", "fel");
+          if (a !== b) return status("Lösenfraserna är inte lika.", "fel");
+          await valvSkapa(a); ritaValv(); return status("🔐 Valvet är skapat. Spara gärna en säkerhetskopia.", "ok");
+        }
+        if (id === "valvOppna") { await valvOppna($("valvFras").value); ritaValv(); if (!statVisad || $("statInnehall").textContent.includes("API-nyckel")) visaStatistik(); return status("🔓 Valvet är öppet.", "ok"); }
+        if (id === "valvLasKnapp") return valvLas();
+        if (id === "valvExport") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([las(VALV)], { type: "application/json" })); a.download = "devigtunga-nyckelvalv.json"; a.click(); return status("⬇ Säkerhetskopian är krypterad – den går bara att öppna med lösenfrasen.", "ok"); }
+        if (id === "valvImport") { valvFil.value = ""; return valvFil.click(); }
+        if (id === "valvGlomToken") { try { localStorage.removeItem("deu-admin-token"); } catch {} ritaValv(); return status("Nästa gång loggar du in med valvets lösenfras.", "ok"); }
+        if (id === "vpSpara") {
+          const p = { tjanst: $("vpTjanst").value.trim(), anvandare: $("vpAnv").value.trim(), losen: $("vpLosen").value, lank: $("vpLank").value.trim(), not: $("vpNot").value.trim() };
+          if (!p.tjanst) return status("Skriv vilken tjänst det gäller.", "fel");
+          valv.poster.push(p); await valvSpara(); ritaValv(); return status(`✓ ${p.tjanst} sparad i valvet.`, "ok");
+        }
+        const v = t.closest("[data-valv-visa]"); if (v) { const n = v.dataset.valvVisa; valvVisa.has(n) ? valvVisa.delete(n) : valvVisa.add(n); return ritaValv(); }
+        const kf = t.closest("[data-valv-kopiera]"); if (kf) { await navigator.clipboard.writeText(valv.fast[kf.dataset.valvKopiera]); return status("📋 Kopierad.", "ok"); }
+        const kp = t.closest("[data-valv-kopiera-post]"); if (kp) { await navigator.clipboard.writeText(valv.poster[+kp.dataset.valvKopieraPost].losen); return status("📋 Kopierad.", "ok"); }
+        const an = t.closest("[data-valv-andra]"); if (an) {
+          const fid = an.dataset.valvAndra, namn = VALV_FAST.find(x => x[0] === fid)[1];
+          const ny = prompt(`${namn} – klistra in (tomt = ta bort):`, ""); if (ny === null) return;
+          if (ny.trim()) valv.fast[fid] = ny.trim(); else delete valv.fast[fid];
+          await valvSpara(); ritaValv(); if (fid === "goatcounter") visaStatistik(); return status(`✓ ${namn} ${ny.trim() ? "sparad" : "borttagen"}.`, "ok");
+        }
+        const bo = t.closest("[data-valv-bort]"); if (bo) { const i = +bo.dataset.valvBort; if (!confirm(`Ta bort ${valv.poster[i].tjanst} ur valvet?`)) return; valv.poster.splice(i, 1); await valvSpara(); return ritaValv(); }
+      } catch (err) { status(err.name === "OperationError" ? "Fel lösenfras." : "Valvet: " + err.message, "fel"); }
+    });
+    $("valvKort").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "valvFras") $("valvOppna").click(); });
+    visaFlik(las("deu-admin-flik") || "latar");
+    // logga in med valvet (när GitHub-nyckeln inte ligger i klartext i webbläsaren)
+    if (harValv() && !las("deu-admin-token")) $("valvLogin").hidden = false;
+    const valvLoggaIn = async () => {
+      try { await valvOppna($("valvLoginFras").value); }
+      catch { return $("loginFel").textContent = "Fel lösenfras för valvet."; }
+      if (!hemlighet("github")) return $("loginFel").textContent = "Valvet saknar GitHub-nyckel – logga in med nyckeln nedan en gång och lägg in den i valvet.";
+      loggaIn(hemlighet("github"), true);
+    };
+    $("valvLoginKnapp").onclick = valvLoggaIn;
+    $("valvLoginFras").addEventListener("keydown", e => { if (e.key === "Enter") valvLoggaIn(); });
 
     // ===== Statistik från GoatCounter (API-nyckeln sparas bara i den här webbläsaren) =====
     const statKod = () => String(data.lankar.statistik || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
     let statDagar = 7;
     function las(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }
     async function gc(vag, param) {
-      const r = await fetch(`https://${statKod()}.goatcounter.com/api/v0/${vag}?${new URLSearchParams(param)}`, { headers: { Authorization: "Bearer " + las("deu-gc-nyckel"), "Content-Type": "application/json" } });
+      const r = await fetch(`https://${statKod()}.goatcounter.com/api/v0/${vag}?${new URLSearchParams(param)}`, { headers: { Authorization: "Bearer " + gcNyckel(), "Content-Type": "application/json" } });
       if (r.status === 401 || r.status === 403) throw new Error("nyckeln godkändes inte – kontrollera att den har Read statistics");
       if (!r.ok) throw new Error("GoatCounter svarade " + r.status);
       return r.json();
@@ -1568,7 +1807,7 @@ ${poster.slice(0, 20).map(p => `<item>
       $("statLank").href = kod ? `https://${kod}.goatcounter.com` : "https://www.goatcounter.com";
       document.querySelectorAll("[data-stat-dagar]").forEach(b => b.classList.toggle("vald-period", +b.dataset.statDagar === statDagar));
       if (!kod) { ut.innerHTML = `<p class="hjalp">Skriv GoatCounter-koden under Länkar först.</p>`; return; }
-      if (!las("deu-gc-nyckel")) { ut.innerHTML = `<p class="hjalp">Lägg in en API-nyckel nedan så visas besök, spelade låtar och nedladdningar här.</p>`; $("statNyckelRuta").open = true; return; }
+      if (!gcNyckel()) { ut.innerHTML = `<p class="hjalp">Lägg in en API-nyckel nedan så visas besök, spelade låtar och nedladdningar här.</p>`; $("statNyckelRuta").open = true; return; }
       ut.innerHTML = `<p class="hjalp">Hämtar statistik…</p>`;
       const slut = new Date(), start = new Date(slut); start.setDate(start.getDate() - (statDagar - 1)); start.setHours(0, 0, 0, 0);
       const p = { start: start.toISOString(), end: slut.toISOString() };
@@ -1602,7 +1841,12 @@ ${poster.slice(0, 20).map(p => `<item>
       }
     }
     $("statKort").addEventListener("click", e => { const b = e.target.closest("[data-stat-dagar]"); if (b) { statDagar = +b.dataset.statDagar; visaStatistik(); } });
-    $("statSpara").onclick = () => { try { localStorage.setItem("deu-gc-nyckel", $("statNyckel").value.trim()); } catch {} $("statNyckel").value = ""; $("statNyckelRuta").open = false; visaStatistik(); };
+    const gcNyckel = () => hemlighet("goatcounter") || las("deu-gc-nyckel");
+    $("statSpara").onclick = async () => {
+      const v = $("statNyckel").value.trim();
+      if (valv) { valv.fast.goatcounter = v; await valvSpara(); ritaValv(); } else { try { localStorage.setItem("deu-gc-nyckel", v); } catch {} }
+      $("statNyckel").value = ""; $("statNyckelRuta").open = false; visaStatistik();
+    };
 
     // ===== Nytt inlägg: hemsidan + inlagg.xml (Make lägger ut på Facebook, Instagram, YouTube) =====
     const INLAGG_FLODE = "inlagg.xml";
@@ -1614,10 +1858,13 @@ ${poster.slice(0, 20).map(p => `<item>
       $("inlaggLank").innerHTML = `<option value="${SIDA}">Hemsidan (devigtunga.se)</option><option value="${SIDA}#radio">Radion</option><option value="${SIDA}lankar/">Länksidan (alla länkar)</option>`
         + data.latar.filter(l => !l.dold && l.titel).map(l => `<option value="${esc(l.slappt && l.spotify ? l.spotify : SIDA + "#lat-" + slugga(l.titel))}">${esc(l.titel)}${l.slappt ? " (Spotify)" : ""}</option>`).join("");
       if (val) $("inlaggLank").value = val;
+      const valdArtist = $("inlaggArtist").value;
+      $("inlaggArtist").innerHTML = ["De Evigt Unga å Vackra", ...data.artister.map(a => ren(a.namn)).filter(Boolean)].map(n => `<option>${esc(n)}</option>`).join("");
+      if (valdArtist && [...$("inlaggArtist").options].some(o => o.value === valdArtist)) $("inlaggArtist").value = valdArtist;
       $("inlaggLista").innerHTML = data.inlagg.length ? `<h3 style="margin-top:6px">Skickade inlägg</h3>` + data.inlagg.map((p, k) => `
         <div class="inlagg-post">
           ${p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
-          <div><p>${esc(p.text)}</p><small>${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
+          <div><p>${esc(p.text)}</p><small>${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
           <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
         </div>`).join("") : "";
     }
@@ -1639,7 +1886,7 @@ ${poster.slice(0, 20).map(p => `<item>
       $("inlaggSkicka").disabled = true;
       try {
         const nu = new Date(), id = nu.toISOString().slice(0, 10) + "-" + (slugga(text.split("\n")[0]).slice(0, 40) || "inlagg") + "-" + nu.getTime().toString(36).slice(-4);
-        const post = { id, datum: nu.toISOString(), text, lank: $("inlaggLank").value || SIDA, typ: "text" };
+        const post = { id, datum: nu.toISOString(), text, artist: $("inlaggArtist").value || "De Evigt Unga å Vackra", lank: $("inlaggLank").value || SIDA, typ: "text" };
         if (inlaggFil) {
           const ext = (inlaggFil.name.match(/\.(mp4|mov|webm|jpe?g|png|webp)$/i) || [, inlaggFil.type.split("/")[1]])[1].toLowerCase().replace("jpeg", "jpg");
           post.typ = inlaggFil.type.startsWith("video") ? "video" : "bild";
@@ -1679,7 +1926,8 @@ ${data.inlagg.slice(0, 20).map(p => `<item>
   <description>${x(p.text)}</description>
   <link>${x(p.lank || SIDA)}</link>
   <guid isPermaLink="false">${x(p.id)}</guid>
-  <pubDate>${new Date(p.datum).toUTCString()}</pubDate>${p.media ? `
+  <pubDate>${new Date(p.datum).toUTCString()}</pubDate>
+  <category>${x(p.artist || "De Evigt Unga å Vackra")}</category>${p.media ? `
   <enclosure url="${x(mediaUrl(p.media))}" type="${x(p.mime)}" length="${p.storlek || 0}"/>
   <media:content url="${x(mediaUrl(p.media))}" medium="${p.typ === "video" ? "video" : "image"}" type="${x(p.mime)}"/>` : ""}
 </item>`).join("\n")}
