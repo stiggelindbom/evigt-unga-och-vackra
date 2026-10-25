@@ -881,7 +881,7 @@
     let viaFil = false;
     const harFil = l => !!(l && l.fil && !l.saknas);
     const arSpotify = () => !!(latar[nu] && latar[nu].slappt && !viaFil);
-    let klipp = null, klippLen = 30;   // start (sek) och längd för aktuell demos lyssningsklipp, annars null
+    let klipp = null, klippLen = 30, autoKlipp = false;   // start (sek) och längd för aktuell demos lyssningsklipp, annars null
     let spTipsTimer = null, raknadFor = -1, raknaLat = () => {};
     function kollaRakna(pos) { if (nu >= 0 && raknadFor !== nu && pos >= 30) { raknadFor = nu; raknaLat(); } }
     function visaSpTips() {
@@ -1041,6 +1041,7 @@
     }
     function passSlut() {
       if (!pass) return;
+      if (PEKPLATTA && document.hidden) { const t = pass.titel; startaPass(); pass.titel = t; return; }   // låst iPhone får inte byta spelare: stanna på HitNet
       tona(stationLjud, 0, 3, () => { avslutaPass(); valjStation(null); nasta(1); });
     }
     function passFel() { avslutaPass(); valjStation(null); nasta(1); }
@@ -1075,7 +1076,8 @@
       const l = latar[i];
       rakna("Spelad", l.titel);
       // iPhone: Spotify-rutan ger bara förhandslyssning och kräver ett tryck per låt – egen fil flyter på även med låst skärm
-      viaFil = !!(l.slappt && (document.hidden || PEKPLATTA) && harFil(l));
+      // med HitNet-varvet på spelas även släppta låtar från egen fil: Spotify-rutan kan inte starta av sig själv
+      viaFil = !!(l.slappt && (document.hidden || PEKPLATTA || vanMixPa) && harFil(l));
       if (l.slappt && !viaFil) {
         avbrytMix(); if (!ljud.paused) ljud.pause();
         $("spRam").hidden = false; spStartat = false; spPaus = true; visaTid(0, 0);
@@ -1098,10 +1100,13 @@
         $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
         // demo med lyssningsklipp: spela bara de utvalda 30 sekunderna (#t= hoppar direkt dit)
         klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
+        // HitNet-varvet: var fjärde låt är vår – som 30 s förlyssning (låtar utan valt klipp tar en bit en bit in i låten)
+        autoKlipp = vanMixPa && klipp == null;
+        if (vanMixPa) klippLen = Math.min(klippLen, 30);
         avbrytMix();
         ljud.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
         startaAnalys(); ljud._utTonad = false; ljud._klippSlut = false;
-        if (klipp != null) { sattVolym(ljud, 0, 0); sattVolym(ljud, 1, KLIPP_IN); }   // klippet tonas in
+        if (klipp != null || autoKlipp) { sattVolym(ljud, 0, 0); sattVolym(ljud, 1, KLIPP_IN); }   // klippet tonas in
         ljud.play().catch(() => {});
         uppdatera();
       }
@@ -1124,7 +1129,7 @@
     }
     function nastaIndex(steg = 1, fran = nu) {
       // i bakgrunden: hoppa över Spotify-låtar som saknar egen fil (de kan inte starta där)
-      const bakgrund = j => tillganglig(j) && !(document.hidden && latar[j].slappt && !harFil(latar[j]));
+      const bakgrund = j => tillganglig(j) && !((document.hidden || vanMixPa) && latar[j].slappt && !harFil(latar[j]));
       const ok = latar.some((_, j) => bakgrund(j)) ? bakgrund : tillganglig;
       const n = latar.length, mojliga = latar.map((_, j) => j).filter(ok);
       if (!mojliga.length) return -1;
@@ -1156,7 +1161,7 @@
     function startaMix(i) {
       mixar = true;
       const gammal = ljud, ny = annan(), l = latar[i];
-      nu = i; raknadFor = -1; viaFil = !!l.slappt; ny._utTonad = false; ny._klippSlut = false; klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
+      nu = i; raknadFor = -1; viaFil = !!l.slappt; ny._utTonad = false; ny._klippSlut = false; autoKlipp = false; klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
       sattVolym(ny, 0, 0);
       ny.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
       ny.play().catch(() => {});
@@ -1191,7 +1196,9 @@
         ritaLista(); return;
       }
       const l = latar[nu];
-      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY" : (l && !l.slappt && typeof l.klipp === "number") ? `${l.klippLangd || 30} S SMAKPROV` : "NU SPELAS";
+      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY"
+        : vanMixPa && vanStation && l && (autoKlipp || typeof l.klipp === "number") ? `${klippLen} S FÖRLYSSNING · SEN ${vanStation.namn.toUpperCase()}`
+        : (l && !l.slappt && typeof l.klipp === "number") ? `${l.klippLangd || 30} S SMAKPROV` : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
       if (l) { const bild = omslagFor(l); if (!$("studioBild").src.endsWith(bild)) { $("studioBild").src = bild; $("miniBild").src = bild; } }
@@ -1328,7 +1335,9 @@
     }
     const paAktiv = fn => e => { if (e.target === ljud) fn(e); };   // bara den spelare som är "på" räknas
     for (const el of spelareEl) {
-      el.addEventListener("loadedmetadata", paAktiv(() => { if (klipp != null && Math.abs(ljud.currentTime - klipp) > 1) ljud.currentTime = klipp; }));
+      el.addEventListener("loadedmetadata", paAktiv(() => {
+        if (autoKlipp && klipp == null && isFinite(ljud.duration)) { klipp = Math.round(Math.max(0, Math.min(ljud.duration * 0.3, ljud.duration - 30))); ljud.currentTime = klipp; return; }
+        if (klipp != null && Math.abs(ljud.currentTime - klipp) > 1) ljud.currentTime = klipp; }));
       el.addEventListener("timeupdate", paAktiv(() => {
         if (arSpotify()) return;
         const slut = klipp != null ? klipp + klippLen : ljud.duration;
