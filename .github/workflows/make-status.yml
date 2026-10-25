@@ -1,0 +1,44 @@
+# Tar emot kvitton från Make ("inlägget ligger ute") och sparar dem i status/<id>.json.
+# Make anropar: POST https://api.github.com/repos/stiggelindbom/evigt-unga-och-vackra/dispatches
+#   {"event_type":"make-status","client_payload":{"id":"…","facebook":"ja","instagram":"ja","youtube":"nej"}}
+name: Kvitto från Make
+
+on:
+  repository_dispatch:
+    types: [make-status]
+
+permissions:
+  contents: write
+
+jobs:
+  spara:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skriv kvittot
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = JSON.parse(process.env.PAYLOAD || "{}");
+            const id = String(p.id || "").toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 120);
+            if (!id) { console.log("Inget id i kvittot"); process.exit(0); }
+            const kanaler = {}, lankar = {};
+            for (const k of ["facebook", "instagram", "youtube", "tiktok"]) {
+              if (p[k] !== undefined) kanaler[k] = String(p[k]).toLowerCase();
+              if (p[k + "_url"]) lankar[k] = String(p[k + "_url"]);
+            }
+            fs.mkdirSync("status", { recursive: true });
+            fs.writeFileSync(`status/${id}.json`, JSON.stringify({ id, klar: p.klar !== false, tid: new Date().toISOString(), kanaler, lankar, fel: p.fel || undefined }, null, 2) + "\n");
+            console.log("Kvitto sparat för", id, kanaler);
+          '
+      - name: Spara på GitHub
+        run: |
+          git config user.name "Kvitto från Make"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add status
+          git diff --cached --quiet && exit 0
+          git commit -m "Kvitto från Make"
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && exit 0; sleep $((i * 3)); done
+          exit 1

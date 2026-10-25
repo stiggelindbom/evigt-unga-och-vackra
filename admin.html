@@ -71,6 +71,13 @@
     .inlagg-post .tumme { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #2a2418; display: grid; place-items: center; font-size: 1.4rem; }
     .inlagg-post p { font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .inlagg-post small { color: var(--dampad); }
+    .prickar { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px; }
+    .kanal-prick { font-size: .75rem; color: var(--dampad); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+    .kanal-prick::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #6b5a2e; }
+    .kanal-prick.ute { color: var(--text); } .kanal-prick.ute::before { background: var(--spotify); box-shadow: 0 0 6px var(--spotify); }
+    .kanal-prick.vantar::before { background: var(--guld); animation: puls 1.4s infinite; }
+    .kanal-prick.fel { color: #ff6b6b; } .kanal-prick.fel::before { background: #ff4d4d; }
+    @keyframes puls { 50% { opacity: .35; } }
     .post-status { display: inline-block; font-size: .72rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--kant); margin-right: 6px; }
     .post-status.planerad { border-color: var(--guld); color: var(--guld); }
     .post-status.skickad { border-color: var(--spotify); color: var(--spotify); }
@@ -461,7 +468,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025205920";
+    const VERSION = "v20261025214310";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -610,6 +617,7 @@
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
       flodeSha = await gh(`/contents/${FLODE}?ref=${GREN}`).then(f => f.sha).catch(() => null);
+      await hamtaKvitton();
     }
 
     // ===== Inloggning =====
@@ -2163,13 +2171,13 @@ ${poster.slice(0, 20).map(p => `<item>
       $("inlaggArtist").innerHTML = ["De Evigt Unga å Vackra", ...data.artister.map(a => ren(a.namn)).filter(Boolean)].map(n => `<option>${esc(n)}</option>`).join("");
       if (valdArtist && [...$("inlaggArtist").options].some(o => o.value === valdArtist)) $("inlaggArtist").value = valdArtist;
       data.inlagg.sort((a, b) => b.datum.localeCompare(a.datum));
-      ritaKalender();
+      ritaKalender(); bevakaKvitton();
       const statusFor = p => p.typ === "paminnelse" ? `<span class="post-status planerad">🔔 Påminnelse</span>` : p.planerad && new Date(p.planerad) > new Date() ? `<span class="post-status planerad">🗓 Planerad</span>`
         : p.vantar ? `<span class="post-status vantar">⏳ Väntar på att skickas</span>` : `<span class="post-status skickad">✓ Skickad</span>`;
       $("inlaggLista").innerHTML = data.inlagg.length ? `<h3 style="margin-top:6px">Inlägg</h3>` + data.inlagg.map((p, k) => `
         <div class="inlagg-post">
           ${p.typ === "paminnelse" ? `<div class="tumme">🔔</div>` : p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
-          <div><p>${esc(p.text)}</p><small>${statusFor(p)}${p.kanaler ? (p.kanaler.length ? p.kanaler.join(", ") : "bara hemsidan") + " · " : ""}${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
+          <div><p>${esc(p.text)}</p><div class="prickar">${prickar(p)}</div><small>${statusFor(p)}${p.kanaler ? (p.kanaler.length ? p.kanaler.join(", ") : "bara hemsidan") + " · " : ""}${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
           <div style="display:grid;gap:6px">
             ${p.typ === "paminnelse" ? "" : `<button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>`}
             ${p.vantar || p.typ === "paminnelse" ? `<button class="knapp kontur liten" type="button" data-inlagg-andra="${k}">✏️ Ändra</button>` : ""}
@@ -2265,6 +2273,41 @@ ${poster.slice(0, 20).map(p => `<item>
       }
       await $("spara").onclick();
     });
+    // ===== Kvitton från Make: status/<id>.json skrivs av GitHub när Make har lagt ut inlägget =====
+    let kvitton = {}, kvittoTimer = null;
+    async function hamtaKvitton() {
+      const lista = await gh(`/contents/status?ref=${GREN}`).catch(() => []);
+      const namn = new Set((Array.isArray(lista) ? lista : []).filter(f => f.name.endsWith(".json")).map(f => f.name.slice(0, -5)));
+      // läs innehållet bara för nya kvitton på inlägg som finns (för länkar och vilka kanaler)
+      for (const p of data.inlagg) {
+        if (!namn.has(p.id) || kvitton[p.id]) continue;
+        try { const f = await gh(`/contents/status/${encodeURIComponent(p.id)}.json?ref=${GREN}`); kvitton[p.id] = JSON.parse(franBase64(f.content)); } catch {}
+      }
+    }
+    const KANAL_NAMN = { facebook: "Facebook", instagram: "Instagram", youtube: "YouTube" };
+    function prickar(p) {
+      if (p.typ === "paminnelse" || !(p.kanaler || ["facebook", "instagram", "youtube"]).length) return "";
+      if (p.planerad && new Date(p.planerad) > new Date()) return "";
+      const kv = kvitton[p.id], skickad = p.skickad ? new Date(p.skickad) : null;
+      return (p.kanaler || ["facebook", "instagram", "youtube"]).map(k => {
+        const ok = kv && kv.klar && (kv.kanaler?.[k] ?? "ja") === "ja";
+        const typ = ok ? "ute" : !skickad || Date.now() - skickad < 2 * 3600e3 ? "vantar" : "fel";
+        const titel = ok ? `Ligger ute på ${KANAL_NAMN[k]}` : typ === "vantar" ? `Väntar på kvitto från Make (${KANAL_NAMN[k]})` : `Inget kvitto från Make efter 2 timmar – kolla History i Make (${KANAL_NAMN[k]})`;
+        const lank = ok && kv.lankar?.[k];
+        return lank ? `<a class="kanal-prick ${typ}" href="${esc(lank)}" target="_blank" rel="noopener" title="${titel}">${KANAL_NAMN[k]}</a>` : `<span class="kanal-prick ${typ}" title="${titel}">${KANAL_NAMN[k]}</span>`;
+      }).join("");
+    }
+    // så länge något väntar på kvitto: titta efter nya var 30:e sekund (bara när fliken Inlägg är öppen)
+    function bevakaKvitton() {
+      clearTimeout(kvittoTimer);
+      const vantar = data && data.inlagg.some(p => p.skickad && !kvitton[p.id] && Date.now() - new Date(p.skickad) < 2 * 3600e3 && (p.kanaler || [1]).length);
+      if (!vantar) return;
+      kvittoTimer = setTimeout(async () => {
+        if (!document.hidden && !document.querySelector('[data-flik-del="inlagg"]').hidden) { const fore = Object.keys(kvitton).length; await hamtaKvitton(); if (Object.keys(kvitton).length !== fore) ritaInlagg(); }
+        bevakaKvitton();
+      }, 30000);
+    }
+
     // stående/fyrkant: alla kanaler · liggande: inte Instagram (blir liten med svarta kanter) · bild: inte YouTube
     function anpassaKanaler(format) {
       const satt = (k, v) => { const c = document.querySelector(`[data-kanal="${k}"]`); if (c) c.checked = v; };

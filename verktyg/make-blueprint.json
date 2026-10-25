@@ -32,20 +32,33 @@
         {
           "flow": [
             {
-              "id": 3,
+              "id": 11,
               "module": "http:ActionGetFile",
               "version": 3,
               "parameters": {
                 "handleErrors": false
               },
+              "mapper": {
+                "url": "{{1.media_url}}",
+                "method": "get",
+                "serializeUrl": false,
+                "shareCookies": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": -900,
+                  "name": "Hämta videon/bilden"
+                }
+              },
               "filter": {
-                "name": "DJ Stigge · stående video (Reels/Shorts)",
+                "name": "DJ Stigge · stående/bild",
                 "conditions": [
                   [
                     {
                       "a": "{{1.typ}}",
-                      "o": "text:equal",
-                      "b": "video"
+                      "o": "text:notequal",
+                      "b": "text"
                     },
                     {
                       "a": "{{1.artist}}",
@@ -59,6 +72,174 @@
                     }
                   ]
                 ]
+              }
+            },
+            {
+              "id": 16,
+              "module": "builtin:BasicRouter",
+              "version": 1,
+              "mapper": null,
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -900
+                }
+              },
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 12,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Instagram?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_instagram}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -1100,
+                          "name": "Instagram – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 13,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Facebook?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_facebook}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -950,
+                          "name": "Facebook – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 14,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Youtube?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_youtube}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -800,
+                          "name": "Youtube – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 15,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": {
+                        "handleErrors": false,
+                        "useNewZLibDeCompress": true
+                      },
+                      "mapper": {
+                        "url": "https://api.github.com/repos/stiggelindbom/evigt-unga-och-vackra/dispatches",
+                        "method": "post",
+                        "headers": [
+                          {
+                            "name": "Authorization",
+                            "value": "Bearer KLISTRA_IN_GITHUB_NYCKELN_HÄR"
+                          },
+                          {
+                            "name": "Accept",
+                            "value": "application/vnd.github+json"
+                          }
+                        ],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "data": "{\"event_type\":\"make-status\",\"client_payload\":{\"id\":\"{{1.id}}\",\"facebook\":\"{{1.till_facebook}}\",\"instagram\":\"{{1.till_instagram}}\",\"youtube\":\"{{1.till_youtube}}\"}}",
+                        "parseResponse": false,
+                        "serializeUrl": false,
+                        "shareCookies": false,
+                        "rejectUnauthorized": true,
+                        "followRedirect": true,
+                        "useQuerystring": false,
+                        "gzip": true,
+                        "useMtls": false,
+                        "followAllRedirects": false
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -650,
+                          "name": "✅ Rapportera till devigtunga (sist)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 17,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
               },
               "mapper": {
                 "url": "{{1.media_url}}",
@@ -69,29 +250,18 @@
               "metadata": {
                 "designer": {
                   "x": 600,
-                  "y": -450
+                  "y": -300,
+                  "name": "Hämta videon/bilden"
                 }
-              }
-            }
-          ]
-        },
-        {
-          "flow": [
-            {
-              "id": 4,
-              "module": "http:ActionGetFile",
-              "version": 3,
-              "parameters": {
-                "handleErrors": false
               },
               "filter": {
-                "name": "DJ Stigge · liggande video (YouTube)",
+                "name": "DJ Stigge · liggande",
                 "conditions": [
                   [
                     {
                       "a": "{{1.typ}}",
-                      "o": "text:equal",
-                      "b": "video"
+                      "o": "text:notequal",
+                      "b": "text"
                     },
                     {
                       "a": "{{1.artist}}",
@@ -105,6 +275,142 @@
                     }
                   ]
                 ]
+              }
+            },
+            {
+              "id": 21,
+              "module": "builtin:BasicRouter",
+              "version": 1,
+              "mapper": null,
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": -300
+                }
+              },
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 18,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Youtube?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_youtube}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -500,
+                          "name": "Youtube – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 19,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Facebook?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_facebook}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -350,
+                          "name": "Facebook – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 20,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": {
+                        "handleErrors": false,
+                        "useNewZLibDeCompress": true
+                      },
+                      "mapper": {
+                        "url": "https://api.github.com/repos/stiggelindbom/evigt-unga-och-vackra/dispatches",
+                        "method": "post",
+                        "headers": [
+                          {
+                            "name": "Authorization",
+                            "value": "Bearer KLISTRA_IN_GITHUB_NYCKELN_HÄR"
+                          },
+                          {
+                            "name": "Accept",
+                            "value": "application/vnd.github+json"
+                          }
+                        ],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "data": "{\"event_type\":\"make-status\",\"client_payload\":{\"id\":\"{{1.id}}\",\"facebook\":\"{{1.till_facebook}}\",\"instagram\":\"{{1.till_instagram}}\",\"youtube\":\"{{1.till_youtube}}\"}}",
+                        "parseResponse": false,
+                        "serializeUrl": false,
+                        "shareCookies": false,
+                        "rejectUnauthorized": true,
+                        "followRedirect": true,
+                        "useQuerystring": false,
+                        "gzip": true,
+                        "useMtls": false,
+                        "followAllRedirects": false
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": -200,
+                          "name": "✅ Rapportera till devigtunga (sist)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 22,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
               },
               "mapper": {
                 "url": "{{1.media_url}}",
@@ -115,29 +421,18 @@
               "metadata": {
                 "designer": {
                   "x": 600,
-                  "y": -150
+                  "y": 300,
+                  "name": "Hämta videon/bilden"
                 }
-              }
-            }
-          ]
-        },
-        {
-          "flow": [
-            {
-              "id": 5,
-              "module": "http:ActionGetFile",
-              "version": 3,
-              "parameters": {
-                "handleErrors": false
               },
               "filter": {
-                "name": "Bandet · stående video (Reels/Shorts)",
+                "name": "Bandet · stående/bild",
                 "conditions": [
                   [
                     {
                       "a": "{{1.typ}}",
-                      "o": "text:equal",
-                      "b": "video"
+                      "o": "text:notequal",
+                      "b": "text"
                     },
                     {
                       "a": "{{1.artist}}",
@@ -151,6 +446,174 @@
                     }
                   ]
                 ]
+              }
+            },
+            {
+              "id": 27,
+              "module": "builtin:BasicRouter",
+              "version": 1,
+              "mapper": null,
+              "metadata": {
+                "designer": {
+                  "x": 900,
+                  "y": 300
+                }
+              },
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 23,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Instagram?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_instagram}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 100,
+                          "name": "Instagram – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 24,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Facebook?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_facebook}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 250,
+                          "name": "Facebook – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 25,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Youtube?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_youtube}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 400,
+                          "name": "Youtube – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 26,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": {
+                        "handleErrors": false,
+                        "useNewZLibDeCompress": true
+                      },
+                      "mapper": {
+                        "url": "https://api.github.com/repos/stiggelindbom/evigt-unga-och-vackra/dispatches",
+                        "method": "post",
+                        "headers": [
+                          {
+                            "name": "Authorization",
+                            "value": "Bearer KLISTRA_IN_GITHUB_NYCKELN_HÄR"
+                          },
+                          {
+                            "name": "Accept",
+                            "value": "application/vnd.github+json"
+                          }
+                        ],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "data": "{\"event_type\":\"make-status\",\"client_payload\":{\"id\":\"{{1.id}}\",\"facebook\":\"{{1.till_facebook}}\",\"instagram\":\"{{1.till_instagram}}\",\"youtube\":\"{{1.till_youtube}}\"}}",
+                        "parseResponse": false,
+                        "serializeUrl": false,
+                        "shareCookies": false,
+                        "rejectUnauthorized": true,
+                        "followRedirect": true,
+                        "useQuerystring": false,
+                        "gzip": true,
+                        "useMtls": false,
+                        "followAllRedirects": false
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 550,
+                          "name": "✅ Rapportera till devigtunga (sist)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 28,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
               },
               "mapper": {
                 "url": "{{1.media_url}}",
@@ -161,29 +624,18 @@
               "metadata": {
                 "designer": {
                   "x": 600,
-                  "y": 150
+                  "y": 900,
+                  "name": "Hämta videon/bilden"
                 }
-              }
-            }
-          ]
-        },
-        {
-          "flow": [
-            {
-              "id": 6,
-              "module": "http:ActionGetFile",
-              "version": 3,
-              "parameters": {
-                "handleErrors": false
               },
               "filter": {
-                "name": "Bandet · liggande video (YouTube)",
+                "name": "Bandet · liggande",
                 "conditions": [
                   [
                     {
                       "a": "{{1.typ}}",
-                      "o": "text:equal",
-                      "b": "video"
+                      "o": "text:notequal",
+                      "b": "text"
                     },
                     {
                       "a": "{{1.artist}}",
@@ -197,19 +649,131 @@
                     }
                   ]
                 ]
-              },
-              "mapper": {
-                "url": "{{1.media_url}}",
-                "method": "get",
-                "serializeUrl": false,
-                "shareCookies": false
-              },
+              }
+            },
+            {
+              "id": 32,
+              "module": "builtin:BasicRouter",
+              "version": 1,
+              "mapper": null,
               "metadata": {
                 "designer": {
-                  "x": 600,
-                  "y": 450
+                  "x": 900,
+                  "y": 900
                 }
-              }
+              },
+              "routes": [
+                {
+                  "flow": [
+                    {
+                      "id": 29,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Youtube?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_youtube}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 700,
+                          "name": "Youtube – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 30,
+                      "module": "util:FunctionSleep",
+                      "version": 1,
+                      "parameters": {},
+                      "filter": {
+                        "name": "Till Facebook?",
+                        "conditions": [
+                          [
+                            {
+                              "a": "{{1.till_facebook}}",
+                              "o": "text:equal",
+                              "b": "ja"
+                            }
+                          ]
+                        ]
+                      },
+                      "mapper": {
+                        "duration": "1"
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 850,
+                          "name": "Facebook – lägg till blocket efter mig"
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "flow": [
+                    {
+                      "id": 31,
+                      "module": "http:ActionSendData",
+                      "version": 3,
+                      "parameters": {
+                        "handleErrors": false,
+                        "useNewZLibDeCompress": true
+                      },
+                      "mapper": {
+                        "url": "https://api.github.com/repos/stiggelindbom/evigt-unga-och-vackra/dispatches",
+                        "method": "post",
+                        "headers": [
+                          {
+                            "name": "Authorization",
+                            "value": "Bearer KLISTRA_IN_GITHUB_NYCKELN_HÄR"
+                          },
+                          {
+                            "name": "Accept",
+                            "value": "application/vnd.github+json"
+                          }
+                        ],
+                        "bodyType": "raw",
+                        "contentType": "application/json",
+                        "data": "{\"event_type\":\"make-status\",\"client_payload\":{\"id\":\"{{1.id}}\",\"facebook\":\"{{1.till_facebook}}\",\"instagram\":\"{{1.till_instagram}}\",\"youtube\":\"{{1.till_youtube}}\"}}",
+                        "parseResponse": false,
+                        "serializeUrl": false,
+                        "shareCookies": false,
+                        "rejectUnauthorized": true,
+                        "followRedirect": true,
+                        "useQuerystring": false,
+                        "gzip": true,
+                        "useMtls": false,
+                        "followAllRedirects": false
+                      },
+                      "metadata": {
+                        "designer": {
+                          "x": 1200,
+                          "y": 1000,
+                          "name": "✅ Rapportera till devigtunga (sist)"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           ]
         }

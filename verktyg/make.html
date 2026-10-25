@@ -45,27 +45,27 @@
     <li>Backoffice → <b>🔐 Valv &amp; koder</b> → <b>Make-webhook</b> → <b>Lägg in</b> → klistra in.</li>
     <li>I Make: klicka <b>Run once</b>. I backoffice: skicka ett <b>testinlägg med en stående video</b> (t.ex. ett klipp från 🎬 Gör video). Make visar då vad som kom in.</li>
   </ol>
-  <div class="ruta hjalp">Mallen innehåller webhooken, en växel med fyra vägar och ett block som hämtar videon. Du lägger till Instagram/Facebook/YouTube-blocken nedan – de kräver din inloggning och kan därför inte ligga färdiga i mallen.</div>
+  <div class="ruta hjalp">Mallen är färdigbyggd: webhooken, fyra vägar (DJ Stigge/bandet × stående/liggande), "Hämta videon/bilden", en växel per kanal med filter för kryssrutorna – och sist <b>✅ Rapportera till devigtunga</b> som ger den gröna pricken i backoffice. Det enda du lägger till är själva Instagram-, Facebook- och YouTube-blocken (de kräver din inloggning).</div>
 
-  <h2>3. De fyra vägarna</h2>
+  <h2>3. Lägg till kanalerna</h2>
+  <p>På varje väg finns små <b>"Instagram/Facebook/YouTube – lägg till blocket efter mig"</b> (en kort paus på 1 sekund). Klicka på <b>+</b> till höger om dem och lägg till rätt block:</p>
   <table>
-    <tr><th>Väg</th><th>Lägg till efter "HTTP – Get a file"</th></tr>
-    <tr><td>DJ Stigge · stående</td><td>Instagram Reel · Facebook-video · YouTube (Short) – <b>DJ Stigges konton</b></td></tr>
-    <tr><td>DJ Stigge · liggande</td><td>YouTube + Facebook-video – <b>DJ Stigges konton</b></td></tr>
-    <tr><td>Bandet · stående</td><td>Instagram Reel · Facebook-video · YouTube (Short) – <b>bandets konton</b></td></tr>
-    <tr><td>Bandet · liggande</td><td>YouTube (@devigtunga) + Facebook-video – <b>bandets konton</b></td></tr>
+    <tr><th>Väg</th><th>Konton</th></tr>
+    <tr><td>DJ Stigge · stående/bild</td><td>Instagram · Facebook · YouTube Shorts – <b>DJ Stigges konton</b></td></tr>
+    <tr><td>DJ Stigge · liggande</td><td>YouTube · Facebook – <b>DJ Stigges konton</b></td></tr>
+    <tr><td>Bandet · stående/bild</td><td>Instagram · Facebook · YouTube Shorts – <b>bandets konton</b></td></tr>
+    <tr><td>Bandet · liggande</td><td>YouTube (@devigtunga) · Facebook – <b>bandets konton</b></td></tr>
   </table>
-  <div class="ruta hjalp"><b>Storlekar:</b> stående 9:16 (max ca 90 s) → Reels på Instagram och Facebook + YouTube Shorts. Liggande 16:9 (hela låtar) → vanlig YouTube-video + vanlig Facebook-video. Instagram får inte liggande videor – de blir små med svarta kanter.</div>
-  <p class="hjalp">Lägg till ett block: håll muspekaren till höger om "HTTP – Get a file" → <b>Add another module</b> (+). Flera block efter varandra går bra.</p>
+  <div class="ruta hjalp"><b>Storlekar:</b> stående 9:16 (max ca 90 s) → Reels och Shorts. Liggande 16:9 (hela låtar) → vanlig YouTube- och Facebook-video. Instagram får inga liggande videor. Kampanjinlägg är <b>bilder</b> (omslaget): på Instagram/Facebook-grenarna kan du lägga en liten Router med två vägar – <code>typ</code> = video → Reel/video, <code>typ</code> = bild → foto-inlägg. YouTube tar bara video (filtret sköter det).</div>
 
-  <h3>Kryssrutorna i backoffice (Facebook / Instagram / YouTube)</h3>
-  <p>Backoffice skickar med <code>till_facebook</code>, <code>till_instagram</code> och <code>till_youtube</code> = <code>ja</code> eller <code>nej</code>. Sätt ett filter före varje block, så hoppas kanaler du kryssat ur över:</p>
+  <h3>✅ Grön prick i backoffice (kvitto)</h3>
+  <p>Sist på varje väg ligger <b>✅ Rapportera till devigtunga</b>. När alla kanaler har gått bra skickar den ett kvitto till GitHub, och backoffice visar en <b>grön prick</b> per kanal på inlägget. Gör så här en gång:</p>
   <ol>
-    <li>Klicka på <b>skiftnyckeln/länken</b> mellan "HTTP – Get a file" och t.ex. Instagram-blocket → <b>Set up a filter</b>.</li>
-    <li>Label: <i>Till Instagram?</i> · Condition: <code>till_instagram</code> · <b>Text operators: Equal to</b> · <code>ja</code> → <b>OK</b>.</li>
-    <li>Samma sak före Facebook (<code>till_facebook</code>) och YouTube (<code>till_youtube</code>).</li>
+    <li>GitHub → <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">Fine-grained token</a> → namn <i>Make kvitto</i> → Repository access: <b>Only select repositories → evigt-unga-och-vackra</b> → Permissions → Repository → <b>Contents: Read and write</b> → Generate → kopiera.</li>
+    <li>Lägg den i 🔐 Valvet (+ Ny inloggning → "GitHub-nyckel för Make").</li>
+    <li>I Make: öppna <b>✅ Rapportera</b> på varje väg (fyra stycken) → <b>Headers → Authorization</b> → ersätt <code>KLISTRA_IN_GITHUB_NYCKELN_HÄR</code> med nyckeln (behåll <code>Bearer </code> före) → OK.</li>
   </ol>
-  <p class="hjalp">Flera block efter varandra: lägg en <b>Router</b> efter "HTTP – Get a file" och ett block per väg, så stoppar inte ett avstängt block de andra.</p>
+  <p class="hjalp">Prickarna: 🟢 ligger ute · 🟡 väntar på kvitto · 🔴 inget kvitto efter 2 timmar (titta i Make → History vad som gick fel). Går något block fel stoppar Make, och då kommer inget kvitto – så den gröna pricken betyder att allt verkligen gick igenom.</p>
 
   <h3>Planerade inlägg</h3>
   <p>Inlägg du planerar i kalendern skickas av GitHub var 15:e minut. Lägg in webhook-adressen även där – en gång:</p>
@@ -78,19 +78,19 @@
   <ol>
     <li>Sök <b>Instagram for Business</b> → <b>Create a Reel Post</b> (eller "Create a Video/Reel Post").</li>
     <li><b>Connection</b>: Add → logga in med Facebook → välj rätt sida och Instagram-konto.</li>
-    <li><b>Video URL</b>: <code>media_url</code> (från Webhooks). <b>Caption</b>: <code>text</code>.</li>
+    <li><b>Video URL</b>: <code>media_url</code> (från Webhooks). <b>Caption</b>: <code>text</code>. (Bild: <b>Create a Photo Post</b> med <b>Image URL</b> = <code>media_url</code>.)</li>
   </ol>
 
   <h3>Facebook-video</h3>
   <ol>
     <li>Sök <b>Facebook Pages</b> → <b>Upload a Video</b> (eller "Create a Reel").</li>
-    <li><b>Page</b>: välj sidan. <b>File</b>: välj <i>HTTP – Get a file</i>. <b>Description</b>: <code>text</code>.</li>
+    <li><b>Page</b>: välj sidan. <b>File</b>: välj <i>Hämta videon/bilden</i>. <b>Description</b>: <code>text</code>. (Bild: <b>Upload a Photo</b> på samma sätt.)</li>
   </ol>
 
   <h3>YouTube</h3>
   <ol>
     <li>Sök <b>YouTube</b> → <b>Upload a Video</b>. <b>Connection</b>: logga in med Google-kontot för rätt kanal.</li>
-    <li><b>File</b>: <i>HTTP – Get a file</i>.</li>
+    <li><b>File</b>: <i>Hämta videon/bilden</i>.</li>
     <li><b>Title</b>: skriv <code>{{first(split(1.text; newline))}}</code> (första raden i texten). Stående video blir automatiskt en Short – lägg gärna till <code>#Shorts</code> sist.</li>
     <li><b>Description</b>: <code>text</code>, ny rad, <code>lank</code>. <b>Privacy</b>: Public. <b>Category</b>: Music. <b>Made for kids</b>: No.</li>
   </ol>
