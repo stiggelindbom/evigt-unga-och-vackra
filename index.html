@@ -1128,9 +1128,7 @@
         $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
         // demo med lyssningsklipp: spela bara de utvalda 30 sekunderna (#t= hoppar direkt dit)
         klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
-        // HitNet-varvet: var fjärde låt är vår – som 30 s förlyssning (låtar utan valt klipp tar en bit en bit in i låten)
-        autoKlipp = vanMixPa && klipp == null;
-        if (vanMixPa) klippLen = Math.min(klippLen, 30);
+        autoKlipp = false;   // HitNet-varvet spelar våra låtar hela (inga förlyssningar)
         avbrytMix();
         ljud.src = "musik/" + encodeURI(l.fil) + (klipp != null ? "#t=" + klipp : "");
         startaAnalys(); ljud._utTonad = false; ljud._klippSlut = false;
@@ -1240,7 +1238,7 @@
       }
       const l = latar[nu];
       $("nuEtikett").textContent = spelarJingel ? "🎺 SNART PÅ EVIGT UNG RADIO" : viaSpotify ? "SPELAS VIA SPOTIFY"
-        : vanMixPa && vanStation && l && (autoKlipp || typeof l.klipp === "number") ? `${klippLen} S FÖRLYSSNING · SEN ${vanStation.namn.toUpperCase()}`
+        : vanMixPa && vanStation && l && typeof l.klipp !== "number" ? `NU SPELAS · SEN ${vanStation.namn.toUpperCase()}`
         : (l && !l.slappt && typeof l.klipp === "number") ? `${l.klippLangd || 30} S SMAKPROV` : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
       $("nuKredit").hidden = !harKredit(l);
