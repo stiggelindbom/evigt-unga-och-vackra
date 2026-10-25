@@ -170,7 +170,7 @@
     },
     {
       "slappt": false,
-      "titel": "Vart tog den söta lilla flickan vägen ",
+      "titel": "Vart tog den söta lilla flickan vägen",
       "info": "",
       "typ": "Demo",
       "spotify": "",
@@ -722,6 +722,19 @@
       "namn": "TORPA BOYS",
       "lank": "",
       "logga": "van-torpa-boys.png"
+    }
+  ],
+  "inlagg": [],
+  "artister": [
+    {
+      "namn": "DJ Stigge",
+      "spotify": "",
+      "youtube": "",
+      "instagram": "",
+      "facebook": "",
+      "tiktok": "",
+      "soundcloud": "",
+      "webb": "https://stigges.se"
     }
   ]
 }
