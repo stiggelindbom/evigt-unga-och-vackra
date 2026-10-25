@@ -726,6 +726,24 @@
   ],
   "inlagg": [
     {
+      "id": "2026-10-25-ah-vilken-harlig-dag-de-evigt-unga-a-vac-t86v",
+      "datum": "2026-10-25T21:14:50.167Z",
+      "text": "Åh, vilken härlig dag! ☀️ De Evigt Unga å Vackra\n\nSöndagskväll, mörkt ute och måndagen står och knackar på dörren… 🥶\nSå vi tar med dig till stranden en stund – hallontoppar, skumbananer och solglasögon på! 🍬😎\n\nSommarreggae för alla som redan saknar juli.\nLyssna gratis på devigtunga.se – länk i bion 🎧\n\n#DeEvigtUngaÅVackra #VilkenHärligDag #Sommarreggae #Söndagskväll #NyMusik",
+      "artist": "De Evigt Unga å Vackra",
+      "lank": "https://devigtunga.se/",
+      "typ": "video",
+      "kanaler": [
+        "facebook",
+        "instagram",
+        "youtube"
+      ],
+      "vantar": true,
+      "format": "staende",
+      "media": "inlagg/2026-10-25-ah-vilken-harlig-dag-de-evigt-unga-a-vac-t86v.mp4",
+      "mime": "video/mp4",
+      "storlek": 17216853
+    },
+    {
       "id": "2026-10-25-sondagskvall-morkt-ute-redan-vid-fem-och-8roh",
       "datum": "2026-10-25T16:18:59.489Z",
       "text": "🕯️ Söndagskväll, mörkt ute redan vid fem och måndagen står och knackar på dörren… 🥶\nVi vet. Men längta inte för mycket – vi har nåt på gång i studion som värmer bättre än en yllefilt och en kopp varm choklad 🔥🎶\nNästa släpp från De Evigt Unga å Vackra kommer snart. Gilla sidan så är du först att höra den! 👀\nTills dess: sätt på \"Åh, vilken härlig dag\", blunda och låtsas att det är juli ☀️🏖️\n🎧 Lyssna gratis på devigtunga.se",
@@ -749,5 +767,7 @@
       "soundcloud": "",
       "webb": "https://stigges.se"
     }
-  ]
+  ],
+  "jinglar": [],
+  "radio": {}
 }
