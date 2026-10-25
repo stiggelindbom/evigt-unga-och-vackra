@@ -287,6 +287,10 @@
     .knapp.sc { background: #ff5500; color: #fff; box-shadow: 0 0 20px rgba(255,85,0,.35); }
     .ig-kort { display: grid; gap: 14px; place-items: center; text-align: center; padding: 32px 20px; border-radius: 12px; border: 1px solid var(--kant); background: var(--yta); min-height: 300px; }
     .ig-kort img { width: 120px; border-radius: 50%; box-shadow: 0 0 0 3px #dd2a7b; }
+    .fb-kort img { box-shadow: 0 0 0 3px var(--fb); }
+    .yt-kort img { box-shadow: 0 0 0 3px #ff0033; }
+    .knapp.yt { background: #ff0033; color: #fff; box-shadow: 0 0 20px rgba(255,0,51,.35); }
+    #fbFlode { display: grid; gap: 24px; }
     .slappt-listor { max-width: 760px; margin: 0 auto 28px; text-align: left; }
     .spotify-ram { max-width: 760px; margin: 0 auto 28px; border-radius: 14px; overflow: hidden; }
     .spotify-ram iframe { width: 100%; height: 452px; border: 0; display: block; }
@@ -1515,12 +1519,14 @@
     }
 
     // --- Senaste nytt: Facebook-flöde och Instagram ---
+    // Facebooks inbäddade flöde blockeras ofta (spårningsskydd/kakor) och blir en tom vit ruta – visa ett eget kort i stället
     if (L.facebook) {
-      const fb = "https://www.facebook.com/plugins/page.php?" + new URLSearchParams({
-        href: L.facebook, tabs: "timeline", width: "500", height: "640",
-        small_header: "true", adapt_container_width: "true", hide_cover: "false", show_facepile: "false"
-      });
-      $("fbFlode").innerHTML = `<iframe src="${fb}" loading="lazy" allow="encrypted-media" title="De Evigt Unga å Vackra på Facebook"></iframe>`;
+      const namn = (L.facebook.match(/facebook\.com\/([^/?#]+)/) || [])[1] || "facebook";
+      $("fbFlode").innerHTML = `<div class="ig-kort fb-kort"><img src="assets/omslag.jpg" alt=""><b style="font-family:Oswald,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:var(--guld-ljus)">facebook.com/${esc(namn)}</b><p style="color:var(--dampad)">Nyheter, spelningar och bilder – gilla sidan så missar du inget.</p><a class="knapp fb" href="${esc(L.facebook)}" target="_blank" rel="noopener">Gilla oss på Facebook</a></div>`;
+    }
+    if (L.youtube) {
+      const kanal = (L.youtube.match(/youtube\.com\/(@[^/?#]+)/) || [])[1] || "YouTube";
+      $("fbFlode").insertAdjacentHTML("beforeend", `<div class="ig-kort yt-kort"><img src="assets/omslag.jpg" alt=""><b style="font-family:Oswald,sans-serif;text-transform:uppercase;letter-spacing:.1em;color:var(--guld-ljus)">${esc(kanal)}</b><p style="color:var(--dampad)">Videor, klipp och hela låtar – prenumerera!</p><a class="knapp yt" href="${esc(L.youtube)}" target="_blank" rel="noopener">Prenumerera på YouTube</a></div>`);
     }
     if (L.instagramWidget) {
       // Inbäddningskod från en Instagram-flödestjänst (t.ex. Behold), inlagd i admin
