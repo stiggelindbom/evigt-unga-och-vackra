@@ -58,6 +58,22 @@
   <div class="ruta hjalp"><b>Storlekar:</b> stående 9:16 (max ca 90 s) → Reels på Instagram och Facebook + YouTube Shorts. Liggande 16:9 (hela låtar) → vanlig YouTube-video + vanlig Facebook-video. Instagram får inte liggande videor – de blir små med svarta kanter.</div>
   <p class="hjalp">Lägg till ett block: håll muspekaren till höger om "HTTP – Get a file" → <b>Add another module</b> (+). Flera block efter varandra går bra.</p>
 
+  <h3>Kryssrutorna i backoffice (Facebook / Instagram / YouTube)</h3>
+  <p>Backoffice skickar med <code>till_facebook</code>, <code>till_instagram</code> och <code>till_youtube</code> = <code>ja</code> eller <code>nej</code>. Sätt ett filter före varje block, så hoppas kanaler du kryssat ur över:</p>
+  <ol>
+    <li>Klicka på <b>skiftnyckeln/länken</b> mellan "HTTP – Get a file" och t.ex. Instagram-blocket → <b>Set up a filter</b>.</li>
+    <li>Label: <i>Till Instagram?</i> · Condition: <code>till_instagram</code> · <b>Text operators: Equal to</b> · <code>ja</code> → <b>OK</b>.</li>
+    <li>Samma sak före Facebook (<code>till_facebook</code>) och YouTube (<code>till_youtube</code>).</li>
+  </ol>
+  <p class="hjalp">Flera block efter varandra: lägg en <b>Router</b> efter "HTTP – Get a file" och ett block per väg, så stoppar inte ett avstängt block de andra.</p>
+
+  <h3>Planerade inlägg</h3>
+  <p>Inlägg du planerar i kalendern skickas av GitHub var 15:e minut. Lägg in webhook-adressen även där – en gång:</p>
+  <ol>
+    <li>GitHub → repot <b>evigt-unga-och-vackra</b> → <b>Settings</b> → <b>Secrets and variables</b> → <b>Actions</b> → <b>New repository secret</b>.</li>
+    <li>Name: <code>MAKE_WEBHOOK</code> · Secret: webhook-adressen från Make → <b>Add secret</b>.</li>
+  </ol>
+
   <h3>Instagram Reel</h3>
   <ol>
     <li>Sök <b>Instagram for Business</b> → <b>Create a Reel Post</b> (eller "Create a Video/Reel Post").</li>

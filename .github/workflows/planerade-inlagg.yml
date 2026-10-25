@@ -1,0 +1,37 @@
+# Skickar planerade inlägg från backoffice till Make när det är dags.
+# Kräver hemligheten MAKE_WEBHOOK (Settings → Secrets and variables → Actions).
+name: Planerade inlägg
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: planerade-inlagg
+  cancel-in-progress: false
+
+jobs:
+  skicka:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Skicka det som är dags
+        run: node verktyg/planerade-inlagg.mjs
+        env:
+          MAKE_WEBHOOK: ${{ secrets.MAKE_WEBHOOK }}
+      - name: Spara att de är skickade
+        run: |
+          if git diff --quiet; then echo "Inget att spara"; exit 0; fi
+          git config user.name "Planerade inlägg"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add musik/innehall.json inlagg.xml
+          git commit -m "Planerade inlägg skickade"
+          for i in 1 2 3; do git pull --rebase -q && git push -q && exit 0; sleep 5; done
+          exit 1

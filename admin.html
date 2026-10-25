@@ -71,6 +71,23 @@
     .inlagg-post .tumme { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #2a2418; display: grid; place-items: center; font-size: 1.4rem; }
     .inlagg-post p { font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .inlagg-post small { color: var(--dampad); }
+    .post-status { display: inline-block; font-size: .72rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--kant); margin-right: 6px; }
+    .post-status.planerad { border-color: var(--guld); color: var(--guld); }
+    .post-status.skickad { border-color: var(--spotify); color: var(--spotify); }
+    .post-status.vantar { border-color: #ff9a3d; color: #ff9a3d; }
+    .kalender { border-top: 1px solid var(--kant); padding-top: 12px; display: grid; gap: 8px; }
+    .kal-huvud { display: flex; align-items: center; gap: 10px; }
+    .kal-huvud b { font-family: "Oswald", sans-serif; letter-spacing: .06em; text-transform: uppercase; flex: 1; text-align: center; }
+    .kal-rutnat { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .kal-rutnat .dag-namn { font-size: .72rem; color: var(--dampad); text-align: center; }
+    .kal-dag { min-height: 64px; border: 1px solid var(--kant); border-radius: 8px; padding: 4px; font-size: .75rem; background: #14110c; cursor: pointer; overflow: hidden; text-align: left; color: var(--text); }
+    .kal-dag:hover { border-color: var(--guld); }
+    .kal-dag.idag { border-color: var(--guld); box-shadow: inset 0 0 0 1px var(--guld); }
+    .kal-dag.annan { opacity: .35; }
+    .kal-dag i { display: block; font-style: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 4px; padding: 0 4px; margin-top: 2px; font-size: .68rem; }
+    .kal-dag i.planerad { background: rgba(245,197,24,.2); color: var(--guld); }
+    .kal-dag i.skickad { background: rgba(30,215,96,.15); color: var(--spotify); }
+    .kal-dag i.vantar { background: rgba(255,154,61,.15); color: #ff9a3d; }
     .hjalp { color: var(--dampad); font-size: .9rem; }
     .hjalp ol { padding-left: 20px; margin-top: 6px; display: grid; gap: 4px; }
 
@@ -300,8 +317,21 @@
         </label>
       </div>
       <div class="inlagg-rad">
+        <span class="hjalp">Lägg ut på:</span>
+        <label class="kryss"><input type="checkbox" data-kanal="facebook" checked> Facebook</label>
+        <label class="kryss"><input type="checkbox" data-kanal="instagram" checked> Instagram</label>
+        <label class="kryss"><input type="checkbox" data-kanal="youtube" checked> YouTube</label>
+        <span class="hjalp">· alltid på hemsidan · TikTok lägger du upp själv</span>
+      </div>
+      <div class="inlagg-rad">
+        <label class="kryss"><input type="radio" name="inlaggNar" value="nu" checked> Skicka nu</label>
+        <label class="kryss"><input type="radio" name="inlaggNar" value="senare"> Planera till</label>
+        <input type="datetime-local" id="inlaggTid" style="max-width:230px">
+      </div>
+      <div class="inlagg-rad">
         <button class="knapp" type="button" id="inlaggSkicka">📣 Skicka inlägget</button>
       </div>
+      <div id="kalender"></div>
       <input type="file" id="inlaggFil" accept="video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp" hidden>
       <div id="inlaggLista"></div>
     </div>
@@ -406,7 +436,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025200059";
+    const VERSION = "v20261025200354";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1644,7 +1674,7 @@ ${poster.slice(0, 20).map(p => `<item>
     $("videoInlagg").onclick = () => {
       if (!videoBlob) return;
       const l = videoLat, t = videoTema(l), titel = ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "");
-      valjInlaggFil(new File([videoBlob], videoBlob.namn, { type: videoBlob.type })); inlaggFormat = videoBlob.format;
+      valjInlaggFil(new File([videoBlob], videoBlob.namn, { type: videoBlob.type })); anpassaKanaler(inlaggFormat = videoBlob.format);
       const k = l.kredit || {}, upphov = [k.kompositor && "Musik: " + k.kompositor, k.textforfattare && "Text: " + k.textforfattare].filter(Boolean).join(" · ");
       $("inlaggText").value = `${t.artist} – ${titel}${l.slappt ? "" : " (demo)"} 🎶\n${l.info ? l.info + "\n" : ""}\n🎧 Lyssna och ladda ner gratis på devigtunga.se${upphov ? "\n" + upphov : ""}\n\n${t.tagg} #DeEvigtUngaÅVackraMedVänner #svenskmusik`;
       ritaInlagg();
@@ -2002,12 +2032,16 @@ ${poster.slice(0, 20).map(p => `<item>
       const valdArtist = $("inlaggArtist").value;
       $("inlaggArtist").innerHTML = ["De Evigt Unga å Vackra", ...data.artister.map(a => ren(a.namn)).filter(Boolean)].map(n => `<option>${esc(n)}</option>`).join("");
       if (valdArtist && [...$("inlaggArtist").options].some(o => o.value === valdArtist)) $("inlaggArtist").value = valdArtist;
-      $("inlaggLista").innerHTML = data.inlagg.length ? `<h3 style="margin-top:6px">Skickade inlägg</h3>` + data.inlagg.map((p, k) => `
+      data.inlagg.sort((a, b) => b.datum.localeCompare(a.datum));
+      ritaKalender();
+      const statusFor = p => p.planerad && new Date(p.planerad) > new Date() ? `<span class="post-status planerad">🗓 Planerad</span>`
+        : p.vantar ? `<span class="post-status vantar">⏳ Väntar på att skickas</span>` : `<span class="post-status skickad">✓ Skickad</span>`;
+      $("inlaggLista").innerHTML = data.inlagg.length ? `<h3 style="margin-top:6px">Inlägg</h3>` + data.inlagg.map((p, k) => `
         <div class="inlagg-post">
           ${p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
-          <div><p>${esc(p.text)}</p><small>${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
+          <div><p>${esc(p.text)}</p><small>${statusFor(p)}${p.kanaler ? (p.kanaler.length ? p.kanaler.join(", ") : "bara hemsidan") + " · " : ""}${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
           <div style="display:grid;gap:6px">
-            <button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make en gång till">↻ Skicka igen</button>
+            <button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>
             <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
           </div>
         </div>`).join("") : "";
@@ -2021,9 +2055,9 @@ ${poster.slice(0, 20).map(p => `<item>
       inlaggFil = f; inlaggFormat = "";
       if (f.type.startsWith("video")) {   // stående/liggande avgör vart Make skickar den (Shorts/Reels eller vanlig YouTube)
         const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
-        v.onloadedmetadata = () => { if (inlaggFil === f) inlaggFormat = v.videoWidth > v.videoHeight ? "liggande" : v.videoWidth < v.videoHeight ? "staende" : "kvadrat"; };
+        v.onloadedmetadata = () => { if (inlaggFil === f) anpassaKanaler(inlaggFormat = v.videoWidth > v.videoHeight ? "liggande" : v.videoWidth < v.videoHeight ? "staende" : "kvadrat"); };
         v.src = URL.createObjectURL(f);
-      } else inlaggFormat = "bild";
+      } else anpassaKanaler(inlaggFormat = "bild");
       $("inlaggFilNamn").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
       const url = URL.createObjectURL(f);
       $("inlaggForhand").innerHTML = f.type.startsWith("video") ? `<video src="${url}" controls playsinline muted></video>` : `<img src="${url}" alt="">`;
@@ -2034,8 +2068,16 @@ ${poster.slice(0, 20).map(p => `<item>
       if (!text && !inlaggFil) return status("Skriv något eller välj en video/bild först.", "fel");
       $("inlaggSkicka").disabled = true;
       try {
-        const nu = new Date(), id = nu.toISOString().slice(0, 10) + "-" + (slugga(text.split("\n")[0]).slice(0, 40) || "inlagg") + "-" + nu.getTime().toString(36).slice(-4);
-        const post = { id, datum: nu.toISOString(), text, artist: $("inlaggArtist").value || "De Evigt Unga å Vackra", lank: $("inlaggLank").value || SIDA, typ: "text" };
+        const nu = new Date(), senare = document.querySelector('[name="inlaggNar"]:checked').value === "senare";
+        const tid = senare ? new Date($("inlaggTid").value) : nu;
+        if (senare && (isNaN(tid) || tid - nu < 5 * 60000)) { $("inlaggSkicka").disabled = false; return status("Välj en tid minst 5 minuter fram för att planera inlägget.", "fel"); }
+        const kanaler = [...document.querySelectorAll("[data-kanal]:checked")].map(c => c.dataset.kanal);
+        const id = tid.toISOString().slice(0, 10) + "-" + (slugga(text.split("\n")[0]).slice(0, 40) || "inlagg") + "-" + nu.getTime().toString(36).slice(-4);
+        const post = { id, datum: tid.toISOString(), text, artist: $("inlaggArtist").value || "De Evigt Unga å Vackra", lank: $("inlaggLank").value || SIDA, typ: "text", kanaler };
+        if (senare) { post.planerad = tid.toISOString(); post.vantar = true; }
+        else if (!kanaler.length) post.skickad = nu.toISOString();   // bara hemsidan
+        else if (hemlighet("make")) post.skickad = nu.toISOString();   // skickas till Make direkt nedan
+        else post.vantar = true;   // skickas av GitHub-körningen när MAKE_WEBHOOK finns där
         if (inlaggFil) {
           const ext = (inlaggFil.name.match(/\.(mp4|mov|webm|jpe?g|png|webp)$/i) || [, inlaggFil.type.split("/")[1]])[1].toLowerCase().replace("jpeg", "jpg");
           post.typ = inlaggFil.type.startsWith("video") ? "video" : "bild";
@@ -2048,9 +2090,11 @@ ${poster.slice(0, 20).map(p => `<item>
         $("inlaggText").value = ""; inlaggFil = null; $("inlaggFilNamn").textContent = "Ingen fil vald (går att skicka bara text)"; $("inlaggForhand").hidden = true; $("inlaggForhand").innerHTML = "";
         ritaInlagg(); andrat();
         await $("spara").onclick();   // sparar låtlistan, nyhetsflödet och inläggsflödet
-        const make = await skickaTillMake(post);
-        status("📣 Inlägget är skickat! Det syns på hemsidan om en minut" + (make === true ? " – och Make lägger ut det på sociala medier."
-          : make === "last" ? ". Lås upp valvet nästa gång så skickas det också till Make." : ". Lägg in Make-webhooken i valvet så hamnar det även på Facebook, Instagram och YouTube."), "ok");
+        if (senare) return status(`🗓 Planerat till ${tid.toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}. Det publiceras automatiskt (inom ca 15 min efter tiden).`, "ok");
+        if (!kanaler.length) return status("📣 Inlägget ligger på hemsidan om en minut (inga sociala kanaler valda).", "ok");
+        const make = post.skickad ? await skickaTillMake(post) : false;
+        status("📣 Inlägget är skickat! Det syns på hemsidan om en minut" + (make === true ? " – och Make lägger ut det på " + kanaler.join(", ") + "."
+          : " – och skickas till sociala medier automatiskt inom ca 15 min (eller lås upp valvet och tryck Skicka nu)."), "ok");
       } catch (e) { status("Inlägget kunde inte skickas: " + e.message, "fel"); }
       $("inlaggSkicka").disabled = false;
     };
@@ -2060,6 +2104,11 @@ ${poster.slice(0, 20).map(p => `<item>
         const p = data.inlagg[+igen.dataset.inlaggIgen]; igen.disabled = true;
         try {
           const svar = await skickaTillMake(p);
+          if (svar === true && (p.vantar || !p.skickad)) {
+            const nuIso = new Date().toISOString(); p.skickad = nuIso; delete p.vantar;
+            if (p.planerad && new Date(p.planerad) > new Date()) { p.planerad = nuIso; p.datum = nuIso; }
+            ritaInlagg(); andrat(); await $("spara").onclick();
+          }
           status(svar === true ? `↻ "${(p.text.split("\n")[0] || "Inlägget").slice(0, 40)}" skickades till Make igen.`
             : svar === "last" ? "Lås upp valvet (🔐 Valv & koder) så kan inlägget skickas till Make." : "Lägg in Make-webhooken i 🔐 Valvet först.", svar === true ? "ok" : "fel");
         } catch (err) { status("Kunde inte skicka till Make: " + err.message, "fel"); }
@@ -2074,6 +2123,45 @@ ${poster.slice(0, 20).map(p => `<item>
       }
       await $("spara").onclick();
     });
+    // stående/fyrkant: alla kanaler · liggande: inte Instagram (blir liten med svarta kanter) · bild: inte YouTube
+    function anpassaKanaler(format) {
+      const satt = (k, v) => { const c = document.querySelector(`[data-kanal="${k}"]`); if (c) c.checked = v; };
+      satt("facebook", true); satt("instagram", format !== "liggande"); satt("youtube", format !== "bild");
+    }
+    // ===== Planeringskalender =====
+    let kalManad = new Date(); kalManad.setDate(1);
+    function ritaKalender() {
+      const ar = kalManad.getFullYear(), man = kalManad.getMonth();
+      const forsta = new Date(ar, man, 1), start = new Date(forsta); start.setDate(1 - ((forsta.getDay() + 6) % 7));   // måndag först
+      const perDag = {};
+      for (const p of data.inlagg) { const d = new Date(p.datum); const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; (perDag[k] ||= []).push(p); }
+      const idag = new Date(); let celler = "";
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(start); d.setDate(start.getDate() + i);
+        const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+        const poster = (perDag[k] || []).map(p => { const typ = p.planerad && new Date(p.planerad) > idag ? "planerad" : p.vantar ? "vantar" : "skickad";
+          return `<i class="${typ}" title="${esc(p.text)}">${new Date(p.datum).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })} ${esc((p.text.split("\n")[0] || "").slice(0, 30))}</i>`; }).join("");
+        celler += `<button type="button" class="kal-dag${d.getMonth() !== man ? " annan" : ""}${d.toDateString() === idag.toDateString() ? " idag" : ""}" data-kal-dag="${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}">${d.getDate()}${poster}</button>`;
+        const nasta = new Date(d); nasta.setDate(d.getDate() + 1);
+        if (i % 7 === 6 && i >= 27 && nasta.getMonth() !== man) break;   // sluta efter veckan där månaden tar slut
+      }
+      $("kalender").innerHTML = `<div class="kalender">
+        <div class="kal-huvud"><button class="knapp kontur liten" type="button" data-kal="-1">◀</button><b>🗓 ${forsta.toLocaleDateString("sv-SE", { month: "long", year: "numeric" })}</b><button class="knapp kontur liten" type="button" data-kal="1">▶</button></div>
+        <div class="kal-rutnat">${["mån", "tis", "ons", "tor", "fre", "lör", "sön"].map(n => `<div class="dag-namn">${n}</div>`).join("")}${celler}</div>
+        <p class="hjalp" style="font-size:.8rem">Klicka på en dag för att planera ett inlägg då. <span style="color:var(--guld)">■ planerad</span> · <span style="color:var(--spotify)">■ skickad</span> · <span style="color:#ff9a3d">■ väntar</span></p>
+      </div>`;
+    }
+    $("kalender").addEventListener("click", e => {
+      const n = e.target.closest("[data-kal]"); if (n) { kalManad.setMonth(kalManad.getMonth() + +n.dataset.kal); return ritaKalender(); }
+      const d = e.target.closest("[data-kal-dag]"); if (!d) return;
+      document.querySelector('[name="inlaggNar"][value="senare"]').checked = true;
+      const tid = $("inlaggTid").value.slice(11) || "18:00";
+      $("inlaggTid").value = `${d.dataset.kalDag}T${tid}`;
+      $("inlaggText").scrollIntoView({ behavior: "smooth", block: "center" }); $("inlaggText").focus({ preventScroll: true });
+      status(`🗓 Planerar till ${d.dataset.kalDag} kl ${tid} – ändra tiden om du vill, skriv inlägget och tryck Skicka.`, "osparat");
+    });
+    $("inlaggTid").addEventListener("input", () => { document.querySelector('[name="inlaggNar"][value="senare"]').checked = true; });
+
     // Make: admin skickar inlägget direkt till en webhook (adressen ligger i valvet). Make lägger sedan ut det.
     async function skickaTillMake(post) {
       const url = hemlighet("make");
@@ -2089,8 +2177,10 @@ ${poster.slice(0, 20).map(p => `<item>
       }
       const art = data.artister.find(a => ren(a.namn).toLowerCase() === String(post.artist || "").toLowerCase());
       const k = art || data.lankar;   // bandets egna kanaler ligger under Länkar
+      const kan = post.kanaler || ["facebook", "instagram", "youtube"];
       const falt = { id: post.id, text: post.text, artist: post.artist || "De Evigt Unga å Vackra", typ: post.typ, format: post.format || "", media_url: post.media ? mediaUrl(post.media) : "", mime: post.mime || "",
-        lank: post.lank || SIDA, datum: post.datum, youtube: k.youtube || "", instagram: k.instagram || "", facebook: k.facebook || "", tiktok: k.tiktok || "" };
+        lank: post.lank || SIDA, datum: post.datum, youtube: k.youtube || "", instagram: k.instagram || "", facebook: k.facebook || "", tiktok: k.tiktok || "",
+        till_facebook: kan.includes("facebook") ? "ja" : "nej", till_instagram: kan.includes("instagram") ? "ja" : "nej", till_youtube: kan.includes("youtube") ? "ja" : "nej" };
       status("Skickar till Make…");
       await fetch(url, { method: "POST", mode: "no-cors", body: new URLSearchParams(falt) });   // enkelt formulär: inget svar behövs
       return true;
@@ -2103,7 +2193,7 @@ ${poster.slice(0, 20).map(p => `<item>
 <link>${SIDA}</link>
 <description>Inlägg från De Evigt Unga å Vackra (för Facebook, Instagram och YouTube via Make)</description>
 <language>sv</language>
-${data.inlagg.slice(0, 20).map(p => `<item>
+${data.inlagg.filter(p => !p.planerad || new Date(p.planerad) <= new Date()).slice(0, 20).map(p => `<item>
   <title>${x((p.text.split("\n")[0] || "Nytt från De Evigt Unga å Vackra").slice(0, 90))}</title>
   <description>${x(p.text)}</description>
   <link>${x(p.lank || SIDA)}</link>
