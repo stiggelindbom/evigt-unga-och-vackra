@@ -404,7 +404,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025070305";
+    const VERSION = "v20261025153932";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1828,23 +1828,61 @@ ${poster.slice(0, 20).map(p => `<item>
     const statKod = () => String(data.lankar.statistik || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
     let statDagar = 7;
     function las(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }
-    async function gc(vag, param) {
-      const r = await fetch(`https://${statKod()}.goatcounter.com/api/v0/${vag}?${new URLSearchParams(param)}`, { headers: { Authorization: "Bearer " + gcNyckel(), "Content-Type": "application/json" } });
-      if (r.status === 401 || r.status === 403) throw new Error("nyckeln godkändes inte – kontrollera att den har Read statistics");
-      if (!r.ok) throw new Error("GoatCounter svarade " + r.status);
-      return r.json();
+    // GoatCounter begränsar antalet anrop: ett i taget med paus emellan, och vänta och försök igen vid 429
+    const GC_PAUS = 1500;
+    let gcKo = Promise.resolve(), gcSenast = 0;
+    const vila = ms => new Promise(x => setTimeout(x, ms));
+    function gc(vag, param) {
+      const jobb = gcKo.then(async () => {
+        for (let forsok = 0; ; forsok++) {
+          const vanta = gcSenast + GC_PAUS - Date.now(); if (vanta > 0) await vila(vanta);
+          gcSenast = Date.now();
+          const r = await fetch(`https://${statKod()}.goatcounter.com/api/v0/${vag}?${new URLSearchParams(param)}`, { headers: { Authorization: "Bearer " + gcNyckel(), "Content-Type": "application/json" } });
+          if (r.status === 429 && forsok < 3) {
+            const sek = Math.min(60, Math.max(5, parseInt(r.headers.get("Retry-After"), 10) || 10 * (forsok + 1)));
+            $("statInnehall").innerHTML = `<p class="hjalp">GoatCounter vill att vi tar det lugnt – försöker igen om ${sek} s…</p>`;
+            await vila(sek * 1000); continue;
+          }
+          if (r.status === 401 || r.status === 403) throw new Error("nyckeln godkändes inte – kontrollera att den har Read statistics");
+          if (!r.ok) throw new Error("GoatCounter svarade " + r.status + (r.status === 429 ? " (för många anrop – vänta en minut)" : ""));
+          return r.json();
+        }
+      });
+      gcKo = jobb.catch(() => {});   // nästa anrop väntar på det här, även om det misslyckas
+      return jobb;
     }
-    async function visaStatistik() {
+    // svaren sparas en stund, så att byte mellan Idag / 7 / 30 dagar inte hämtar om allt
+    const STAT_CACHE_MIN = 5;
+    let statTur = 0;
+    function statCache(nyckel, varde) {
+      const k = "deu-stat-" + nyckel;
+      try {
+        if (varde) return sessionStorage.setItem(k, JSON.stringify({ tid: Date.now(), varde }));
+        const c = JSON.parse(sessionStorage.getItem(k) || "null");
+        return c && Date.now() - c.tid < STAT_CACHE_MIN * 60000 ? c : null;
+      } catch { return null; }
+    }
+    async function visaStatistik(tvinga = false) {
       const kod = statKod(), ut = $("statInnehall");
       $("statLank").href = kod ? `https://${kod}.goatcounter.com` : "https://www.goatcounter.com";
       document.querySelectorAll("[data-stat-dagar]").forEach(b => b.classList.toggle("vald-period", +b.dataset.statDagar === statDagar));
       if (!kod) { ut.innerHTML = `<p class="hjalp">Skriv GoatCounter-koden under Länkar först.</p>`; return; }
       if (!gcNyckel()) { ut.innerHTML = `<p class="hjalp">Lägg in en API-nyckel nedan så visas besök, spelade låtar och nedladdningar här.</p>`; $("statNyckelRuta").open = true; return; }
-      ut.innerHTML = `<p class="hjalp">Hämtar statistik…</p>`;
-      const slut = new Date(), start = new Date(slut); start.setDate(start.getDate() - (statDagar - 1)); start.setHours(0, 0, 0, 0);
+      const tur = ++statTur, dagar = statDagar;
+      const slut = new Date(), start = new Date(slut); start.setDate(start.getDate() - (dagar - 1)); start.setHours(0, 0, 0, 0);
       const p = { start: start.toISOString(), end: slut.toISOString() };
+      const nyckel = `${kod}-${dagar}-${start.toISOString().slice(0, 10)}`;
       try {
-        const [tot, hits, refs] = await Promise.all([gc("stats/total", p), gc("stats/hits", { ...p, limit: 100 }), gc("stats/toprefs", { ...p, limit: 8 }).catch(() => ({ stats: [] }))]);
+        let c = tvinga ? null : statCache(nyckel);
+        if (!c) {
+          ut.innerHTML = `<p class="hjalp">Hämtar statistik…</p>`;
+          const tot = await gc("stats/total", p); if (tur !== statTur) return;   // ny period vald: sluta hämta den här
+          const hits = await gc("stats/hits", { ...p, limit: 100 }); if (tur !== statTur) return;
+          const refs = await gc("stats/toprefs", { ...p, limit: 8 }).catch(() => ({ stats: [] }));
+          statCache(nyckel, { tot, hits, refs }); c = { tid: Date.now(), varde: { tot, hits, refs } };
+        }
+        if (tur !== statTur) return;   // man hann byta period – visa inte ett gammalt svar
+        const { tot, hits, refs } = c.varde;
         const alla = hits.hits || [];
         const grupp = prefix => alla.filter(h => (h.path || "").startsWith(prefix)).map(h => ({ namn: h.path.slice(prefix.length), antal: h.count || 0 })).sort((a, b) => b.antal - a.antal);
         const summa = arr => arr.reduce((a, b) => a + b.antal, 0);
@@ -1862,6 +1900,7 @@ ${poster.slice(0, 20).map(p => `<item>
             <div><b>${summa(delat)}</b><span>delningar</span></div>
             <div><b>${summa(vidare)}</b><span>klick till Spotify m.fl.</span></div>
           </div>
+          <p class="hjalp" style="font-size:.8rem">Uppdaterad ${new Date(c.tid).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })} · <button class="knapp kontur liten" type="button" id="statUppdatera" style="padding:2px 10px">↻ Hämta nytt</button></p>
           <div class="stat-listor">
             ${lista("Mest spelade", spelade, "Inga spelningar än.")}
             ${lista("Nedladdningar", ner, "Inga nedladdningar än.")}
@@ -1869,10 +1908,14 @@ ${poster.slice(0, 20).map(p => `<item>
             ${lista("Klick vidare", [...vidare, ...lanksidan.map(x => ({ ...x, namn: "Länksidan: " + x.namn }))].sort((a, b) => b.antal - a.antal), "Inga klick än.")}
           </div>`;
       } catch (e) {
+        if (tur !== statTur) return;
         ut.innerHTML = `<p class="hjalp">Kunde inte hämta statistiken (${esc(e.message === "Failed to fetch" ? "GoatCounter tillåter inte läsning härifrån" : e.message)}). Använd länken <b>Öppna hela statistiken</b> ovan.</p>`;
       }
     }
-    $("statKort").addEventListener("click", e => { const b = e.target.closest("[data-stat-dagar]"); if (b) { statDagar = +b.dataset.statDagar; visaStatistik(); } });
+    $("statKort").addEventListener("click", e => {
+      if (e.target.id === "statUppdatera") return visaStatistik(true);
+      const b = e.target.closest("[data-stat-dagar]"); if (b) { statDagar = +b.dataset.statDagar; visaStatistik(); }
+    });
     const gcNyckel = () => hemlighet("goatcounter") || las("deu-gc-nyckel");
     $("statSpara").onclick = async () => {
       const v = $("statNyckel").value.trim();
