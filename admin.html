@@ -405,7 +405,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025160258";
+    const VERSION = "v20261025160449";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1732,7 +1732,8 @@ ${poster.slice(0, 20).map(p => `<item>
           <form id="valvSkapaForm" autocomplete="on" style="display:grid;gap:12px"><input type="text" name="username" autocomplete="username" value="Nyckelvalv – devigtunga.se" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
           <div class="rutnat"><label>Lösenfras<input type="password" name="password" id="valvFras1" autocomplete="new-password"></label><label>Samma igen<input type="password" name="password2" id="valvFras2" autocomplete="new-password"></label></div>
           <div><button class="knapp" type="submit" id="valvSkapa">🔐 Skapa valvet</button></div></form>
-          <p class="hjalp">Chrome frågar om du vill spara lösenfrasen i Google Lösenordshantering – säg <b>Spara</b>, så fylls den i nästa gång.</p>`;
+          <p class="hjalp">Chrome frågar om du vill spara lösenfrasen i Google Lösenordshantering – säg <b>Spara</b>, så fylls den i nästa gång.</p>
+          <p class="hjalp">Har du redan ett valv på en annan dator eller i en annan webbläsare? <button class="knapp kontur liten" type="button" id="valvImport">⬆ Läs in säkerhetskopia</button></p>`;
         return;
       }
       if (!valv) {
