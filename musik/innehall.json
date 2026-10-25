@@ -726,6 +726,18 @@
   ],
   "inlagg": [
     {
+      "id": "2026-10-25-test-4-fsrc",
+      "datum": "2026-10-25T16:24:27.480Z",
+      "text": "test 4",
+      "artist": "De Evigt Unga å Vackra",
+      "lank": "https://devigtunga.se/#lat-vilken-harlig-dag",
+      "typ": "video",
+      "format": "staende",
+      "media": "inlagg/2026-10-25-test-4-fsrc.mp4",
+      "mime": "video/mp4",
+      "storlek": 17247907
+    },
+    {
       "id": "2026-10-25-test-3-ask1",
       "datum": "2026-10-25T16:20:33.937Z",
       "text": "Test 3",
