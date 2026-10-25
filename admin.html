@@ -76,9 +76,21 @@
     .post-status.skickad { border-color: var(--spotify); color: var(--spotify); }
     .post-status.vantar { border-color: #ff9a3d; color: #ff9a3d; }
     .kalender { border-top: 1px solid var(--kant); padding-top: 12px; display: grid; gap: 8px; }
-    .kal-huvud { display: flex; align-items: center; gap: 10px; }
+    .kal-huvud { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .kal-huvud b { font-family: "Oswald", sans-serif; letter-spacing: .06em; text-transform: uppercase; flex: 1; text-align: center; }
-    .kal-rutnat { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .kal-rutnat { display: grid; grid-template-columns: 30px repeat(7, minmax(0, 1fr)); gap: 4px; }
+    .kal-vnr { font-size: .68rem; color: var(--dampad); background: none; border: 0; padding: 0; align-self: center; }
+    .kal-vnr:hover { color: var(--guld); }
+    .kal-vecka { display: grid; grid-template-columns: 34px repeat(7, minmax(68px, 1fr)); gap: 3px; min-width: 560px; }
+    .kal-vecka .idag-namn { color: var(--guld); font-weight: 600; }
+    .kal-timme { font-size: .7rem; color: var(--dampad); text-align: right; padding-right: 4px; }
+    .kal-cell { min-height: 26px; border: 1px solid #2a2418; border-radius: 5px; background: #14110c; padding: 2px; cursor: pointer; text-align: left; color: var(--text); overflow: hidden; }
+    .kal-cell:hover { border-color: var(--guld); }
+    .kal-cell.forbi { opacity: .45; }
+    .kal-cell i { display: block; font-style: normal; font-size: .66rem; border-radius: 3px; padding: 0 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .kal-cell i.planerad { background: rgba(245,197,24,.2); color: var(--guld); }
+    .kal-cell i.skickad { background: rgba(30,215,96,.15); color: var(--spotify); }
+    .kal-cell i.vantar { background: rgba(255,154,61,.15); color: #ff9a3d; }
     .kal-rutnat .dag-namn { font-size: .72rem; color: var(--dampad); text-align: center; }
     .kal-dag { min-height: 64px; border: 1px solid var(--kant); border-radius: 8px; padding: 4px; font-size: .75rem; background: #14110c; cursor: pointer; overflow: hidden; text-align: left; color: var(--text); }
     .kal-dag:hover { border-color: var(--guld); }
@@ -436,7 +448,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025200354";
+    const VERSION = "v20261025200616";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2129,36 +2141,65 @@ ${poster.slice(0, 20).map(p => `<item>
       satt("facebook", true); satt("instagram", format !== "liggande"); satt("youtube", format !== "bild");
     }
     // ===== Planeringskalender =====
-    let kalManad = new Date(); kalManad.setDate(1);
+    // Månad eller vecka (med klockslag). Veckonummer enligt ISO (måndag först).
+    let kalVy = las("deu-kal-vy") || "manad", kalManad = new Date(); kalManad.setDate(1);
+    let kalVecka = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; })();
+    const veckonr = d => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dag = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - dag); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
+    const datumNyckel = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const postTyp = p => p.planerad && new Date(p.planerad) > new Date() ? "planerad" : p.vantar ? "vantar" : "skickad";
+    const klock = d => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
+    const TIMMAR = Array.from({ length: 17 }, (_, k) => k + 7);   // 07–23
     function ritaKalender() {
-      const ar = kalManad.getFullYear(), man = kalManad.getMonth();
-      const forsta = new Date(ar, man, 1), start = new Date(forsta); start.setDate(1 - ((forsta.getDay() + 6) % 7));   // måndag först
-      const perDag = {};
-      for (const p of data.inlagg) { const d = new Date(p.datum); const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; (perDag[k] ||= []).push(p); }
-      const idag = new Date(); let celler = "";
-      for (let i = 0; i < 42; i++) {
-        const d = new Date(start); d.setDate(start.getDate() + i);
-        const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        const poster = (perDag[k] || []).map(p => { const typ = p.planerad && new Date(p.planerad) > idag ? "planerad" : p.vantar ? "vantar" : "skickad";
-          return `<i class="${typ}" title="${esc(p.text)}">${new Date(p.datum).toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })} ${esc((p.text.split("\n")[0] || "").slice(0, 30))}</i>`; }).join("");
-        celler += `<button type="button" class="kal-dag${d.getMonth() !== man ? " annan" : ""}${d.toDateString() === idag.toDateString() ? " idag" : ""}" data-kal-dag="${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}">${d.getDate()}${poster}</button>`;
-        const nasta = new Date(d); nasta.setDate(d.getDate() + 1);
-        if (i % 7 === 6 && i >= 27 && nasta.getMonth() !== man) break;   // sluta efter veckan där månaden tar slut
+      const idag = new Date(), perDag = {};
+      for (const p of data.inlagg) (perDag[datumNyckel(new Date(p.datum))] ||= []).push(p);
+      const postEtikett = p => `<i class="${postTyp(p)}" title="${esc(p.text)}">${klock(new Date(p.datum))} ${esc((p.text.split("\n")[0] || "").slice(0, 30))}</i>`;
+      const vyKnappar = `<span style="display:flex;gap:4px"><button class="knapp kontur liten${kalVy === "manad" ? " vald-period" : ""}" type="button" data-kal-vy="manad">Månad</button><button class="knapp kontur liten${kalVy === "vecka" ? " vald-period" : ""}" type="button" data-kal-vy="vecka">Vecka</button></span>`;
+      let rubrik, innehall;
+      if (kalVy === "vecka") {
+        const dagar = Array.from({ length: 7 }, (_, k) => { const d = new Date(kalVecka); d.setDate(kalVecka.getDate() + k); return d; });
+        rubrik = `Vecka ${veckonr(kalVecka)} · ${dagar[0].toLocaleDateString("sv-SE", { day: "numeric", month: "short" })} – ${dagar[6].toLocaleDateString("sv-SE", { day: "numeric", month: "short", year: "numeric" })}`;
+        innehall = `<div style="overflow-x:auto"><div class="kal-vecka">
+          <div></div>${dagar.map(d => `<div class="dag-namn${d.toDateString() === idag.toDateString() ? " idag-namn" : ""}">${d.toLocaleDateString("sv-SE", { weekday: "short" })} ${d.getDate()}/${d.getMonth() + 1}</div>`).join("")}
+          ${TIMMAR.map(h => `<div class="kal-timme">${String(h).padStart(2, "0")}</div>` + dagar.map(d => {
+            const poster = (perDag[datumNyckel(d)] || []).filter(p => { const t = new Date(p.datum).getHours(); return t === h || (h === 7 && t < 7); });
+            const forbi = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h + 1) < idag;
+            return `<button type="button" class="kal-cell${forbi ? " forbi" : ""}" data-kal-tid="${datumNyckel(d)}T${String(h).padStart(2, "0")}:00" title="Planera ${d.toLocaleDateString("sv-SE")} kl ${h}:00">${poster.map(postEtikett).join("")}</button>`;
+          }).join("")).join("")}
+        </div></div>`;
+      } else {
+        const ar = kalManad.getFullYear(), man = kalManad.getMonth();
+        const forsta = new Date(ar, man, 1), start = new Date(forsta); start.setDate(1 - ((forsta.getDay() + 6) % 7));
+        rubrik = forsta.toLocaleDateString("sv-SE", { month: "long", year: "numeric" });
+        let celler = "";
+        for (let i = 0; i < 42; i++) {
+          const d = new Date(start); d.setDate(start.getDate() + i);
+          if (i % 7 === 0) celler += `<button type="button" class="kal-vnr" data-kal-gavecka="${datumNyckel(d)}" title="Visa veckan">v.${veckonr(d)}</button>`;
+          celler += `<button type="button" class="kal-dag${d.getMonth() !== man ? " annan" : ""}${d.toDateString() === idag.toDateString() ? " idag" : ""}" data-kal-dag="${datumNyckel(d)}">${d.getDate()}${(perDag[datumNyckel(d)] || []).map(postEtikett).join("")}</button>`;
+          const nasta = new Date(d); nasta.setDate(d.getDate() + 1);
+          if (i % 7 === 6 && i >= 27 && nasta.getMonth() !== man) break;
+        }
+        innehall = `<div class="kal-rutnat"><div></div>${["mån", "tis", "ons", "tor", "fre", "lör", "sön"].map(n => `<div class="dag-namn">${n}</div>`).join("")}${celler}</div>`;
       }
       $("kalender").innerHTML = `<div class="kalender">
-        <div class="kal-huvud"><button class="knapp kontur liten" type="button" data-kal="-1">◀</button><b>🗓 ${forsta.toLocaleDateString("sv-SE", { month: "long", year: "numeric" })}</b><button class="knapp kontur liten" type="button" data-kal="1">▶</button></div>
-        <div class="kal-rutnat">${["mån", "tis", "ons", "tor", "fre", "lör", "sön"].map(n => `<div class="dag-namn">${n}</div>`).join("")}${celler}</div>
-        <p class="hjalp" style="font-size:.8rem">Klicka på en dag för att planera ett inlägg då. <span style="color:var(--guld)">■ planerad</span> · <span style="color:var(--spotify)">■ skickad</span> · <span style="color:#ff9a3d">■ väntar</span></p>
+        <div class="kal-huvud"><button class="knapp kontur liten" type="button" data-kal="-1">◀</button><b>🗓 ${rubrik}</b><button class="knapp kontur liten" type="button" data-kal="1">▶</button>${vyKnappar}</div>
+        ${innehall}
+        <p class="hjalp" style="font-size:.8rem">${kalVy === "vecka" ? "Klicka på en tid för att planera ett inlägg då." : "Klicka på en dag för att planera, eller på veckonumret för veckovyn."} <span style="color:var(--guld)">■ planerad</span> · <span style="color:var(--spotify)">■ skickad</span> · <span style="color:#ff9a3d">■ väntar</span></p>
       </div>`;
     }
-    $("kalender").addEventListener("click", e => {
-      const n = e.target.closest("[data-kal]"); if (n) { kalManad.setMonth(kalManad.getMonth() + +n.dataset.kal); return ritaKalender(); }
-      const d = e.target.closest("[data-kal-dag]"); if (!d) return;
+    function planeraTill(datum, tid) {
       document.querySelector('[name="inlaggNar"][value="senare"]').checked = true;
-      const tid = $("inlaggTid").value.slice(11) || "18:00";
-      $("inlaggTid").value = `${d.dataset.kalDag}T${tid}`;
+      $("inlaggTid").value = `${datum}T${tid}`;
       $("inlaggText").scrollIntoView({ behavior: "smooth", block: "center" }); $("inlaggText").focus({ preventScroll: true });
-      status(`🗓 Planerar till ${d.dataset.kalDag} kl ${tid} – ändra tiden om du vill, skriv inlägget och tryck Skicka.`, "osparat");
+      const d = new Date(`${datum}T${tid}`);
+      status(`🗓 Planerar till ${d.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" })} kl ${tid} (vecka ${veckonr(d)}) – skriv inlägget och tryck Skicka.`, "osparat");
+    }
+    $("kalender").addEventListener("click", e => {
+      const vy = e.target.closest("[data-kal-vy]"); if (vy) { kalVy = vy.dataset.kalVy; try { localStorage.setItem("deu-kal-vy", kalVy); } catch {} return ritaKalender(); }
+      const n = e.target.closest("[data-kal]");
+      if (n) { if (kalVy === "vecka") kalVecka.setDate(kalVecka.getDate() + 7 * n.dataset.kal); else kalManad.setMonth(kalManad.getMonth() + +n.dataset.kal); return ritaKalender(); }
+      const gv = e.target.closest("[data-kal-gavecka]"); if (gv) { kalVecka = new Date(gv.dataset.kalGavecka + "T00:00"); kalVy = "vecka"; return ritaKalender(); }
+      const t = e.target.closest("[data-kal-tid]"); if (t) { const [datum, tid] = t.dataset.kalTid.split("T"); return planeraTill(datum, tid); }
+      const d = e.target.closest("[data-kal-dag]"); if (d) planeraTill(d.dataset.kalDag, $("inlaggTid").value.slice(11) || "18:00");
     });
     $("inlaggTid").addEventListener("input", () => { document.querySelector('[name="inlaggNar"][value="senare"]').checked = true; });
 
