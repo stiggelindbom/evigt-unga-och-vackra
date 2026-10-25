@@ -404,7 +404,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025153932";
+    const VERSION = "v20261025160004";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1752,8 +1752,11 @@ ${poster.slice(0, 20).map(p => `<item>
             ${lank ? `<a class="knapp kontur liten" href="${lank}" target="_blank" rel="noopener">Öppna ↗</a>` : ""}
           </div></div>`).join("")}
         ${valv.fast.github && las("deu-admin-token") ? `<p class="hjalp">GitHub-nyckeln ligger också okrypterad i webbläsaren för automatisk inloggning. <button class="knapp kontur liten" type="button" id="valvGlomToken">Logga in med valvet i stället</button></p>` : ""}
-        <h4 style="margin-top:8px">Inloggningar och anteckningar</h4>
-        ${valv.poster.map((p, i) => `<div class="valv-post" data-valv-post="${i}">
+        <div class="inlagg-rad" style="margin-top:8px"><h4 style="margin-right:auto">Inloggningar och anteckningar (${valv.poster.length})</h4>
+          <button class="knapp kontur liten" type="button" id="valvGoogle">⬆ Importera från Google</button></div>
+        <div id="valvImportPanel"></div>
+        ${valv.poster.length > 5 ? `<input type="search" id="valvSok" placeholder="🔍 Sök i valvet (tjänst, användare, adress)">` : ""}
+        ${valv.poster.map((p, i) => `<div class="valv-post" data-valv-post="${i}" data-sok="${esc([p.tjanst, p.anvandare, p.lank].join(" ").toLowerCase())}">
           <div><b>${esc(p.tjanst)}</b>${p.anvandare ? ` · ${esc(p.anvandare)}` : ""}<br>${dold("p:" + i, p.losen || "")}${p.not ? `<br><small>${esc(p.not)}</small>` : ""}</div>
           <div class="knappar">
             ${p.losen ? `<button class="knapp kontur liten" type="button" data-valv-visa="p:${i}">${valvVisa.has("p:" + i) ? "Dölj" : "Visa"}</button><button class="knapp kontur liten" type="button" data-valv-kopiera-post="${i}">Kopiera</button>` : ""}
@@ -1771,6 +1774,48 @@ ${poster.slice(0, 20).map(p => `<item>
           <button class="knapp liten" type="button" id="vpSpara" style="margin-top:8px">Spara i valvet</button>
         </details>`;
     }
+    // ===== Import från Google Lösenordshantering (CSV-export: name,url,username,password,note) =====
+    function lasCsv(text) {
+      const rader = []; let rad = [], falt = "", citat = false;
+      for (let i = 0; i < text.length; i++) {
+        const t = text[i];
+        if (citat) { if (t === '"' && text[i + 1] === '"') { falt += '"'; i++; } else if (t === '"') citat = false; else falt += t; }
+        else if (t === '"') citat = true;
+        else if (t === ",") { rad.push(falt); falt = ""; }
+        else if (t === "\n" || t === "\r") { if (t === "\r" && text[i + 1] === "\n") i++; rad.push(falt); rader.push(rad); rad = []; falt = ""; }
+        else falt += t;
+      }
+      if (falt || rad.length) { rad.push(falt); rader.push(rad); }
+      const [huvud, ...data] = rader.filter(x => x.some(Boolean));
+      const k = (huvud || []).map(h => h.trim().toLowerCase());
+      return data.map(x => Object.fromEntries(k.map((n, j) => [n, x[j] || ""])));
+    }
+    let googleRader = [];
+    const googleFil = Object.assign(document.createElement("input"), { type: "file", accept: ".csv,text/csv" });
+    googleFil.addEventListener("change", async () => {
+      const f = googleFil.files[0]; if (!f) return;
+      const finns = new Set(valv.poster.map(p => (p.tjanst + "|" + p.anvandare).toLowerCase()));
+      googleRader = lasCsv(await f.text()).map(x => {
+        let tjanst = x.name || ""; try { if (!tjanst && x.url) tjanst = new URL(x.url).hostname.replace(/^www\./, ""); } catch {}
+        return { tjanst: tjanst || x.url || "Okänd", anvandare: x.username || "", losen: x.password || "", lank: /^https?:/.test(x.url) ? x.url : "", not: x.note || "" };
+      }).filter(p => p.losen && !finns.has((p.tjanst + "|" + p.anvandare).toLowerCase()));
+      if (!googleRader.length) return status("Hittade inga nya inloggningar i filen (eller så finns de redan i valvet).", "fel");
+      ritaGoogleImport();
+    });
+    function ritaGoogleImport() {
+      $("valvImportPanel").innerHTML = `<div class="kort" style="display:grid;gap:8px;padding:14px;margin:6px 0">
+        <b>Välj vad som ska in i valvet (${googleRader.length} nya)</b>
+        <div class="inlagg-rad"><input type="search" id="gSok" placeholder="🔍 Filtrera, t.ex. spotify, meta, one.com" style="flex:1;min-width:180px">
+          <button class="knapp kontur liten" type="button" id="gAlla">Markera synliga</button><button class="knapp kontur liten" type="button" id="gInga">Avmarkera alla</button></div>
+        <div style="max-height:320px;overflow:auto;display:grid;gap:2px">${googleRader.map((p, i) => `<label class="kryss" data-g-rad="${i}" data-sok="${esc((p.tjanst + " " + p.anvandare + " " + p.lank).toLowerCase())}"><input type="checkbox" data-g="${i}"> ${esc(p.tjanst)} <small style="color:var(--dampad)">${esc(p.anvandare)}</small></label>`).join("")}</div>
+        <div class="inlagg-rad"><button class="knapp liten" type="button" id="gImportera">Importera valda</button><button class="knapp kontur liten" type="button" id="gAvbryt">Avbryt</button>
+          <span class="hjalp">Tips: ta bara med det som rör musiken – privata konton behöver inte ligga här.</span></div>
+      </div>`;
+    }
+    $("valvKort").addEventListener("input", e => {
+      if (e.target.id === "valvSok") { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll("[data-valv-post]").forEach(r => r.hidden = q && !r.dataset.sok.includes(q)); }
+      if (e.target.id === "gSok") { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll("[data-g-rad]").forEach(r => r.hidden = q && !r.dataset.sok.includes(q)); }
+    });
     const valvFil = Object.assign(document.createElement("input"), { type: "file", accept: "application/json,.json" });
     valvFil.addEventListener("change", async () => {
       const f = valvFil.files[0]; if (!f) return;
@@ -1793,6 +1838,20 @@ ${poster.slice(0, 20).map(p => `<item>
         if (id === "valvLasKnapp") return valvLas();
         if (id === "valvExport") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([las(VALV)], { type: "application/json" })); a.download = "devigtunga-nyckelvalv.json"; a.click(); return status("⬇ Säkerhetskopian är krypterad – den går bara att öppna med lösenfrasen.", "ok"); }
         if (id === "valvImport") { valvFil.value = ""; return valvFil.click(); }
+        if (id === "valvGoogle") {
+          if (!confirm("Exportera först från Google: passwords.google.com → ⚙ Inställningar → Exportera lösenord → spara filen.\n\nVälj sedan filen här. OK?")) return;
+          googleFil.value = ""; return googleFil.click();
+        }
+        if (id === "gAlla") { document.querySelectorAll("[data-g-rad]:not([hidden]) input").forEach(c => c.checked = true); return; }
+        if (id === "gInga") { document.querySelectorAll("[data-g]").forEach(c => c.checked = false); return; }
+        if (id === "gAvbryt") { googleRader = []; $("valvImportPanel").innerHTML = ""; return; }
+        if (id === "gImportera") {
+          const valda = [...document.querySelectorAll("[data-g]:checked")].map(c => googleRader[+c.dataset.g]);
+          if (!valda.length) return status("Kryssa i vilka inloggningar som ska importeras.", "fel");
+          valv.poster.push(...valda); valv.poster.sort((a, b) => a.tjanst.localeCompare(b.tjanst, "sv"));
+          await valvSpara(); googleRader = []; ritaValv();
+          return status(`✓ ${valda.length} inloggningar importerade och krypterade. Radera nu CSV-filen från datorn (och papperskorgen) – den är inte krypterad.`, "ok");
+        }
         if (id === "valvGlomToken") { try { localStorage.removeItem("deu-admin-token"); } catch {} ritaValv(); return status("Nästa gång loggar du in med valvets lösenfras.", "ok"); }
         if (id === "vpSpara") {
           const p = { tjanst: $("vpTjanst").value.trim(), anvandare: $("vpAnv").value.trim(), losen: $("vpLosen").value, lank: $("vpLank").value.trim(), not: $("vpNot").value.trim() };
