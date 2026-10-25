@@ -1077,13 +1077,31 @@
     }
 
     let spelTur = 0;   // räknas upp vid varje låtbyte, så att en sen Spotify-start kan se att den blivit inaktuell
-    async function spela(i) {
-      spelTur++;
+    // --- Jinglar: en slumpad jingel före varje Kommande-låt (i samma spelare, så det fungerar även med låst iPhone) ---
+    const JINGLAR = (DATA.jinglar || []).filter(j => j.fil);
+    const arKommande = l => !!l && !l.slappt && typeof l.klipp === "number";
+    const kommandeIRadio = () => JINGLAR.length > 0 && !vanMixPa;
+    let spelarJingel = false, jingelFor = -1;
+    function spelaJingel(i) {
+      const j = JINGLAR[Math.floor(Math.random() * JINGLAR.length)];
+      if (spCtrl) { spSpelaNarRedo = false; spCtrl.pause(); }
+      $("spRam").hidden = true; $("spTips").hidden = true; $("spRam").classList.remove("blinka");
+      avbrytMix(); viaFil = false; klipp = null; autoKlipp = false;
+      spelarJingel = true; jingelFor = i;
+      ljud.src = "musik/" + encodeURI(j.fil); startaAnalys(); ljud._utTonad = false; ljud._klippSlut = false; sattVolym(ljud, 1, 0);
+      ljud.play().catch(() => { spelarJingel = false; spela(i, true); });
+      uppdatera();
+    }
+    function jingelKlar() { spelarJingel = false; spela(jingelFor, true); }
+    async function spela(i, utanJingel = false) {
+      spelTur++; spelarJingel = false;
       if (station) valjStation(null, false, true);
       if (!tillganglig(i)) return nasta(1, i);
       if (i !== nu) raknadFor = -1;
       nu = i;
       const l = latar[i];
+      if (!utanJingel) raknaKommande(i);
+      if (!utanJingel && arKommande(l) && JINGLAR.length) return spelaJingel(i);
       rakna("Spelad", l.titel);
       // iPhone: Spotify-rutan ger bara förhandslyssning och kräver ett tryck per låt – egen fil flyter på även med låst skärm
       // med HitNet-varvet på spelas även släppta låtar från egen fil: Spotify-rutan kan inte starta av sig själv
@@ -1126,7 +1144,7 @@
       if (nu < 0 && delad >= 0) return spela(delad);   // kom via en delad länk: spela den låten
       if (nu < 0) {
         // börja med första demon: den spelas från vår server och startar direkt även på iPhone
-        const demo = latar.findIndex((l, i) => !l.slappt && tillganglig(i));
+        const demo = latar.findIndex((l, i) => !l.slappt && tillganglig(i) && !arKommande(l));   // radion börjar alltid med en vanlig demo
         return demo >= 0 ? spela(demo) : nasta(1);
       }
       if (arSpotify()) {
@@ -1138,10 +1156,24 @@
       if (!ljud.getAttribute("src")) return spela(nu);   // iPhone: spelaren användes av HitNet – ladda låten igen
       if (ljud.paused) { startaAnalys(); ljud.play(); } else ljud.pause();
     }
+    // Kommande i radion: slumpas in efter 2–3 vanliga låtar (med jingel före), aldrig två i rad och inte samma som förra gången.
+    // Bara när det finns jinglar och HitNet inte blandas in – annars spelas de bara när man väljer dem.
+    let sedanKommande = 0, kommandeVarje = 2 + Math.floor(Math.random() * 2), senasteVanliga = -1, senasteKommande = -1;
+    function raknaKommande(i) {
+      if (arKommande(latar[i])) { sedanKommande = 0; kommandeVarje = 2 + Math.floor(Math.random() * 2); senasteKommande = i; }
+      else { sedanKommande++; senasteVanliga = i; }
+    }
     function nastaIndex(steg = 1, fran = nu) {
       // i bakgrunden: hoppa över Spotify-låtar som saknar egen fil (de kan inte starta där)
-      const bakgrund = j => tillganglig(j) && !((document.hidden || vanMixPa) && latar[j].slappt && !harFil(latar[j]));
-      const ok = latar.some((_, j) => bakgrund(j)) ? bakgrund : tillganglig;
+      const grund = j => tillganglig(j) && !((document.hidden || vanMixPa) && latar[j].slappt && !harFil(latar[j]));
+      if (steg === 1 && kommandeIRadio() && !arKommande(latar[fran]) && sedanKommande >= kommandeVarje) {
+        const k = latar.map((_, j) => j).filter(j => grund(j) && arKommande(latar[j]));
+        const val = k.length > 1 ? k.filter(j => j !== senasteKommande) : k;
+        if (val.length) return val[Math.floor(Math.random() * val.length)];
+      }
+      if (arKommande(latar[fran]) && senasteVanliga >= 0) fran = senasteVanliga;   // fortsätt där de vanliga låtarna var
+      const vanlig = j => grund(j) && !arKommande(latar[j]);
+      const ok = latar.some((_, j) => vanlig(j)) ? vanlig : j => tillganglig(j) && !arKommande(latar[j]);
       const n = latar.length, mojliga = latar.map((_, j) => j).filter(ok);
       if (!mojliga.length) return -1;
       let i = fran;
@@ -1170,7 +1202,7 @@
       sattVolym(ljud, 1, 0); sattVolym(o, 1, 0);
     }
     function startaMix(i) {
-      mixar = true;
+      mixar = true; raknaKommande(i);
       const gammal = ljud, ny = annan(), l = latar[i];
       nu = i; raknadFor = -1; viaFil = !!l.slappt; ny._utTonad = false; ny._klippSlut = false; autoKlipp = false; klipp = typeof l.klipp === "number" ? l.klipp : null; klippLen = l.klippLangd || 30;
       sattVolym(ny, 0, 0);
@@ -1207,7 +1239,7 @@
         ritaLista(); return;
       }
       const l = latar[nu];
-      $("nuEtikett").textContent = viaSpotify ? "SPELAS VIA SPOTIFY"
+      $("nuEtikett").textContent = spelarJingel ? "🎺 SNART PÅ EVIGT UNG RADIO" : viaSpotify ? "SPELAS VIA SPOTIFY"
         : vanMixPa && vanStation && l && (autoKlipp || typeof l.klipp === "number") ? `${klippLen} S FÖRLYSSNING · SEN ${vanStation.namn.toUpperCase()}`
         : (l && !l.slappt && typeof l.klipp === "number") ? `${l.klippLangd || 30} S SMAKPROV` : "NU SPELAS";
       $("nuTitel").textContent = l ? l.titel : "Tryck play";
@@ -1354,10 +1386,11 @@
     const paAktiv = fn => e => { if (e.target === ljud) fn(e); };   // bara den spelare som är "på" räknas
     for (const el of spelareEl) {
       el.addEventListener("loadedmetadata", paAktiv(() => {
-        if (station) return;
+        if (station || spelarJingel) return;
         if (autoKlipp && klipp == null && isFinite(ljud.duration)) { klipp = Math.round(Math.max(0, Math.min(ljud.duration * 0.3, ljud.duration - 30))); ljud.currentTime = klipp; return; }
         if (klipp != null && Math.abs(ljud.currentTime - klipp) > 1) ljud.currentTime = klipp; }));
       el.addEventListener("timeupdate", paAktiv(() => {
+        if (spelarJingel) return visaTid(ljud.currentTime, ljud.duration);
         if (arSpotify() || station) return;
         const slut = klipp != null ? klipp + klippLen : ljud.duration;
         if (klipp != null) {
@@ -1370,7 +1403,7 @@
         // mixa in nästa demo de sista sekunderna (kräver Web Audio; Spotify-låtar kan inte mixas)
         if (mixPa && !vanMixPa && !mixar && forstarkning.size && isFinite(slut) && slut - ljud.currentTime <= MIX && !ljud.paused) {
           const n = nastaIndex(1);
-          if (n >= 0 && n !== nu && (!latar[n].slappt || (document.hidden && harFil(latar[n])))) return startaMix(n);
+          if (n >= 0 && n !== nu && !(arKommande(latar[n]) && JINGLAR.length) && (!latar[n].slappt || (document.hidden && harFil(latar[n])))) return startaMix(n);
         }
         if (klipp != null && ljud.currentTime >= klipp + klippLen && !mixar && !ljud._klippSlut) {   // klippet slut: nästa låt
           // iPhone med låst skärm: pausa inte först – då tappar sidan ljudet och får inte starta igen förrän man låser upp
@@ -1391,8 +1424,8 @@
         uppdatera();
       }));
       el.addEventListener("pause", paAktiv(uppdatera));
-      el.addEventListener("ended", paAktiv(() => { if (!mixar && !station) latSlut(); }));   // radion rullar vidare
-      el.addEventListener("error", paAktiv(() => { if (!station && nu >= 0 && !arSpotify() && ljud.getAttribute("src")) { latar[nu].saknas = true; nasta(1); } }));
+      el.addEventListener("ended", paAktiv(() => { if (spelarJingel) return jingelKlar(); if (!mixar && !station) latSlut(); }));   // radion rullar vidare
+      el.addEventListener("error", paAktiv(() => { if (spelarJingel) return jingelKlar(); if (!station && nu >= 0 && !arSpotify() && ljud.getAttribute("src")) { latar[nu].saknas = true; nasta(1); } }));
     }
     $("sok").addEventListener("input", e => {
       if (arSpotify()) { if (spCtrl && spLang) spCtrl.seek(e.target.value / 100 * spLang); }

@@ -298,7 +298,18 @@
         <button class="knapp liten" type="button" data-ny="kommande">+ Nytt smakprov</button>
       </div>
       <p class="hjalp" style="margin:-4px 0 10px">Smakprov på framtida släpp: på hemsidan spelas bara klippet, och hela låten laddas bara ner med kod.</p>
+      <p class="hjalp" style="margin:0 0 10px">📻 <b>I radion:</b> när det finns minst en 🎺 jingel spelas Kommande också i radion, med en jingel före – men aldrig när HitNet blandas in. Utan jinglar spelas de bara när någon väljer dem i listan.</p>
       <div class="latlista" id="kommandeLista"></div>
+    </div>
+
+    <div class="kort">
+      <div class="listhuvud">
+        <h3>🎺 Jinglar</h3>
+        <button class="knapp liten" type="button" id="nyJingel">+ Ladda upp jingel</button>
+      </div>
+      <p class="hjalp" style="margin:-4px 0 10px">En slumpad jingel spelas före varje Kommande-låt. Med minst en jingel går Kommande även med i radion (utom när HitNet blandas in). Korta mp3/wav, helst under 15 s.</p>
+      <div id="jingelLista" style="display:grid;gap:8px"></div>
+      <input type="file" id="jingelFil" accept=".mp3,.wav,audio/mpeg,audio/wav" hidden>
     </div>
 
     <div class="kort">
@@ -450,7 +461,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025200743";
+    const VERSION = "v20261025201844";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -593,7 +604,7 @@
       const f = await gh(`/contents/${DATAFIL}?ref=${GREN}`);
       sha = f.sha;
       data = JSON.parse(franBase64(f.content));
-      data.lankar ||= {}; data.latar ||= []; data.vanner ||= []; data.inlagg ||= [];
+      data.lankar ||= {}; data.latar ||= []; data.vanner ||= []; data.inlagg ||= []; data.jinglar ||= []; data.radio ||= {};
       data.artister ||= [{ namn: "DJ Stigge", spotify: "", youtube: "", instagram: "", facebook: "", tiktok: "", soundcloud: "", webb: "https://stigges.se" }];
       for (const l of data.latar) if (!l.kredit) { l.kredit = FORVAL(); fyllda.push(l); }
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
@@ -776,6 +787,7 @@
       $("demoLista").innerHTML = lista("demo");
       ritaVanner();
       ritaArtister();
+      ritaJinglar();
       ritaInlagg();
       if (!statVisad) { statVisad = true; visaStatistik(); }
       ritaEngangsDel();
@@ -1249,6 +1261,40 @@
         if (lank && !SPOTIFY_RE.test(lank)) return status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/", "fel");
         lank ? autoSlapp(data.latar[i], lank) : slappLat(data.latar[i], "");
       }
+    });
+
+    // ===== 🎺 Jinglar (spelas före Kommande-låtar) =====
+    function ritaJinglar() {
+      $("jingelLista").innerHTML = data.jinglar.map((j, k) => `<div class="inlagg-rad" data-jingel="${k}">
+          <input type="text" data-jingel-namn value="${esc(j.namn)}" style="flex:1;min-width:140px" aria-label="Namn på jingeln">
+          ${j.fil ? `<audio controls preload="none" src="${esc(forhands[j.fil] || "musik/" + encodeURI(j.fil))}" style="height:32px;max-width:240px"></audio>` : ""}
+          <button class="knapp kontur liten" type="button" data-jingel-bort>Ta bort</button></div>`).join("") || `<p class="hjalp">Inga jinglar än.</p>`;
+    }
+    $("nyJingel").onclick = () => { $("jingelFil").value = ""; $("jingelFil").click(); };
+    $("jingelFil").addEventListener("change", async () => {
+      let f = $("jingelFil").files[0]; if (!f) return;
+      const namn = f.name.replace(/\.(mp3|wav)$/i, "").replace(/[_-]+/g, " ").trim() || "Jingel";
+      try {
+        if (/\.wav$/i.test(f.name)) { status("Gör om jingeln till mp3…"); f = await wavTillMp3(f, p => status(`Gör om till mp3… ${Math.round(p * 100)} %`)); }
+        if (f.size > 10 * 1048576) throw new Error("jingeln är större än 10 MB – gör den kortare");
+        const fil = "jingel-" + filnamn(namn).replace(/\.mp3$/, "") + "-" + Date.now().toString(36).slice(-4) + ".mp3";
+        status(`Laddar upp ${fil}…`);
+        await gh(`/contents/musik/${encodeURIComponent(fil)}`, { method: "PUT", body: JSON.stringify({ message: `Jingel ${namn} via backoffice`, content: bytesTillBase64(new Uint8Array(await f.arrayBuffer())), branch: GREN }) });
+        filer.add(fil); forhands[fil] = URL.createObjectURL(f);
+        data.jinglar.push({ namn, fil }); ritaJinglar(); andrat();
+        status(`🎺 ${namn} uppladdad – tryck Spara ändringar.`, "osparat");
+      } catch (e) { status("Jingeln kunde inte laddas upp: " + e.message, "fel"); }
+    });
+    $("jingelLista").addEventListener("input", e => {
+      if (!e.target.matches("[data-jingel-namn]")) return;
+      data.jinglar[+e.target.closest("[data-jingel]").dataset.jingel].namn = e.target.value.trim(); andrat();
+    });
+    $("jingelLista").addEventListener("click", e => {
+      if (!e.target.closest("[data-jingel-bort]")) return;
+      const k = +e.target.closest("[data-jingel]").dataset.jingel, j = data.jinglar[k];
+      if (!confirm(`Ta bort jingeln ”${j.namn}”?`)) return;
+      data.jinglar.splice(k, 1); if (j.fil) attRadera.add(j.fil);   // filen tas bort när du sparar
+      ritaJinglar(); andrat();
     });
 
     // ===== 📅 Släppkampanj: hela marknadsföringen i kalendern med ett klick =====
