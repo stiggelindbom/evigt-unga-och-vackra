@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Make-guide – devigtunga.se</title>
+  <link rel="icon" type="image/png" href="../assets/favicon.png">
+  <style>
+    :root { --svart: #0b0b0b; --yta: #1f1b14; --kant: #3a3020; --guld: #f5c518; --text: #f4ecd6; --dampad: #b9ad8d; color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--svart); color: var(--text); font: 16px/1.6 system-ui, sans-serif; }
+    main { width: min(760px, 100%); margin: 0 auto; padding: 28px 16px 60px; }
+    h1 { color: var(--guld); font-size: 1.7rem; margin: 0 0 6px; }
+    h2 { color: var(--guld); font-size: 1.15rem; margin: 32px 0 8px; border-top: 1px solid var(--kant); padding-top: 18px; }
+    h3 { font-size: 1rem; margin: 18px 0 6px; }
+    p, li { color: var(--text); }
+    .hjalp { color: var(--dampad); }
+    a { color: var(--guld); }
+    code, kbd { background: var(--yta); border: 1px solid var(--kant); border-radius: 5px; padding: 1px 6px; font-size: .9em; word-break: break-word; }
+    .ruta { background: var(--yta); border: 1px solid var(--kant); border-radius: 12px; padding: 14px 16px; margin: 12px 0; }
+    .knapp { display: inline-block; background: var(--guld); color: #111; font-weight: 700; text-decoration: none; padding: 10px 18px; border-radius: 999px; margin: 6px 0; }
+    table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+    td, th { border-bottom: 1px solid var(--kant); padding: 6px 8px; text-align: left; vertical-align: top; }
+    ol li, ul li { margin: 4px 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Make: inlägg ut på sociala medier</h1>
+  <p class="hjalp">Görs en gång. Sedan skickar du allt från backoffice → 📣 Inlägg.</p>
+
+  <h2>1. Före start</h2>
+  <ul>
+    <li><b>Instagram</b> måste vara ett <b>professionellt konto</b> (Skapare eller Företag) och <b>kopplat till Facebook-sidan</b>. Gäller både bandets och DJ Stigges konton.</li>
+    <li>Ha inloggningarna till Facebook, Instagram och YouTube nära till hands (de ligger kanske i 🔐 Valvet).</li>
+  </ul>
+
+  <h2>2. Importera mallen</h2>
+  <a class="knapp" href="make-blueprint.json" download="devigtunga-make-mall.json">⬇ Ladda ner mallen</a>
+  <ol>
+    <li>Logga in på <a href="https://www.make.com" target="_blank" rel="noopener">make.com</a> → <b>Scenarios</b> → <b>Create a new scenario</b>.</li>
+    <li>Klicka på <b>⋯</b> (längst ner i verktygsraden) → <b>Import Blueprint</b> → välj filen → <b>Save</b>.</li>
+    <li>Klicka på första blocket <b>Webhooks</b> → <b>Create a webhook</b> → namn <i>Devigtunga inlägg</i> → <b>Save</b> → <b>Copy address to clipboard</b>.</li>
+    <li>Backoffice → <b>🔐 Valv &amp; koder</b> → <b>Make-webhook</b> → <b>Lägg in</b> → klistra in.</li>
+    <li>I Make: klicka <b>Run once</b>. I backoffice: skicka ett <b>testinlägg med en stående video</b> (t.ex. ett klipp från 🎬 Gör video). Make visar då vad som kom in.</li>
+  </ol>
+  <div class="ruta hjalp">Mallen innehåller webhooken, en växel med fyra vägar och ett block som hämtar videon. Du lägger till Instagram/Facebook/YouTube-blocken nedan – de kräver din inloggning och kan därför inte ligga färdiga i mallen.</div>
+
+  <h2>3. De fyra vägarna</h2>
+  <table>
+    <tr><th>Väg</th><th>Lägg till efter "HTTP – Get a file"</th></tr>
+    <tr><td>DJ Stigge · stående</td><td>Instagram Reel · Facebook-video · YouTube (Short) – <b>DJ Stigges konton</b></td></tr>
+    <tr><td>DJ Stigge · liggande</td><td>YouTube – <b>DJ Stigges kanal</b></td></tr>
+    <tr><td>Bandet · stående</td><td>Instagram Reel · Facebook-video · YouTube (Short) – <b>bandets konton</b></td></tr>
+    <tr><td>Bandet · liggande</td><td>YouTube – <b>@devigtunga</b></td></tr>
+  </table>
+  <p class="hjalp">Lägg till ett block: håll muspekaren till höger om "HTTP – Get a file" → <b>Add another module</b> (+). Flera block efter varandra går bra.</p>
+
+  <h3>Instagram Reel</h3>
+  <ol>
+    <li>Sök <b>Instagram for Business</b> → <b>Create a Reel Post</b> (eller "Create a Video/Reel Post").</li>
+    <li><b>Connection</b>: Add → logga in med Facebook → välj rätt sida och Instagram-konto.</li>
+    <li><b>Video URL</b>: <code>media_url</code> (från Webhooks). <b>Caption</b>: <code>text</code>.</li>
+  </ol>
+
+  <h3>Facebook-video</h3>
+  <ol>
+    <li>Sök <b>Facebook Pages</b> → <b>Upload a Video</b> (eller "Create a Reel").</li>
+    <li><b>Page</b>: välj sidan. <b>File</b>: välj <i>HTTP – Get a file</i>. <b>Description</b>: <code>text</code>.</li>
+  </ol>
+
+  <h3>YouTube</h3>
+  <ol>
+    <li>Sök <b>YouTube</b> → <b>Upload a Video</b>. <b>Connection</b>: logga in med Google-kontot för rätt kanal.</li>
+    <li><b>File</b>: <i>HTTP – Get a file</i>.</li>
+    <li><b>Title</b>: skriv <code>{{first(split(1.text; newline))}}</code> (första raden i texten). Stående video blir automatiskt en Short – lägg gärna till <code>#Shorts</code> sist.</li>
+    <li><b>Description</b>: <code>text</code>, ny rad, <code>lank</code>. <b>Privacy</b>: Public. <b>Category</b>: Music. <b>Made for kids</b>: No.</li>
+  </ol>
+
+  <h2>4. Slå på</h2>
+  <ol>
+    <li><b>Save</b> (diskettikonen) → slå på reglaget <b>Immediately as data arrives</b> / <b>ON</b> nere till vänster.</li>
+    <li>Klart! Varje gång du trycker <b>Skicka</b> i backoffice läggs inlägget ut automatiskt.</li>
+  </ol>
+
+  <h2>Fält som backoffice skickar</h2>
+  <table>
+    <tr><td><code>text</code></td><td>Inläggets text</td></tr>
+    <tr><td><code>artist</code></td><td>De Evigt Unga å Vackra, DJ Stigge …</td></tr>
+    <tr><td><code>typ</code></td><td>video, bild eller text</td></tr>
+    <tr><td><code>format</code></td><td>staende, liggande, kvadrat eller bild</td></tr>
+    <tr><td><code>media_url</code></td><td>Länk till videon/bilden på devigtunga.se</td></tr>
+    <tr><td><code>lank</code></td><td>Länken du valde (hemsidan, radion, låten …)</td></tr>
+    <tr><td><code>youtube</code>, <code>instagram</code>, <code>facebook</code>, <code>tiktok</code></td><td>Artistens kanaler (från backoffice)</td></tr>
+  </table>
+  <p class="hjalp">Fastnar du? Ta en skärmbild och skicka till Claude, så löser vi det.</p>
+</main>
+</body>
+</html>

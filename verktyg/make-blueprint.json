@@ -1,0 +1,237 @@
+{
+  "name": "devigtunga.se – inlägg till sociala medier",
+  "flow": [
+    {
+      "id": 1,
+      "module": "gateway:CustomWebHook",
+      "version": 1,
+      "parameters": {
+        "hook": null,
+        "maxResults": 1
+      },
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "mapper": null,
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      },
+      "routes": [
+        {
+          "flow": [
+            {
+              "id": 3,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
+              },
+              "filter": {
+                "name": "DJ Stigge · stående video (Reels/Shorts)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.typ}}",
+                      "o": "text:equal",
+                      "b": "video"
+                    },
+                    {
+                      "a": "{{1.artist}}",
+                      "o": "text:equal:ci",
+                      "b": "DJ Stigge"
+                    },
+                    {
+                      "a": "{{1.format}}",
+                      "o": "text:notequal",
+                      "b": "liggande"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "{{1.media_url}}",
+                "method": "get",
+                "serializeUrl": false,
+                "shareCookies": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": -450
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 4,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
+              },
+              "filter": {
+                "name": "DJ Stigge · liggande video (YouTube)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.typ}}",
+                      "o": "text:equal",
+                      "b": "video"
+                    },
+                    {
+                      "a": "{{1.artist}}",
+                      "o": "text:equal:ci",
+                      "b": "DJ Stigge"
+                    },
+                    {
+                      "a": "{{1.format}}",
+                      "o": "text:equal",
+                      "b": "liggande"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "{{1.media_url}}",
+                "method": "get",
+                "serializeUrl": false,
+                "shareCookies": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": -150
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 5,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
+              },
+              "filter": {
+                "name": "Bandet · stående video (Reels/Shorts)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.typ}}",
+                      "o": "text:equal",
+                      "b": "video"
+                    },
+                    {
+                      "a": "{{1.artist}}",
+                      "o": "text:notequal:ci",
+                      "b": "DJ Stigge"
+                    },
+                    {
+                      "a": "{{1.format}}",
+                      "o": "text:notequal",
+                      "b": "liggande"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "{{1.media_url}}",
+                "method": "get",
+                "serializeUrl": false,
+                "shareCookies": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": 150
+                }
+              }
+            }
+          ]
+        },
+        {
+          "flow": [
+            {
+              "id": 6,
+              "module": "http:ActionGetFile",
+              "version": 3,
+              "parameters": {
+                "handleErrors": false
+              },
+              "filter": {
+                "name": "Bandet · liggande video (YouTube)",
+                "conditions": [
+                  [
+                    {
+                      "a": "{{1.typ}}",
+                      "o": "text:equal",
+                      "b": "video"
+                    },
+                    {
+                      "a": "{{1.artist}}",
+                      "o": "text:notequal:ci",
+                      "b": "DJ Stigge"
+                    },
+                    {
+                      "a": "{{1.format}}",
+                      "o": "text:equal",
+                      "b": "liggande"
+                    }
+                  ]
+                ]
+              },
+              "mapper": {
+                "url": "{{1.media_url}}",
+                "method": "get",
+                "serializeUrl": false,
+                "shareCookies": false
+              },
+              "metadata": {
+                "designer": {
+                  "x": 600,
+                  "y": 450
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "instant": true,
+    "version": 1,
+    "scenario": {
+      "roundtrips": 1,
+      "maxErrors": 3,
+      "autoCommit": true,
+      "autoCommitTriggerLast": true,
+      "sequential": true,
+      "confidential": false,
+      "dataloss": false,
+      "dlq": false,
+      "freshVariables": false
+    },
+    "designer": {
+      "orphans": []
+    }
+  }
+}

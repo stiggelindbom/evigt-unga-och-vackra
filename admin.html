@@ -404,7 +404,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025065733";
+    const VERSION = "v20261025070305";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1628,7 +1628,7 @@ ${poster.slice(0, 20).map(p => `<item>
         videoBlob = new Blob(delar, { type: typ.split(";")[0] });
         const ext = typ.startsWith("video/mp4") ? "mp4" : "webm";
         const namn = `${filnamn((tema.artist + " " + ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "")).trim()).replace(/\.mp3$/, "")}-${hel ? "youtube" : "short"}.${ext}`;
-        $("videoNer").href = URL.createObjectURL(videoBlob); $("videoNer").download = namn; videoBlob.namn = namn;
+        $("videoNer").href = URL.createObjectURL(videoBlob); $("videoNer").download = namn; videoBlob.namn = namn; videoBlob.format = hel ? "liggande" : "staende";
         $("videoKlar").hidden = false;
         $("videoStatus").textContent = `✓ Klar! ${(videoBlob.size / 1048576).toFixed(1)} MB ${ext}.` + (!/avc1/.test(typ) ? " Tips: YouTube tar alla format, men Instagram vill ha mp4 med H.264 – strular det där, spela in i Safari eller senaste Chrome." : "");
       };
@@ -1640,7 +1640,7 @@ ${poster.slice(0, 20).map(p => `<item>
     $("videoInlagg").onclick = () => {
       if (!videoBlob) return;
       const l = videoLat, t = videoTema(l), titel = ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "");
-      valjInlaggFil(new File([videoBlob], videoBlob.namn, { type: videoBlob.type }));
+      valjInlaggFil(new File([videoBlob], videoBlob.namn, { type: videoBlob.type })); inlaggFormat = videoBlob.format;
       const k = l.kredit || {}, upphov = [k.kompositor && "Musik: " + k.kompositor, k.textforfattare && "Text: " + k.textforfattare].filter(Boolean).join(" · ");
       $("inlaggText").value = `${t.artist} – ${titel}${l.slappt ? "" : " (demo)"} 🎶\n${l.info ? l.info + "\n" : ""}\n🎧 Lyssna och ladda ner gratis på devigtunga.se${upphov ? "\n" + upphov : ""}\n\n${t.tagg} #DeEvigtUngaÅVackraMedVänner #svenskmusik`;
       ritaInlagg();
@@ -1689,7 +1689,7 @@ ${poster.slice(0, 20).map(p => `<item>
       ["github", "GitHub-nyckel", "Inloggningen till backoffice", "https://github.com/settings/personal-access-tokens"],
       ["goatcounter", "GoatCounter API-nyckel", "Statistiken under Översikt", "https://devigtunga.goatcounter.com/user/api"],
       ["server", "Server-adminnyckel", "Engångskoder för smakprov", ""],
-      ["make", "Make-webhook", "Adressen från Make (https://hook.…make.com/…) – inlägg skickas dit direkt", "https://www.make.com/"],
+      ["make", "Make-webhook", "Adressen från Make (https://hook.…make.com/…) – inlägg skickas dit direkt. Guide och färdig mall: verktyg/make.html", "verktyg/make.html"],
       ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"]
     ];
     let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
@@ -1909,7 +1909,7 @@ ${poster.slice(0, 20).map(p => `<item>
       inlaggFil = f; inlaggFormat = "";
       if (f.type.startsWith("video")) {   // stående/liggande avgör vart Make skickar den (Shorts/Reels eller vanlig YouTube)
         const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
-        v.onloadedmetadata = () => { inlaggFormat = v.videoWidth > v.videoHeight ? "liggande" : v.videoWidth < v.videoHeight ? "staende" : "kvadrat"; };
+        v.onloadedmetadata = () => { if (inlaggFil === f) inlaggFormat = v.videoWidth > v.videoHeight ? "liggande" : v.videoWidth < v.videoHeight ? "staende" : "kvadrat"; };
         v.src = URL.createObjectURL(f);
       } else inlaggFormat = "bild";
       $("inlaggFilNamn").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
