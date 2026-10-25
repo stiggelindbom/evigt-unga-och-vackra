@@ -40,6 +40,17 @@
     h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--guld); font-size: 1rem; }
     .kort { background: var(--yta); border: 1px solid var(--kant); border-radius: 12px; padding: 20px; }
     .inlagg-kort { display: grid; gap: 12px; }
+    .stat-kort { display: grid; gap: 14px; }
+    .knapp.kontur.vald-period { background: var(--guld); color: #111; }
+    .stat-tal { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
+    .stat-tal div { background: #14110c; border: 1px solid var(--kant); border-radius: 10px; padding: 10px 12px; }
+    .stat-tal b { display: block; font-family: "Oswald", sans-serif; font-size: 1.7rem; color: var(--guld); line-height: 1.1; }
+    .stat-tal span { color: var(--dampad); font-size: .8rem; }
+    .stat-listor { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; }
+    .stat-listor h4 { font-family: "Oswald", sans-serif; letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; color: var(--guld); margin-bottom: 6px; }
+    .stat-rad { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: .88rem; padding: 4px 0; border-bottom: 1px solid #2a2418; position: relative; }
+    .stat-rad i { position: absolute; left: 0; bottom: -1px; height: 2px; background: var(--guld); opacity: .6; }
+    .stat-rad span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .inlagg-rad { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
     #inlaggForhand video, #inlaggForhand img { max-width: 220px; max-height: 260px; border-radius: 10px; display: block; }
     .inlagg-post { display: grid; grid-template-columns: 64px 1fr auto; gap: 12px; align-items: center; border-top: 1px solid var(--kant); padding-top: 10px; }
@@ -209,6 +220,24 @@
     </div>
 
     <div>
+      <h2>📊 Statistik</h2>
+    </div>
+    <div class="kort stat-kort" id="statKort">
+      <div class="inlagg-rad">
+        <button class="knapp kontur liten" type="button" data-stat-dagar="1">Idag</button>
+        <button class="knapp kontur liten" type="button" data-stat-dagar="7">7 dagar</button>
+        <button class="knapp kontur liten" type="button" data-stat-dagar="30">30 dagar</button>
+        <a class="hjalp" id="statLank" target="_blank" rel="noopener" style="margin-left:auto">Öppna hela statistiken ↗</a>
+      </div>
+      <div id="statInnehall"></div>
+      <details id="statNyckelRuta">
+        <summary class="hjalp" style="cursor:pointer">API-nyckel för statistiken</summary>
+        <p class="hjalp" style="margin:8px 0">Skapa en nyckel i GoatCounter: logga in → <b>Settings</b> (kugghjulet) → <b>API</b> → <b>New API key</b>, kryssa i <b>Read statistics</b> och kopiera nyckeln hit. Den sparas bara i den här webbläsaren.</p>
+        <div class="inlagg-rad"><input type="password" id="statNyckel" placeholder="Klistra in API-nyckeln" style="flex:1;min-width:200px"><button class="knapp liten" type="button" id="statSpara">Spara nyckel</button></div>
+      </details>
+    </div>
+
+    <div>
       <h2>Låtar</h2>
       <p class="hjalp">Släppta låtar spelas via Spotify på hemsidan så att lyssningarna räknas. Demos spelas i radion och kan laddas ner. Ordningen här är ordningen på hemsidan.</p>
     </div>
@@ -283,7 +312,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261024205338";
+    const VERSION = "v20261025063338";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -596,6 +625,7 @@
       $("demoLista").innerHTML = lista("demo");
       ritaVanner();
       ritaInlagg();
+      if (!statVisad) { statVisad = true; visaStatistik(); }
       ritaEngangsDel();
       setTimeout(ritaAllaVagformer);
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
@@ -1340,8 +1370,60 @@ ${poster.slice(0, 20).map(p => `<item>
       flodeSha = svar.content.sha;
     }
 
+    // ===== Statistik från GoatCounter (API-nyckeln sparas bara i den här webbläsaren) =====
+    const statKod = () => String(data.lankar.statistik || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
+    let statDagar = 7;
+    function las(k) { try { return localStorage.getItem(k) || ""; } catch { return ""; } }
+    async function gc(vag, param) {
+      const r = await fetch(`https://${statKod()}.goatcounter.com/api/v0/${vag}?${new URLSearchParams(param)}`, { headers: { Authorization: "Bearer " + las("deu-gc-nyckel"), "Content-Type": "application/json" } });
+      if (r.status === 401 || r.status === 403) throw new Error("nyckeln godkändes inte – kontrollera att den har Read statistics");
+      if (!r.ok) throw new Error("GoatCounter svarade " + r.status);
+      return r.json();
+    }
+    async function visaStatistik() {
+      const kod = statKod(), ut = $("statInnehall");
+      $("statLank").href = kod ? `https://${kod}.goatcounter.com` : "https://www.goatcounter.com";
+      document.querySelectorAll("[data-stat-dagar]").forEach(b => b.classList.toggle("vald-period", +b.dataset.statDagar === statDagar));
+      if (!kod) { ut.innerHTML = `<p class="hjalp">Skriv GoatCounter-koden under Länkar först.</p>`; return; }
+      if (!las("deu-gc-nyckel")) { ut.innerHTML = `<p class="hjalp">Lägg in en API-nyckel nedan så visas besök, spelade låtar och nedladdningar här.</p>`; $("statNyckelRuta").open = true; return; }
+      ut.innerHTML = `<p class="hjalp">Hämtar statistik…</p>`;
+      const slut = new Date(), start = new Date(slut); start.setDate(start.getDate() - (statDagar - 1)); start.setHours(0, 0, 0, 0);
+      const p = { start: start.toISOString(), end: slut.toISOString() };
+      try {
+        const [tot, hits, refs] = await Promise.all([gc("stats/total", p), gc("stats/hits", { ...p, limit: 100 }), gc("stats/toprefs", { ...p, limit: 8 }).catch(() => ({ stats: [] }))]);
+        const alla = hits.hits || [];
+        const grupp = prefix => alla.filter(h => (h.path || "").startsWith(prefix)).map(h => ({ namn: h.path.slice(prefix.length), antal: h.count || 0 })).sort((a, b) => b.antal - a.antal);
+        const summa = arr => arr.reduce((a, b) => a + b.antal, 0);
+        const spelade = grupp("Spelad: "), ner = grupp("Nedladdad: "), delat = grupp("Delad: "), vidare = grupp("Till "), lanksidan = grupp("Länksidan: ");
+        const sidor = alla.filter(h => !h.event).map(h => ({ namn: h.path === "/" ? "Startsidan" : h.path, antal: h.count || 0 }));
+        const kallor = (refs.stats || []).map(x => ({ namn: x.name || "(direkt)", antal: x.count || 0 })).sort((a, b) => b.antal - a.antal);
+        const lista = (rubrik, arr, tom) => {
+          const max = Math.max(1, ...arr.map(a => a.antal));
+          return `<div><h4>${rubrik}</h4>${arr.length ? arr.slice(0, 10).map(a => `<div class="stat-rad"><span title="${esc(a.namn)}">${esc(a.namn)}</span><b>${a.antal}</b><i style="width:${a.antal / max * 100}%"></i></div>`).join("") : `<p class="hjalp">${tom}</p>`}</div>`;
+        };
+        ut.innerHTML = `<div class="stat-tal">
+            <div><b>${tot.total ?? summa(sidor)}</b><span>besök</span></div>
+            <div><b>${summa(spelade)}</b><span>spelade låtar</span></div>
+            <div><b>${summa(ner)}</b><span>nedladdningar</span></div>
+            <div><b>${summa(delat)}</b><span>delningar</span></div>
+            <div><b>${summa(vidare)}</b><span>klick till Spotify m.fl.</span></div>
+          </div>
+          <div class="stat-listor">
+            ${lista("Mest spelade", spelade, "Inga spelningar än.")}
+            ${lista("Nedladdningar", ner, "Inga nedladdningar än.")}
+            ${lista("Varifrån besökarna kommer", kallor, "Inga källor än.")}
+            ${lista("Klick vidare", [...vidare, ...lanksidan.map(x => ({ ...x, namn: "Länksidan: " + x.namn }))].sort((a, b) => b.antal - a.antal), "Inga klick än.")}
+          </div>`;
+      } catch (e) {
+        ut.innerHTML = `<p class="hjalp">Kunde inte hämta statistiken (${esc(e.message === "Failed to fetch" ? "GoatCounter tillåter inte läsning härifrån" : e.message)}). Använd länken <b>Öppna hela statistiken</b> ovan.</p>`;
+      }
+    }
+    $("statKort").addEventListener("click", e => { const b = e.target.closest("[data-stat-dagar]"); if (b) { statDagar = +b.dataset.statDagar; visaStatistik(); } });
+    $("statSpara").onclick = () => { try { localStorage.setItem("deu-gc-nyckel", $("statNyckel").value.trim()); } catch {} $("statNyckel").value = ""; $("statNyckelRuta").open = false; visaStatistik(); };
+
     // ===== Nytt inlägg: hemsidan + inlagg.xml (Make lägger ut på Facebook, Instagram, YouTube) =====
     const INLAGG_FLODE = "inlagg.xml";
+    let statVisad = false;
     let inlaggFil = null, inlaggSha = null, inlaggFlodeSha = null;
     const mediaUrl = m => /^https?:/.test(m) ? m : SIDA + m.split("/").map(encodeURIComponent).join("/");
     function ritaInlagg() {
