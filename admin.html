@@ -191,13 +191,14 @@
     <img class="loggo" src="assets/logo.png" alt="De Evigt Unga å Vackra">
     <div class="kort" style="display:grid;gap:14px">
       <h3>Logga in</h3>
-      <div id="valvLogin" hidden style="display:grid;gap:10px">
+      <form id="valvLogin" hidden style="display:grid;gap:10px" autocomplete="on">
+        <input type="text" name="username" autocomplete="username" value="Nyckelvalv – devigtunga.se" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
         <label>🔐 Lösenfras till nyckelvalvet
-          <input type="password" id="valvLoginFras" autocomplete="current-password">
+          <input type="password" name="password" id="valvLoginFras" autocomplete="current-password">
         </label>
-        <button class="knapp" id="valvLoginKnapp" type="button">Lås upp & logga in</button>
+        <button class="knapp" id="valvLoginKnapp" type="submit">Lås upp & logga in</button>
         <div class="hjalp">…eller logga in med GitHub-nyckeln:</div>
-      </div>
+      </form>
       <label>GitHub-nyckel (token)
         <input type="password" id="token" autocomplete="off" placeholder="github_pat_…">
       </label>
@@ -404,7 +405,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025160004";
+    const VERSION = "v20261025160258";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1728,13 +1729,15 @@ ${poster.slice(0, 20).map(p => `<item>
       if (!harValv()) {
         k.innerHTML = `<h3>Skapa ditt nyckelvalv</h3>
           <p class="hjalp">Välj en lösenfras du kommer ihåg, gärna en hel mening (minst 10 tecken). <b>Glömmer du den går valvet inte att öppna</b> – då får nycklarna skapas om hos varje tjänst.</p>
-          <div class="rutnat"><label>Lösenfras<input type="password" id="valvFras1" autocomplete="new-password"></label><label>Samma igen<input type="password" id="valvFras2" autocomplete="new-password"></label></div>
-          <div><button class="knapp" type="button" id="valvSkapa">🔐 Skapa valvet</button></div>`;
+          <form id="valvSkapaForm" autocomplete="on" style="display:grid;gap:12px"><input type="text" name="username" autocomplete="username" value="Nyckelvalv – devigtunga.se" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">
+          <div class="rutnat"><label>Lösenfras<input type="password" name="password" id="valvFras1" autocomplete="new-password"></label><label>Samma igen<input type="password" name="password2" id="valvFras2" autocomplete="new-password"></label></div>
+          <div><button class="knapp" type="submit" id="valvSkapa">🔐 Skapa valvet</button></div></form>
+          <p class="hjalp">Chrome frågar om du vill spara lösenfrasen i Google Lösenordshantering – säg <b>Spara</b>, så fylls den i nästa gång.</p>`;
         return;
       }
       if (!valv) {
         k.innerHTML = `<h3>🔒 Valvet är låst</h3>
-          <div class="inlagg-rad"><input type="password" id="valvFras" placeholder="Lösenfras" autocomplete="current-password" style="flex:1;min-width:200px"><button class="knapp" type="button" id="valvOppna">Lås upp</button></div>
+          <form class="inlagg-rad" id="valvOppnaForm" autocomplete="on"><input type="text" name="username" autocomplete="username" value="Nyckelvalv – devigtunga.se" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none"><input type="password" name="password" id="valvFras" placeholder="Lösenfras" autocomplete="current-password" style="flex:1;min-width:200px"><button class="knapp" type="submit" id="valvOppna">Lås upp</button></form>
           <div class="inlagg-rad"><button class="knapp kontur liten" type="button" id="valvExport">⬇ Säkerhetskopia</button><button class="knapp kontur liten" type="button" id="valvImport">⬆ Läs in kopia</button></div>`;
         return;
       }
@@ -1870,7 +1873,7 @@ ${poster.slice(0, 20).map(p => `<item>
         const bo = t.closest("[data-valv-bort]"); if (bo) { const i = +bo.dataset.valvBort; if (!confirm(`Ta bort ${valv.poster[i].tjanst} ur valvet?`)) return; valv.poster.splice(i, 1); await valvSpara(); return ritaValv(); }
       } catch (err) { status(err.name === "OperationError" ? "Fel lösenfras." : "Valvet: " + err.message, "fel"); }
     });
-    $("valvKort").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.id === "valvFras") $("valvOppna").click(); });
+    $("valvKort").addEventListener("submit", e => e.preventDefault());   // klicket på knappen sköter resten; formuläret finns för att Chrome ska kunna spara lösenfrasen
     visaFlik(las("deu-admin-flik") || "latar");
     // logga in med valvet (när GitHub-nyckeln inte ligger i klartext i webbläsaren)
     if (harValv() && !las("deu-admin-token")) $("valvLogin").hidden = false;
@@ -1880,8 +1883,8 @@ ${poster.slice(0, 20).map(p => `<item>
       if (!hemlighet("github")) return $("loginFel").textContent = "Valvet saknar GitHub-nyckel – logga in med nyckeln nedan en gång och lägg in den i valvet.";
       loggaIn(hemlighet("github"), true);
     };
-    $("valvLoginKnapp").onclick = valvLoggaIn;
-    $("valvLoginFras").addEventListener("keydown", e => { if (e.key === "Enter") valvLoggaIn(); });
+    $("valvLoginKnapp").onclick = e => { e.preventDefault(); valvLoggaIn(); };
+    $("valvLogin").addEventListener("submit", e => e.preventDefault());
 
     // ===== Statistik från GoatCounter (API-nyckeln sparas bara i den här webbläsaren) =====
     const statKod = () => String(data.lankar.statistik || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
