@@ -405,7 +405,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025160449";
+    const VERSION = "v20261025162554";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2003,7 +2003,10 @@ ${poster.slice(0, 20).map(p => `<item>
         <div class="inlagg-post">
           ${p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
           <div><p>${esc(p.text)}</p><small>${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
-          <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
+          <div style="display:grid;gap:6px">
+            <button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make en gång till">↻ Skicka igen</button>
+            <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
+          </div>
         </div>`).join("") : "";
     }
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -2049,6 +2052,16 @@ ${poster.slice(0, 20).map(p => `<item>
       $("inlaggSkicka").disabled = false;
     };
     $("inlaggLista").addEventListener("click", async e => {
+      const igen = e.target.closest("[data-inlagg-igen]");
+      if (igen) {
+        const p = data.inlagg[+igen.dataset.inlaggIgen]; igen.disabled = true;
+        try {
+          const svar = await skickaTillMake(p);
+          status(svar === true ? `↻ "${(p.text.split("\n")[0] || "Inlägget").slice(0, 40)}" skickades till Make igen.`
+            : svar === "last" ? "Lås upp valvet (🔐 Valv & koder) så kan inlägget skickas till Make." : "Lägg in Make-webhooken i 🔐 Valvet först.", svar === true ? "ok" : "fel");
+        } catch (err) { status("Kunde inte skicka till Make: " + err.message, "fel"); }
+        igen.disabled = false; return;
+      }
       const b = e.target.closest("[data-inlagg-bort]"); if (!b) return;
       const k = +b.dataset.inlaggBort, p = data.inlagg[k];
       if (!confirm("Ta bort inlägget från hemsidan? (Det som redan lagts ut på Facebook/Instagram tas bort där.)")) return;
