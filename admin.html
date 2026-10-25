@@ -461,7 +461,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025201844";
+    const VERSION = "v20261025205920";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1184,6 +1184,10 @@
       if (kreditFalt) {
         const l = data.latar[+e.target.closest("[data-i]").dataset.i];
         l.kredit ||= {}; l.kredit[kreditFalt] = e.target.value;
+        // DJ Stigge = club/dans/house, bandet = fest: byt förvalsgenren när artisten ändras
+        if (kreditFalt === "artist" && /stigge/i.test(e.target.value) && (!l.kredit.genre || l.kredit.genre === "Reggae swing")) {
+          l.kredit.genre = "Dance"; const g = e.target.closest("[data-i]").querySelector('[data-kredit="genre"]'); if (g) g.value = "Dance";
+        }
         oppnaKredit.add(l); taggAndrad.add(l); return andrat();
       }
       const falt = e.target.dataset.falt, kort = e.target.closest("[data-i]");
@@ -1297,6 +1301,15 @@
       ritaJinglar(); andrat();
     });
 
+    // Artisten för en låt: står det "DJ Stigge –" först i titeln är det DJ Stigge, annars det som står under Upphovspersoner
+    const artistFor = l => /^dj\s*stigge\b/i.test(ren(l.titel)) ? "DJ Stigge" : ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+    const utanArtist = t => ren(t).replace(/^dj\s*stigge\s*[-–—:]?\s*/i, "");
+    // Hashtaggar efter artist: DJ Stigge är club/dans/house, bandet är fest
+    function hashtaggar(artist) {
+      if (/stigge/i.test(artist)) return "#DJStigge #clubmusic #dance #house #housemusic #dancefloor";
+      if (/evigt unga/i.test(artist)) return "#DeEvigtUngaÅVackra #fest #sommarhit #svenskmusik";
+      return "#" + String(artist).replace(/[^\p{L}\p{N}]/gu, "") + " #svenskmusik";
+    }
     // ===== 📅 Släppkampanj: hela marknadsföringen i kalendern med ett klick =====
     function kampanjForslag() {   // fredag minst 2 veckor fram (fredag = global släppdag)
       const d = new Date(); d.setDate(d.getDate() + 14); while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
@@ -1304,11 +1317,11 @@
     }
     const KAMPANJ = [
       [-21, "paminnelse", (t) => `🔔 Påminnelse: pitcha ”${t}” i Spotify for Artists nu – senast 7 dagar före släpp, för chansen till spellistor.`],
-      [-14, "post", (t, a, dag) => `🎶 Nytt släpp! ”${t}” med ${a} kommer ${dag}. Spara datumet!`],
+      [-14, "post", (t, a, dag, info, dans) => dans ? `🎧 Ny clubbanger! ”${t}” med ${a} droppar ${dag}. Spara datumet!` : `🎶 Nytt släpp! ”${t}” med ${a} kommer ${dag}. Spara datumet!`],
       [-7, "post", (t, a) => `En vecka kvar till ”${t}” 🔥 Vi längtar – gör ni?`],
       [-3, "post", (t, a, dag, info) => `Tre dagar kvar! ”${t}”${info ? " – " + info : ""} 🎵`],
       [-1, "post", (t) => `I morgon släpps ”${t}” 🎉`],
-      [0, "post", (t, a) => `”${t}” är ute NU! 🎧 Lyssna på Spotify – länk i bion. Varje lyssning betyder massor för oss ❤️`],
+      [0, "post", (t, a, dag, info, dans) => dans ? `”${t}” är ute NU! 🔊 Skruva upp – dags för dansgolvet. Spotify, länk i bion 🎧` : `”${t}” är ute NU! 🎧 Lyssna på Spotify – länk i bion. Varje lyssning betyder massor för oss ❤️`],
       [3, "post", (t) => `Tack för alla lyssningar på ”${t}” 🙏 Har du lagt den i din spellista?`],
       [7, "post", (t) => `Har du hört ”${t}” än? 🎶 Den finns överallt där musik finns.`],
       [14, "post", (t) => `Två veckor med ”${t}” – tack för all kärlek! Dela den med en vän 💛`]
@@ -1319,8 +1332,7 @@
       const slapp = new Date(`${datum}T${tid || "18:00"}`), nu = new Date();
       if (data.inlagg.some(p => p.kampanj === l.titel && p.vantar) && !confirm(`Det finns redan en planerad kampanj för ”${l.titel}”. Ersätta den?`)) return;
       data.inlagg = data.inlagg.filter(p => !(p.kampanj === l.titel && p.vantar));
-      const artist = ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
-      const tagg = /stigge/i.test(artist) ? "#DJStigge" : /evigt unga/i.test(artist) ? "#DeEvigtUngaÅVackra" : "#" + artist.replace(/[^\p{L}\p{N}]/gu, "");
+      const artist = artistFor(l), titel = utanArtist(l.titel);
       const dagText = slapp.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
       const bild = l.omslag && !/^https?:/.test(l.omslag) ? "musik/" + l.omslag : "assets/omslag.jpg";
       let antal = 0;
@@ -1328,7 +1340,7 @@
         const nar = new Date(slapp); nar.setDate(slapp.getDate() + dagar);
         if (nar < nu) continue;   // det som redan har passerat hoppas över
         const iso = nar.toISOString(), id = `${datumNyckel(nar)}-kampanj-${slugga(l.titel).slice(0, 30)}${dagar < 0 ? "-m" + -dagar : "-p" + dagar}`;
-        const post = { id, datum: iso, planerad: iso, kampanj: l.titel, text: text(l.titel, artist, dagText, l.info) + (typ === "post" ? `\n\n${tagg} #nymusik #svenskmusik` : ""), artist: data.artister.some(a => ren(a.namn).toLowerCase() === artist.toLowerCase()) ? artist : "De Evigt Unga å Vackra", lank: l.spotify || SIDA + "#lat-" + slugga(l.titel) };
+        const post = { id, datum: iso, planerad: iso, kampanj: l.titel, text: text(titel, artist, dagText, l.info, /stigge/i.test(artist)) + (typ === "post" ? `\n\n${hashtaggar(artist)} #nymusik` : ""), artist: data.artister.some(a => ren(a.namn).toLowerCase() === artist.toLowerCase()) ? artist : "De Evigt Unga å Vackra", lank: l.spotify || SIDA + "#lat-" + slugga(l.titel) };
         if (typ === "paminnelse") Object.assign(post, { typ: "paminnelse", kanaler: [] });
         else Object.assign(post, { typ: "bild", media: bild, mime: "image/jpeg", format: "bild", kanaler: ["facebook", "instagram"], vantar: true });
         data.inlagg.push(post); antal++;
@@ -1629,7 +1641,7 @@ ${poster.slice(0, 20).map(p => `<item>
     const BAKGRUNDER = { popkonst: "musik/omslag-dj-stigge.jpg", band: "assets/mosaik.jpg", guld: "assets/guld.jpg" };
     function videoTema(l) {
       // valen i videorutan går före det som står på låten
-      const artist = ($("videoArtist") && $("videoArtist").value) || ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+      const artist = ($("videoArtist") && $("videoArtist").value) || artistFor(l);
       let t;
       if (/stigge/i.test(artist)) t = { artist: "DJ Stigge", accent: "#ff2d8a", bak: "popkonst", logga: null, tagg: "#DJStigge" };   // loggan finns redan i popkonsten
       else if (/evigt unga/i.test(artist)) t = { artist, accent: "#f5c518", bak: "omslag", logga: "assets/logo.png", tagg: "#DeEvigtUngaÅVackra" };
@@ -1651,7 +1663,7 @@ ${poster.slice(0, 20).map(p => `<item>
       $("videoTitel").textContent = `🎬 ${l.titel}`;
       $("videoKlar").hidden = true; $("videoStart").disabled = false; $("videoRuta").hidden = false;
       $("videoStatus").textContent = "Laddar låten…";
-      const artistNamn = ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+      const artistNamn = artistFor(l);
       const alla = [...new Set(["De Evigt Unga å Vackra", "DJ Stigge", ...data.artister.map(a => ren(a.namn)), ...data.vanner.map(v => ren(v.namn)), artistNamn].filter(Boolean))];
       $("videoArtist").innerHTML = alla.map(n => `<option${n.toLowerCase() === artistNamn.toLowerCase() || (/stigge/i.test(n) && /stigge/i.test(artistNamn)) ? " selected" : ""}>${esc(n)}</option>`).join("");
       $("videoBakgrund").value = "auto";
@@ -1794,7 +1806,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const l = videoLat, t = videoTema(l), titel = ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "");
       valjInlaggFil(new File([videoBlob], videoBlob.namn, { type: videoBlob.type })); anpassaKanaler(inlaggFormat = videoBlob.format);
       const k = l.kredit || {}, upphov = [k.kompositor && "Musik: " + k.kompositor, k.textforfattare && "Text: " + k.textforfattare].filter(Boolean).join(" · ");
-      $("inlaggText").value = `${t.artist} – ${titel}${l.slappt ? "" : " (demo)"} 🎶\n${l.info ? l.info + "\n" : ""}\n🎧 Lyssna och ladda ner gratis på devigtunga.se${upphov ? "\n" + upphov : ""}\n\n${t.tagg} #DeEvigtUngaÅVackraMedVänner #svenskmusik`;
+      $("inlaggText").value = `${t.artist} – ${titel}${l.slappt ? "" : " (demo)"} 🎶\n${l.info ? l.info + "\n" : ""}\n🎧 Lyssna och ladda ner gratis på devigtunga.se${upphov ? "\n" + upphov : ""}\n\n${hashtaggar(t.artist)}`;
       ritaInlagg();
       const lank = [...$("inlaggLank").options].find(o => o.textContent.startsWith(ren(l.titel))); if (lank) $("inlaggLank").value = lank.value;
       $("videoRuta").hidden = true; visaFlik("inlagg");
