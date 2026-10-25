@@ -40,6 +40,10 @@
     h3 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .12em; color: var(--guld); font-size: 1rem; }
     .kort { background: var(--yta); border: 1px solid var(--kant); border-radius: 12px; padding: 20px; }
     .inlagg-kort { display: grid; gap: 12px; }
+    .video-ruta { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.8); display: grid; place-items: center; padding: 16px; overflow: auto; }
+    .video-ruta[hidden] { display: none; }
+    .video-panel { background: var(--yta); border: 1px solid var(--kant); border-radius: 14px; padding: 18px; width: min(900px, 100%); display: grid; gap: 12px; }
+    #videoDuk { width: 100%; max-height: 60vh; object-fit: contain; background: #000; border-radius: 10px; }
     .stat-kort { display: grid; gap: 14px; }
     .knapp.kontur.vald-period { background: var(--guld); color: #111; }
     .stat-tal { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
@@ -300,6 +304,25 @@
       <div class="latlista" id="vannerLista"></div>
     </div>
   </main>
+  <div class="video-ruta" id="videoRuta" hidden>
+    <div class="video-panel">
+      <button class="knapp kontur liten" type="button" id="videoStang" style="justify-self:end">✕ Stäng</button>
+      <h3 id="videoTitel">Gör video</h3>
+      <div class="inlagg-rad">
+        <label class="kryss"><input type="radio" name="videoFormat" value="hel" checked> Hela låten – liggande (YouTube, YouTube Music)</label>
+        <label class="kryss"><input type="radio" name="videoFormat" value="klipp"> Klippet – stående (Shorts, Reels, TikTok)</label>
+      </div>
+      <canvas id="videoDuk" width="1280" height="720"></canvas>
+      <div class="inlagg-rad">
+        <button class="knapp" type="button" id="videoStart">● Spela in</button>
+        <span class="hjalp" id="videoStatus">Videon spelas in i realtid – låt den här fliken vara öppen och synlig tills den är klar.</span>
+      </div>
+      <div id="videoKlar" hidden class="inlagg-rad">
+        <a class="knapp kontur liten" id="videoNer" download>⬇ Ladda ner videon</a>
+        <button class="knapp liten" type="button" id="videoInlagg">📣 Lägg i Nytt inlägg</button>
+      </div>
+    </div>
+  </div>
 
   <div class="sparrad" id="sparrad" hidden>
     <div class="meddelande" id="meddelande">Inga ändringar</div>
@@ -312,7 +335,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025063338";
+    const VERSION = "v20261025065016";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -574,11 +597,13 @@
             <div class="fil">
               ${l.fil ? filStatus : `<span class="status">Ingen låtfil – spelas bara via Spotify</span>`}
               <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav för nedladdning"}</button>
+              ${l.fil && filer.has(l.fil) ? `<button class="knapp kontur liten" type="button" data-video>🎬 Gör video</button>` : ""}
               ${l.fil ? `<label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> Får laddas ner</label>` : ""}
             </div>` : `
             <div class="fil">
               ${filStatus}
               <button class="knapp kontur liten" type="button" data-ladda-upp ${uppladdning !== null ? "disabled" : ""}>${l.fil && filer.has(l.fil) ? "Byt låtfil" : "Ladda upp mp3/wav"}</button>
+              ${l.fil && filer.has(l.fil) ? `<button class="knapp kontur liten" type="button" data-video>🎬 Gör video</button>` : ""}
               <label class="kryss"><input type="checkbox" data-falt="ladda" ${l.ladda ? "checked" : ""}> ${typeof l.klipp === "number" ? "Får laddas ner med kod (smakprov)" : "Får laddas ner"}</label>
               <button class="knapp gron liten" type="button" data-slapp-oppna style="margin-left:auto">🚀 Släpp låten</button>
             </div>
@@ -1062,6 +1087,7 @@
         rita(); return;
       }
       if (e.target.closest("[data-ladda-upp]")) { valjFil(i); }
+      if (e.target.closest("[data-video]")) { oppnaVideo(data.latar[i]); return; }
       if (e.target.closest("[data-omslag]")) { bildFor = i; $("bildval").value = ""; $("bildval").click(); return; }
       if (e.target.closest("[data-omslag-bort]")) { delete data.latar[i].omslag; rita(); andrat(); return; }
       if (e.target.closest("[data-klipp-lyssna]")) { lyssnaKlipp(data.latar[i]); return; }
@@ -1370,6 +1396,163 @@ ${poster.slice(0, 20).map(p => `<item>
       flodeSha = svar.content.sha;
     }
 
+    // ===== 🎬 Gör video: omslag + titel + spektrum till musiken, spelas in i webbläsaren =====
+    // Artisten styr utseendet: DJ Stigge får popkonst-bakgrunden (Andy Warhol), bandet guld, vänner sin logga.
+    const ren = t => String(t || "").trim();
+    function videoTema(l) {
+      const artist = ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+      if (/stigge/i.test(artist)) return { artist: "DJ Stigge", accent: "#ff2d8a", bakgrund: "musik/omslag-dj-stigge.jpg", popkonst: true, logga: null, tagg: "#DJStigge" };   // loggan finns redan i popkonsten
+      if (/evigt unga/i.test(artist)) return { artist, accent: "#f5c518", logga: "assets/logo.png", tagg: "#DeEvigtUngaÅVackra" };
+      const van = (data.vanner || []).find(v => ren(v.namn).toLowerCase() === artist.toLowerCase());
+      return { artist, accent: "#f5c518", logga: van && van.logga ? (/^https?:/.test(van.logga) ? van.logga : "musik/" + encodeURI(van.logga)) : null, tagg: "#" + artist.replace(/[^\p{L}\p{N}]/gu, "") };
+    }
+    const laddaBild = src => new Promise(ok => { if (!src) return ok(null); const im = new Image(); if (/^https?:/.test(src)) im.crossOrigin = "anonymous"; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
+    let videoLat = null, videoBlob = null, videoPagar = null;
+    async function oppnaVideo(l) {
+      videoLat = l; videoBlob = null;
+      $("videoTitel").textContent = `🎬 ${l.titel}`;
+      $("videoKlar").hidden = true; $("videoStart").disabled = false; $("videoRuta").hidden = false;
+      $("videoStatus").textContent = "Laddar låten…";
+      try { await laddaVagform(l); } catch (e) { $("videoStatus").textContent = "Kunde inte läsa låtfilen: " + e.message; return; }
+      $("videoStatus").textContent = "Videon spelas in i realtid – låt den här fliken vara öppen och synlig tills den är klar.";
+      ritaVideoRuta(0, null);
+    }
+    $("videoStang").onclick = () => { if (videoPagar) videoPagar.avbryt(); $("videoRuta").hidden = true; };
+    document.querySelectorAll('[name="videoFormat"]').forEach(r => r.onchange = () => ritaVideoRuta(0, null));
+    const videoFormat = () => document.querySelector('[name="videoFormat"]:checked').value;
+    let videoBilder = {};
+    async function ritaVideoRuta(pos, analys) {
+      const l = videoLat, t = videoTema(l), hel = videoFormat() === "hel", duk = $("videoDuk");
+      const W = hel ? 1280 : 720, H = hel ? 720 : 1280;
+      if (duk.width !== W) { duk.width = W; duk.height = H; }
+      const nyckel = omslagUrl(l) + "|" + t.artist;
+      if (videoBilder.nyckel !== nyckel) {
+        await document.fonts.load('700 60px "Oswald"').catch(() => {});
+        const [omslag, bak, logga] = await Promise.all([laddaBild(omslagUrl(l)), laddaBild(t.bakgrund), laddaBild(t.logga)]);
+        videoBilder = { nyckel, omslag, bak, logga };
+      }
+      ritaVideoBild(duk.getContext("2d"), W, H, l, t, videoBilder, pos, analys);
+    }
+    function tackAlla(cx, im, W, H) {   // fyll hela ytan (som object-fit: cover)
+      const s = Math.max(W / im.width, H / im.height), w = im.width * s, h = im.height * s;
+      cx.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+    }
+    function radbryt(cx, text, maxB, maxRader) {
+      const ord = text.split(/\s+/), rader = []; let rad = "";
+      for (const o of ord) { const prov = rad ? rad + " " + o : o; if (cx.measureText(prov).width > maxB && rad) { rader.push(rad); rad = o; } else rad = prov; }
+      if (rad) rader.push(rad);
+      if (rader.length > maxRader) { rader.length = maxRader; rader[maxRader - 1] += "…"; }
+      return rader;
+    }
+    const fdataVideo = new Uint8Array(256);
+    function ritaVideoBild(cx, W, H, l, t, b, pos, analys) {
+      const hel = W > H, langdS = videoLangd(l);
+      cx.save(); cx.clearRect(0, 0, W, H); cx.fillStyle = "#0b0a08"; cx.fillRect(0, 0, W, H);
+      // bakgrund
+      if (t.popkonst && b.bak) { tackAlla(cx, b.bak, W, H); cx.fillStyle = "rgba(0,0,0,.6)"; cx.fillRect(0, 0, W, H); }
+      else if (b.omslag) { cx.filter = "blur(40px) brightness(.4)"; tackAlla(cx, b.omslag, W, H); cx.filter = "none"; }
+      const vin = cx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .3, W / 2, H / 2, Math.max(W, H) * .75);
+      vin.addColorStop(0, "rgba(0,0,0,0)"); vin.addColorStop(1, "rgba(0,0,0,.65)"); cx.fillStyle = vin; cx.fillRect(0, 0, W, H);
+      // ljud
+      let bas = 0;
+      if (analys) { analys.getByteFrequencyData(fdataVideo); for (let k = 1; k < 8; k++) bas += fdataVideo[k]; bas /= 7 * 255; }
+      // omslag med puls
+      const S = hel ? H * .62 : W * .78, ox = hel ? H * .12 : (W - S) / 2, oy = hel ? (H - S) / 2 : H * .11, puls = 1 + bas * .035;
+      cx.save(); cx.translate(ox + S / 2, oy + S / 2); cx.scale(puls, puls);
+      cx.shadowColor = t.accent; cx.shadowBlur = 30 + bas * 40;
+      if (b.omslag) cx.drawImage(b.omslag, -S / 2, -S / 2, S, S); else { cx.fillStyle = "#222"; cx.fillRect(-S / 2, -S / 2, S, S); }
+      cx.restore();
+      // text
+      const tx = hel ? ox + S + H * .08 : W * .08, tb = hel ? W - tx - H * .08 : W * .84;
+      let ty = hel ? H * .3 : oy + S + H * .075;
+      cx.shadowColor = "rgba(0,0,0,.8)"; cx.shadowBlur = 12;
+      cx.textAlign = hel ? "left" : "center"; const ax = hel ? tx : W / 2;
+      cx.fillStyle = t.accent; cx.font = `700 ${hel ? 30 : 34}px Oswald, sans-serif`;
+      cx.fillText(t.artist.toUpperCase(), ax, ty); ty += hel ? 18 : 22;
+      cx.fillStyle = "#fff"; const fs = hel ? 58 : 60; cx.font = `700 ${fs}px Oswald, sans-serif`;
+      const titel = ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "");
+      for (const rad of radbryt(cx, titel, tb, 3)) { ty += fs * 1.1; cx.fillText(rad, ax, ty); }
+      cx.shadowBlur = 0;
+      // spektrum
+      const sx = hel ? tx : W * .08, sb = hel ? tb : W * .84, sh = hel ? H * .16 : H * .09, sy = ty + (hel ? 40 : 50) + sh, N = 40, g = 4, bw = (sb - g * (N - 1)) / N;
+      cx.fillStyle = t.accent;
+      for (let k = 0; k < N; k++) {
+        const v = analys ? fdataVideo[Math.floor(2 * Math.pow(110 / 2, k / N))] / 255 : .08;
+        const h = Math.max(3, Math.pow(v, 1.5) * sh);
+        cx.globalAlpha = .55 + .45 * v; cx.fillRect(sx + k * (bw + g), sy - h, bw, h);
+      }
+      cx.globalAlpha = 1;
+      // tidslinje
+      const py = sy + 26; cx.fillStyle = "rgba(255,255,255,.2)"; cx.fillRect(sx, py, sb, 4);
+      cx.fillStyle = t.accent; cx.fillRect(sx, py, sb * Math.min(1, pos / langdS), 4);
+      // sidfot
+      cx.fillStyle = "rgba(255,255,255,.9)"; cx.font = `600 ${hel ? 24 : 30}px Inter, sans-serif`; cx.textAlign = "center";
+      cx.fillText("Lyssna & ladda ner gratis på devigtunga.se", W / 2, H - (hel ? 30 : 70));
+      if (b.logga) { const lh = hel ? 70 : 90, lw = lh * b.logga.width / b.logga.height; cx.globalAlpha = .9; cx.drawImage(b.logga, hel ? W - lw - 30 : (W - lw) / 2, hel ? 24 : 18, lw * (hel ? 1 : .8), lh * (hel ? 1 : .8)); cx.globalAlpha = 1; }
+      cx.restore();
+    }
+    function videoLangd(l) {
+      const d = ljudData[l.fil]; if (!d) return 30;
+      return videoFormat() === "hel" ? Math.min(d.buffer.duration, 600) : Math.min(langd(l), d.buffer.duration);
+    }
+    $("videoStart").onclick = async () => {
+      const l = videoLat, d = ljudData[l.fil]; if (!d) return;
+      const typ = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+      if (!typ) return $("videoStatus").textContent = "Den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn.";
+      $("videoStart").disabled = true; $("videoKlar").hidden = true;
+      const hel = videoFormat() === "hel", langdS = videoLangd(l);
+      const start = hel ? 0 : (l.klipp ?? bastaDelen(d, langd(l)));
+      await ritaVideoRuta(0, null);
+      const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: d.buffer.sampleRate });
+      const kalla = ac.createBufferSource(); kalla.buffer = d.buffer;
+      const gain = ac.createGain(), analys = ac.createAnalyser(), mal = ac.createMediaStreamDestination();
+      analys.fftSize = 512; analys.smoothingTimeConstant = .75;
+      kalla.connect(gain); gain.connect(analys); gain.connect(mal);
+      const t0 = ac.currentTime + .15;
+      if (!hel) { gain.gain.setValueAtTime(0, t0); gain.gain.linearRampToValueAtTime(1, t0 + 1); gain.gain.setValueAtTime(1, t0 + langdS - 2); gain.gain.linearRampToValueAtTime(0, t0 + langdS); }
+      const strom = $("videoDuk").captureStream(30);
+      mal.stream.getAudioTracks().forEach(sp => strom.addTrack(sp));
+      const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: hel ? 1_400_000 : 2_500_000, audioBitsPerSecond: 192_000 });
+      const delar = []; rec.ondataavailable = e => { if (e.data.size) delar.push(e.data); };
+      let klar = false, avbruten = false;
+      videoPagar = { avbryt: () => { avbruten = true; try { kalla.stop(); } catch {} } };
+      const tema = videoTema(l);
+      const loop = () => {
+        if (klar) return;
+        const pos = Math.max(0, ac.currentTime - t0);
+        ritaVideoBild($("videoDuk").getContext("2d"), $("videoDuk").width, $("videoDuk").height, l, tema, videoBilder, pos, analys);
+        $("videoStatus").textContent = `Spelar in… ${Math.floor(pos / 60)}:${String(Math.floor(pos % 60)).padStart(2, "0")} av ${Math.floor(langdS / 60)}:${String(Math.floor(langdS % 60)).padStart(2, "0")} – låt fliken vara synlig`;
+        requestAnimationFrame(loop);
+      };
+      rec.onstop = () => {
+        klar = true; videoPagar = null; ac.close();
+        $("videoStart").disabled = false;
+        if (avbruten) return $("videoStatus").textContent = "Inspelningen avbröts.";
+        videoBlob = new Blob(delar, { type: typ.split(";")[0] });
+        const ext = typ.startsWith("video/mp4") ? "mp4" : "webm";
+        const namn = `${filnamn((tema.artist + " " + ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "")).trim()).replace(/\.mp3$/, "")}-${hel ? "youtube" : "short"}.${ext}`;
+        $("videoNer").href = URL.createObjectURL(videoBlob); $("videoNer").download = namn; videoBlob.namn = namn;
+        $("videoKlar").hidden = false;
+        $("videoStatus").textContent = `✓ Klar! ${(videoBlob.size / 1048576).toFixed(1)} MB ${ext}.` + (!/avc1/.test(typ) ? " Tips: YouTube tar alla format, men Instagram vill ha mp4 med H.264 – strular det där, spela in i Safari eller senaste Chrome." : "");
+      };
+      rec.start(1000);
+      kalla.start(t0, start, langdS);
+      kalla.onended = () => setTimeout(() => rec.state !== "inactive" && rec.stop(), 300);
+      requestAnimationFrame(loop);
+    };
+    $("videoInlagg").onclick = () => {
+      if (!videoBlob) return;
+      const l = videoLat, t = videoTema(l), titel = ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "");
+      valjInlaggFil(new File([videoBlob], videoBlob.namn, { type: videoBlob.type }));
+      const k = l.kredit || {}, upphov = [k.kompositor && "Musik: " + k.kompositor, k.textforfattare && "Text: " + k.textforfattare].filter(Boolean).join(" · ");
+      $("inlaggText").value = `${t.artist} – ${titel}${l.slappt ? "" : " (demo)"} 🎶\n${l.info ? l.info + "\n" : ""}\n🎧 Lyssna och ladda ner gratis på devigtunga.se${upphov ? "\n" + upphov : ""}\n\n${t.tagg} #DeEvigtUngaÅVackraMedVänner #svenskmusik`;
+      ritaInlagg();
+      const lank = [...$("inlaggLank").options].find(o => o.textContent.startsWith(ren(l.titel))); if (lank) $("inlaggLank").value = lank.value;
+      $("videoRuta").hidden = true;
+      $("inlaggText").scrollIntoView({ behavior: "smooth", block: "center" });
+      status("🎬 Videon ligger i Nytt inlägg – kolla texten och tryck Skicka.", "osparat");
+    };
+
     // ===== Statistik från GoatCounter (API-nyckeln sparas bara i den här webbläsaren) =====
     const statKod = () => String(data.lankar.statistik || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\.goatcounter\.com.*$/, "");
     let statDagar = 7;
@@ -1440,15 +1623,16 @@ ${poster.slice(0, 20).map(p => `<item>
     }
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     $("inlaggValj").onclick = () => { $("inlaggFil").value = ""; $("inlaggFil").click(); };
-    $("inlaggFil").addEventListener("change", () => {
-      const f = $("inlaggFil").files[0]; if (!f) return;
+    $("inlaggFil").addEventListener("change", () => valjInlaggFil($("inlaggFil").files[0]));
+    function valjInlaggFil(f) {
+      if (!f) return;
       if (f.size > 45 * 1048576) { inlaggFil = null; return status(`Filen är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB. Exportera videon lite mindre.`, "fel"); }
       inlaggFil = f;
       $("inlaggFilNamn").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
       const url = URL.createObjectURL(f);
       $("inlaggForhand").innerHTML = f.type.startsWith("video") ? `<video src="${url}" controls playsinline muted></video>` : `<img src="${url}" alt="">`;
       $("inlaggForhand").hidden = false;
-    });
+    }
     $("inlaggSkicka").onclick = async () => {
       const text = $("inlaggText").value.trim();
       if (!text && !inlaggFil) return status("Skriv något eller välj en video/bild först.", "fel");
