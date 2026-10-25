@@ -369,6 +369,18 @@
         <label class="kryss"><input type="radio" name="videoFormat" value="hel" checked> Hela låten – liggande (YouTube, YouTube Music)</label>
         <label class="kryss"><input type="radio" name="videoFormat" value="klipp"> Klippet – stående (Shorts, Reels, TikTok)</label>
       </div>
+      <div class="rutnat">
+        <label>Artist<select id="videoArtist"></select></label>
+        <label>Bakgrund<select id="videoBakgrund">
+          <option value="auto">Automatisk (efter artist)</option>
+          <option value="popkonst">DJ Stigge popkonst</option>
+          <option value="omslag">Omslaget, suddigt</option>
+          <option value="band">Bandets mosaik</option>
+          <option value="guld">Guld</option>
+          <option value="svart">Svart</option>
+        </select></label>
+        <label>Omslag<select id="videoOmslag"></select></label>
+      </div>
       <canvas id="videoDuk" width="1280" height="720"></canvas>
       <div class="inlagg-rad">
         <button class="knapp" type="button" id="videoStart">● Spela in</button>
@@ -392,7 +404,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025065459";
+    const VERSION = "v20261025065733";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1464,12 +1476,23 @@ ${poster.slice(0, 20).map(p => `<item>
     // ===== 🎬 Gör video: omslag + titel + spektrum till musiken, spelas in i webbläsaren =====
     // Artisten styr utseendet: DJ Stigge får popkonst-bakgrunden (Andy Warhol), bandet guld, vänner sin logga.
     const ren = t => String(t || "").trim();
+    const BAKGRUNDER = { popkonst: "musik/omslag-dj-stigge.jpg", band: "assets/mosaik.jpg", guld: "assets/guld.jpg" };
     function videoTema(l) {
-      const artist = ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
-      if (/stigge/i.test(artist)) return { artist: "DJ Stigge", accent: "#ff2d8a", bakgrund: "musik/omslag-dj-stigge.jpg", popkonst: true, logga: null, tagg: "#DJStigge" };   // loggan finns redan i popkonsten
-      if (/evigt unga/i.test(artist)) return { artist, accent: "#f5c518", logga: "assets/logo.png", tagg: "#DeEvigtUngaÅVackra" };
-      const van = (data.vanner || []).find(v => ren(v.namn).toLowerCase() === artist.toLowerCase());
-      return { artist, accent: "#f5c518", logga: van && van.logga ? (/^https?:/.test(van.logga) ? van.logga : "musik/" + encodeURI(van.logga)) : null, tagg: "#" + artist.replace(/[^\p{L}\p{N}]/gu, "") };
+      // valen i videorutan går före det som står på låten
+      const artist = ($("videoArtist") && $("videoArtist").value) || ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+      let t;
+      if (/stigge/i.test(artist)) t = { artist: "DJ Stigge", accent: "#ff2d8a", bak: "popkonst", logga: null, tagg: "#DJStigge" };   // loggan finns redan i popkonsten
+      else if (/evigt unga/i.test(artist)) t = { artist, accent: "#f5c518", bak: "omslag", logga: "assets/logo.png", tagg: "#DeEvigtUngaÅVackra" };
+      else {
+        const van = (data.vanner || []).find(v => ren(v.namn).toLowerCase() === artist.toLowerCase());
+        t = { artist, accent: "#f5c518", bak: "omslag", logga: van && van.logga ? (/^https?:/.test(van.logga) ? van.logga : "musik/" + encodeURI(van.logga)) : null, tagg: "#" + artist.replace(/[^\p{L}\p{N}]/gu, "") };
+      }
+      const val = $("videoBakgrund") ? $("videoBakgrund").value : "auto";
+      if (val !== "auto") t.bak = val;
+      t.bakgrund = BAKGRUNDER[t.bak] || null;
+      const om = $("videoOmslag") ? $("videoOmslag").value : null;
+      t.omslag = om === null ? omslagUrl(l) : om ? (/^https?:/.test(om) ? om : (forhands[om] || "musik/" + encodeURI(om))) : "assets/omslag.jpg";
+      return t;
     }
     const laddaBild = src => new Promise(ok => { if (!src) return ok(null); const im = new Image(); if (/^https?:/.test(src)) im.crossOrigin = "anonymous"; im.onload = () => ok(im); im.onerror = () => ok(null); im.src = src; });
     let videoLat = null, videoBlob = null, videoPagar = null;
@@ -1478,22 +1501,28 @@ ${poster.slice(0, 20).map(p => `<item>
       $("videoTitel").textContent = `🎬 ${l.titel}`;
       $("videoKlar").hidden = true; $("videoStart").disabled = false; $("videoRuta").hidden = false;
       $("videoStatus").textContent = "Laddar låten…";
+      const artistNamn = ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+      const alla = [...new Set(["De Evigt Unga å Vackra", "DJ Stigge", ...data.artister.map(a => ren(a.namn)), ...data.vanner.map(v => ren(v.namn)), artistNamn].filter(Boolean))];
+      $("videoArtist").innerHTML = alla.map(n => `<option${n.toLowerCase() === artistNamn.toLowerCase() || (/stigge/i.test(n) && /stigge/i.test(artistNamn)) ? " selected" : ""}>${esc(n)}</option>`).join("");
+      $("videoBakgrund").value = "auto";
+      $("videoOmslag").innerHTML = omslagVal(l);
       try { await laddaVagform(l); } catch (e) { $("videoStatus").textContent = "Kunde inte läsa låtfilen: " + e.message; return; }
       $("videoStatus").textContent = "Videon spelas in i realtid – låt den här fliken vara öppen och synlig tills den är klar.";
       ritaVideoRuta(0, null);
     }
     $("videoStang").onclick = () => { if (videoPagar) videoPagar.avbryt(); $("videoRuta").hidden = true; };
     document.querySelectorAll('[name="videoFormat"]').forEach(r => r.onchange = () => ritaVideoRuta(0, null));
+    for (const id of ["videoArtist", "videoBakgrund", "videoOmslag"]) $(id).addEventListener("change", () => { if (!videoPagar) ritaVideoRuta(0, null); });
     const videoFormat = () => document.querySelector('[name="videoFormat"]:checked').value;
     let videoBilder = {};
     async function ritaVideoRuta(pos, analys) {
       const l = videoLat, t = videoTema(l), hel = videoFormat() === "hel", duk = $("videoDuk");
       const W = hel ? 1280 : 720, H = hel ? 720 : 1280;
       if (duk.width !== W) { duk.width = W; duk.height = H; }
-      const nyckel = omslagUrl(l) + "|" + t.artist;
+      const nyckel = [t.omslag, t.artist, t.bakgrund, t.logga].join("|");
       if (videoBilder.nyckel !== nyckel) {
         await document.fonts.load('700 60px "Oswald"').catch(() => {});
-        const [omslag, bak, logga] = await Promise.all([laddaBild(omslagUrl(l)), laddaBild(t.bakgrund), laddaBild(t.logga)]);
+        const [omslag, bak, logga] = await Promise.all([laddaBild(t.omslag), laddaBild(t.bakgrund), laddaBild(t.logga)]);
         videoBilder = { nyckel, omslag, bak, logga };
       }
       ritaVideoBild(duk.getContext("2d"), W, H, l, t, videoBilder, pos, analys);
@@ -1514,7 +1543,8 @@ ${poster.slice(0, 20).map(p => `<item>
       const hel = W > H, langdS = videoLangd(l);
       cx.save(); cx.clearRect(0, 0, W, H); cx.fillStyle = "#0b0a08"; cx.fillRect(0, 0, W, H);
       // bakgrund
-      if (t.popkonst && b.bak) { tackAlla(cx, b.bak, W, H); cx.fillStyle = "rgba(0,0,0,.6)"; cx.fillRect(0, 0, W, H); }
+      if (t.bakgrund && b.bak) { tackAlla(cx, b.bak, W, H); cx.fillStyle = t.bak === "guld" ? "rgba(0,0,0,.45)" : "rgba(0,0,0,.6)"; cx.fillRect(0, 0, W, H); }
+      else if (t.bak === "svart") { /* bara svart */ }
       else if (b.omslag) { cx.filter = "blur(40px) brightness(.4)"; tackAlla(cx, b.omslag, W, H); cx.filter = "none"; }
       const vin = cx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .3, W / 2, H / 2, Math.max(W, H) * .75);
       vin.addColorStop(0, "rgba(0,0,0,0)"); vin.addColorStop(1, "rgba(0,0,0,.65)"); cx.fillStyle = vin; cx.fillRect(0, 0, W, H);
@@ -1565,6 +1595,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const typ = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
       if (!typ) return $("videoStatus").textContent = "Den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn.";
       $("videoStart").disabled = true; $("videoKlar").hidden = true;
+      for (const id of ["videoArtist", "videoBakgrund", "videoOmslag"]) $(id).disabled = true;
       const hel = videoFormat() === "hel", langdS = videoLangd(l);
       const start = hel ? 0 : (l.klipp ?? bastaDelen(d, langd(l)));
       await ritaVideoRuta(0, null);
@@ -1591,6 +1622,7 @@ ${poster.slice(0, 20).map(p => `<item>
       };
       rec.onstop = () => {
         klar = true; videoPagar = null; ac.close();
+        for (const id of ["videoArtist", "videoBakgrund", "videoOmslag"]) $(id).disabled = false;
         $("videoStart").disabled = false;
         if (avbruten) return $("videoStatus").textContent = "Inspelningen avbröts.";
         videoBlob = new Blob(delar, { type: typ.split(";")[0] });
@@ -1657,7 +1689,7 @@ ${poster.slice(0, 20).map(p => `<item>
       ["github", "GitHub-nyckel", "Inloggningen till backoffice", "https://github.com/settings/personal-access-tokens"],
       ["goatcounter", "GoatCounter API-nyckel", "Statistiken under Översikt", "https://devigtunga.goatcounter.com/user/api"],
       ["server", "Server-adminnyckel", "Engångskoder för smakprov", ""],
-      ["make", "Make", "Automatisk publicering på sociala medier", "https://www.make.com/"],
+      ["make", "Make-webhook", "Adressen från Make (https://hook.…make.com/…) – inlägg skickas dit direkt", "https://www.make.com/"],
       ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"]
     ];
     let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
@@ -1851,7 +1883,7 @@ ${poster.slice(0, 20).map(p => `<item>
     // ===== Nytt inlägg: hemsidan + inlagg.xml (Make lägger ut på Facebook, Instagram, YouTube) =====
     const INLAGG_FLODE = "inlagg.xml";
     let statVisad = false;
-    let inlaggFil = null, inlaggSha = null, inlaggFlodeSha = null;
+    let inlaggFil = null, inlaggFormat = "", inlaggSha = null, inlaggFlodeSha = null;
     const mediaUrl = m => /^https?:/.test(m) ? m : SIDA + m.split("/").map(encodeURIComponent).join("/");
     function ritaInlagg() {
       const val = $("inlaggLank").value;
@@ -1874,7 +1906,12 @@ ${poster.slice(0, 20).map(p => `<item>
     function valjInlaggFil(f) {
       if (!f) return;
       if (f.size > 45 * 1048576) { inlaggFil = null; return status(`Filen är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB. Exportera videon lite mindre.`, "fel"); }
-      inlaggFil = f;
+      inlaggFil = f; inlaggFormat = "";
+      if (f.type.startsWith("video")) {   // stående/liggande avgör vart Make skickar den (Shorts/Reels eller vanlig YouTube)
+        const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
+        v.onloadedmetadata = () => { inlaggFormat = v.videoWidth > v.videoHeight ? "liggande" : v.videoWidth < v.videoHeight ? "staende" : "kvadrat"; };
+        v.src = URL.createObjectURL(f);
+      } else inlaggFormat = "bild";
       $("inlaggFilNamn").textContent = `${f.name} (${(f.size / 1048576).toFixed(1)} MB)`;
       const url = URL.createObjectURL(f);
       $("inlaggForhand").innerHTML = f.type.startsWith("video") ? `<video src="${url}" controls playsinline muted></video>` : `<img src="${url}" alt="">`;
@@ -1890,7 +1927,7 @@ ${poster.slice(0, 20).map(p => `<item>
         if (inlaggFil) {
           const ext = (inlaggFil.name.match(/\.(mp4|mov|webm|jpe?g|png|webp)$/i) || [, inlaggFil.type.split("/")[1]])[1].toLowerCase().replace("jpeg", "jpg");
           post.typ = inlaggFil.type.startsWith("video") ? "video" : "bild";
-          post.media = `inlagg/${id}.${ext}`; post.mime = inlaggFil.type || (post.typ === "video" ? "video/mp4" : "image/jpeg"); post.storlek = inlaggFil.size;
+          post.format = inlaggFormat; post.media = `inlagg/${id}.${ext}`; post.mime = inlaggFil.type || (post.typ === "video" ? "video/mp4" : "image/jpeg"); post.storlek = inlaggFil.size;
           status(`Laddar upp ${post.typ === "video" ? "videon" : "bilden"} (${(inlaggFil.size / 1048576).toFixed(1)} MB)…`);
           await gh(`/contents/${post.media}`, { method: "PUT", body: JSON.stringify({ message: `Inlägg: ${post.typ} ${id}`, content: bytesTillBase64(new Uint8Array(await inlaggFil.arrayBuffer())), branch: GREN }) });
           forhands[post.media] = URL.createObjectURL(inlaggFil);
@@ -1899,7 +1936,9 @@ ${poster.slice(0, 20).map(p => `<item>
         $("inlaggText").value = ""; inlaggFil = null; $("inlaggFilNamn").textContent = "Ingen fil vald (går att skicka bara text)"; $("inlaggForhand").hidden = true; $("inlaggForhand").innerHTML = "";
         ritaInlagg(); andrat();
         await $("spara").onclick();   // sparar låtlistan, nyhetsflödet och inläggsflödet
-        status("📣 Inlägget är skickat! Det syns på hemsidan om en minut" + (data.lankar.make ? " och Make lägger ut det på sociala medier." : ". Koppla Make så hamnar det även på Facebook, Instagram och YouTube."), "ok");
+        const make = await skickaTillMake(post);
+        status("📣 Inlägget är skickat! Det syns på hemsidan om en minut" + (make === true ? " – och Make lägger ut det på sociala medier."
+          : make === "last" ? ". Lås upp valvet nästa gång så skickas det också till Make." : ". Lägg in Make-webhooken i valvet så hamnar det även på Facebook, Instagram och YouTube."), "ok");
       } catch (e) { status("Inlägget kunde inte skickas: " + e.message, "fel"); }
       $("inlaggSkicka").disabled = false;
     };
@@ -1913,6 +1952,27 @@ ${poster.slice(0, 20).map(p => `<item>
       }
       await $("spara").onclick();
     });
+    // Make: admin skickar inlägget direkt till en webhook (adressen ligger i valvet). Make lägger sedan ut det.
+    async function skickaTillMake(post) {
+      const url = hemlighet("make");
+      if (!url) return harValv() && !valv ? "last" : false;
+      if (!/^https:\/\/hook\.[a-z0-9.-]*make\.com\//i.test(url)) { status("Make-adressen i valvet ser inte ut som en webhook (https://hook.…make.com/…).", "fel"); return false; }
+      if (post.media) {   // vänta tills hemsidan har publicerat filen, annars hittar Make den inte
+        const mu = mediaUrl(post.media);
+        for (let k = 0; k < 40; k++) {
+          status(`Väntar på att ${post.typ === "video" ? "videon" : "bilden"} syns på hemsidan… (${k * 5} s)`);
+          try { const r = await fetch(mu, { method: "HEAD", cache: "no-store" }); if (r.ok) break; } catch {}
+          await new Promise(x => setTimeout(x, 5000));
+        }
+      }
+      const art = data.artister.find(a => ren(a.namn).toLowerCase() === String(post.artist || "").toLowerCase());
+      const k = art || data.lankar;   // bandets egna kanaler ligger under Länkar
+      const falt = { id: post.id, text: post.text, artist: post.artist || "De Evigt Unga å Vackra", typ: post.typ, format: post.format || "", media_url: post.media ? mediaUrl(post.media) : "", mime: post.mime || "",
+        lank: post.lank || SIDA, datum: post.datum, youtube: k.youtube || "", instagram: k.instagram || "", facebook: k.facebook || "", tiktok: k.tiktok || "" };
+      status("Skickar till Make…");
+      await fetch(url, { method: "POST", mode: "no-cors", body: new URLSearchParams(falt) });   // enkelt formulär: inget svar behövs
+      return true;
+    }
     function byggInlaggFlode() {
       return `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
@@ -1927,7 +1987,8 @@ ${data.inlagg.slice(0, 20).map(p => `<item>
   <link>${x(p.lank || SIDA)}</link>
   <guid isPermaLink="false">${x(p.id)}</guid>
   <pubDate>${new Date(p.datum).toUTCString()}</pubDate>
-  <category>${x(p.artist || "De Evigt Unga å Vackra")}</category>${p.media ? `
+  <category>${x(p.artist || "De Evigt Unga å Vackra")}</category>${p.format ? `
+  <category domain="format">${x(p.format)}</category>` : ""}${p.media ? `
   <enclosure url="${x(mediaUrl(p.media))}" type="${x(p.mime)}" length="${p.storlek || 0}"/>
   <media:content url="${x(mediaUrl(p.media))}" medium="${p.typ === "video" ? "video" : "image"}" type="${x(p.mime)}"/>` : ""}
 </item>`).join("\n")}
