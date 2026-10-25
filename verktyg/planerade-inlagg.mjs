@@ -36,7 +36,7 @@ else for (const p of dags) {
 
 // inlagg.xml: bara det som är publicerat
 const x = t => String(t ?? "").replace(/[<>&'"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[c]));
-const synliga = data.inlagg.filter(p => !p.planerad || new Date(p.planerad) <= nu).slice(0, 20);
+const synliga = data.inlagg.filter(p => p.typ !== "paminnelse" && (!p.planerad || new Date(p.planerad) <= nu)).slice(0, 20);
 const flode = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">
 <channel>

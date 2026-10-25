@@ -155,6 +155,8 @@
     .slapp-panel h4 { font-family: "Oswald", sans-serif; text-transform: uppercase; letter-spacing: .08em; color: var(--spotify); font-weight: 500; }
     .slapp-panel ol { padding-left: 20px; display: grid; gap: 6px; font-size: .92rem; }
     .slapp-panel a { color: var(--spotify); }
+    .kampanj-ruta { border: 1px solid var(--kant); border-radius: 10px; padding: 12px; display: grid; gap: 8px; background: #14110c; }
+    .kampanj-ruta b { color: var(--guld); font-family: "Oswald", sans-serif; letter-spacing: .06em; text-transform: uppercase; font-weight: 500; }
     .slapp-knappar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .knapp.fara { background: transparent; color: var(--fel); border: 1px solid rgba(248,113,113,.5); }
     .knapp.fara.saker { background: var(--fel); color: #000; }
@@ -448,7 +450,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025200616";
+    const VERSION = "v20261025200743";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -748,6 +750,16 @@
               <label>Spotify-länk till låten (Spotify: ··· → Dela → Kopiera länk till låt)
                 <input type="url" data-slapp-lank value="${esc(l.spotify)}" placeholder="https://open.spotify.com/track/…">
               </label>
+              <div class="kampanj-ruta">
+                <b>📅 Släppkampanj – ett klick</b>
+                <span class="hjalp">Lägger in 8 färdiga inlägg (från 2 veckor före till 2 veckor efter) och en påminnelse om Spotify-pitchen i kalendern. Omslaget används som bild – byt gärna till ett 🎬-klipp senare.</span>
+                <div class="inlagg-rad">
+                  <label>Släppdatum <input type="date" data-kampanj-datum value="${kampanjForslag()}"></label>
+                  <label>Tid <input type="time" data-kampanj-tid value="18:00"></label>
+                  <button class="knapp liten" type="button" data-kampanj>📅 Planera kampanjen</button>
+                  ${data.inlagg.some(p => p.kampanj === l.titel && p.vantar) ? `<button class="knapp kontur liten" type="button" data-kampanj-bort>Ta bort planerad kampanj</button>` : ""}
+                </div>
+              </div>
               <div class="slapp-knappar">
                 <button class="knapp gron" type="button" data-slapp-nu>Släpp nu – flytta till Släppta</button>
                 <button class="knapp kontur liten" type="button" data-slapp-stang>Avbryt</button>
@@ -1227,6 +1239,11 @@
       }
       if (e.target.closest("[data-slapp-oppna]")) { slappOppen = slappOppen === i ? -1 : i; raderaVantar = -1; rita(); return; }
       if (e.target.closest("[data-slapp-stang]")) { slappOppen = -1; rita(); return; }
+      if (e.target.closest("[data-kampanj]")) { planeraKampanj(data.latar[i], kort.querySelector("[data-kampanj-datum]").value, kort.querySelector("[data-kampanj-tid]").value); return; }
+      if (e.target.closest("[data-kampanj-bort]")) {
+        const l = data.latar[i]; if (!confirm(`Ta bort de planerade kampanjinläggen för ”${l.titel}”? (Redan skickade ligger kvar.)`)) return;
+        data.inlagg = data.inlagg.filter(p => !(p.kampanj === l.titel && p.vantar)); rita(); andrat(); $("spara").onclick(); return;
+      }
       if (e.target.closest("[data-slapp-nu]")) {
         const lank = kort.querySelector("[data-slapp-lank]").value.trim();
         if (lank && !SPOTIFY_RE.test(lank)) return status("Det där ser inte ut som en Spotify-länk. Den ska börja med https://open.spotify.com/", "fel");
@@ -1234,10 +1251,53 @@
       }
     });
 
+    // ===== 📅 Släppkampanj: hela marknadsföringen i kalendern med ett klick =====
+    function kampanjForslag() {   // fredag minst 2 veckor fram (fredag = global släppdag)
+      const d = new Date(); d.setDate(d.getDate() + 14); while (d.getDay() !== 5) d.setDate(d.getDate() + 1);
+      return datumNyckel(d);
+    }
+    const KAMPANJ = [
+      [-21, "paminnelse", (t) => `🔔 Påminnelse: pitcha ”${t}” i Spotify for Artists nu – senast 7 dagar före släpp, för chansen till spellistor.`],
+      [-14, "post", (t, a, dag) => `🎶 Nytt släpp! ”${t}” med ${a} kommer ${dag}. Spara datumet!`],
+      [-7, "post", (t, a) => `En vecka kvar till ”${t}” 🔥 Vi längtar – gör ni?`],
+      [-3, "post", (t, a, dag, info) => `Tre dagar kvar! ”${t}”${info ? " – " + info : ""} 🎵`],
+      [-1, "post", (t) => `I morgon släpps ”${t}” 🎉`],
+      [0, "post", (t, a) => `”${t}” är ute NU! 🎧 Lyssna på Spotify – länk i bion. Varje lyssning betyder massor för oss ❤️`],
+      [3, "post", (t) => `Tack för alla lyssningar på ”${t}” 🙏 Har du lagt den i din spellista?`],
+      [7, "post", (t) => `Har du hört ”${t}” än? 🎶 Den finns överallt där musik finns.`],
+      [14, "post", (t) => `Två veckor med ”${t}” – tack för all kärlek! Dela den med en vän 💛`]
+    ];
+    function planeraKampanj(l, datum, tid) {
+      if (!l.titel) return status("Låten behöver en titel först.", "fel");
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(datum)) return status("Välj ett släppdatum.", "fel");
+      const slapp = new Date(`${datum}T${tid || "18:00"}`), nu = new Date();
+      if (data.inlagg.some(p => p.kampanj === l.titel && p.vantar) && !confirm(`Det finns redan en planerad kampanj för ”${l.titel}”. Ersätta den?`)) return;
+      data.inlagg = data.inlagg.filter(p => !(p.kampanj === l.titel && p.vantar));
+      const artist = ren(l.kredit && l.kredit.artist) || "De Evigt Unga å Vackra";
+      const tagg = /stigge/i.test(artist) ? "#DJStigge" : /evigt unga/i.test(artist) ? "#DeEvigtUngaÅVackra" : "#" + artist.replace(/[^\p{L}\p{N}]/gu, "");
+      const dagText = slapp.toLocaleDateString("sv-SE", { weekday: "long", day: "numeric", month: "long" });
+      const bild = l.omslag && !/^https?:/.test(l.omslag) ? "musik/" + l.omslag : "assets/omslag.jpg";
+      let antal = 0;
+      for (const [dagar, typ, text] of KAMPANJ) {
+        const nar = new Date(slapp); nar.setDate(slapp.getDate() + dagar);
+        if (nar < nu) continue;   // det som redan har passerat hoppas över
+        const iso = nar.toISOString(), id = `${datumNyckel(nar)}-kampanj-${slugga(l.titel).slice(0, 30)}${dagar < 0 ? "-m" + -dagar : "-p" + dagar}`;
+        const post = { id, datum: iso, planerad: iso, kampanj: l.titel, text: text(l.titel, artist, dagText, l.info) + (typ === "post" ? `\n\n${tagg} #nymusik #svenskmusik` : ""), artist: data.artister.some(a => ren(a.namn).toLowerCase() === artist.toLowerCase()) ? artist : "De Evigt Unga å Vackra", lank: l.spotify || SIDA + "#lat-" + slugga(l.titel) };
+        if (typ === "paminnelse") Object.assign(post, { typ: "paminnelse", kanaler: [] });
+        else Object.assign(post, { typ: "bild", media: bild, mime: "image/jpeg", format: "bild", kanaler: ["facebook", "instagram"], vantar: true });
+        data.inlagg.push(post); antal++;
+      }
+      kalVy = "manad"; kalManad = new Date(slapp); kalManad.setDate(1);
+      slappOppen = -1; rita(); andrat(); visaFlik("inlagg");
+      $("kalender").scrollIntoView({ behavior: "smooth", block: "start" });
+      status(`📅 ${antal} kampanjdelar för ”${l.titel}” ligger i kalendern – tryck Spara ändringar så är det klart.`, "osparat");
+    }
+
     // ===== Släpp: flytta demo till Släppta =====
     const SPOTIFY_RE = /^https?:\/\/open\.spotify\.com\/(intl-[a-z]+\/)?(track|album)\/[A-Za-z0-9]+/;
     function slappLat(l, lank, extra = "") {
       l.slappt = true; l.slapptDatum = new Date().toISOString(); l.spotify = lank;   // låtfil och nedladdning behålls
+      if (lank) data.inlagg.forEach(p => { if (p.kampanj === l.titel && p.vantar) p.lank = lank; });   // kampanjen länkar till Spotify
       if (!l.typ || /demo/i.test(l.typ)) l.typ = "Singel";
       // flytta det nya släppet överst bland de släppta
       data.latar.splice(data.latar.indexOf(l), 1);
@@ -2046,14 +2106,15 @@ ${poster.slice(0, 20).map(p => `<item>
       if (valdArtist && [...$("inlaggArtist").options].some(o => o.value === valdArtist)) $("inlaggArtist").value = valdArtist;
       data.inlagg.sort((a, b) => b.datum.localeCompare(a.datum));
       ritaKalender();
-      const statusFor = p => p.planerad && new Date(p.planerad) > new Date() ? `<span class="post-status planerad">🗓 Planerad</span>`
+      const statusFor = p => p.typ === "paminnelse" ? `<span class="post-status planerad">🔔 Påminnelse</span>` : p.planerad && new Date(p.planerad) > new Date() ? `<span class="post-status planerad">🗓 Planerad</span>`
         : p.vantar ? `<span class="post-status vantar">⏳ Väntar på att skickas</span>` : `<span class="post-status skickad">✓ Skickad</span>`;
       $("inlaggLista").innerHTML = data.inlagg.length ? `<h3 style="margin-top:6px">Inlägg</h3>` + data.inlagg.map((p, k) => `
         <div class="inlagg-post">
-          ${p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
+          ${p.typ === "paminnelse" ? `<div class="tumme">🔔</div>` : p.typ === "bild" ? `<img class="tumme" src="${esc(forhands[p.media] || mediaUrl(p.media))}" alt="">` : p.typ === "video" ? `<div class="tumme">🎬</div>` : `<div class="tumme">💬</div>`}
           <div><p>${esc(p.text)}</p><small>${statusFor(p)}${p.kanaler ? (p.kanaler.length ? p.kanaler.join(", ") : "bara hemsidan") + " · " : ""}${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
           <div style="display:grid;gap:6px">
-            <button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>
+            ${p.typ === "paminnelse" ? "" : `<button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>`}
+            ${p.vantar || p.typ === "paminnelse" ? `<button class="knapp kontur liten" type="button" data-inlagg-andra="${k}">✏️ Ändra</button>` : ""}
             <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
           </div>
         </div>`).join("") : "";
@@ -2111,6 +2172,17 @@ ${poster.slice(0, 20).map(p => `<item>
       $("inlaggSkicka").disabled = false;
     };
     $("inlaggLista").addEventListener("click", async e => {
+      const andra = e.target.closest("[data-inlagg-andra]");
+      if (andra) {
+        const p = data.inlagg[+andra.dataset.inlaggAndra];
+        const text = prompt("Texten i inlägget:", p.text); if (text === null) return;
+        const d = new Date(p.datum), nuvarande = `${datumNyckel(d)} ${klock(d)}`;
+        const tid = prompt("Datum och tid (ÅÅÅÅ-MM-DD TT:MM):", nuvarande); if (tid === null) return;
+        const ny = new Date(tid.trim().replace(" ", "T"));
+        if (isNaN(ny)) return status("Tiden ska skrivas som 2026-11-14 18:00.", "fel");
+        p.text = text.trim() || p.text; p.datum = ny.toISOString(); if (p.planerad) p.planerad = p.datum;
+        ritaInlagg(); andrat(); return status("✏️ Ändrat – tryck Spara ändringar.", "osparat");
+      }
       const igen = e.target.closest("[data-inlagg-igen]");
       if (igen) {
         const p = data.inlagg[+igen.dataset.inlaggIgen]; igen.disabled = true;
@@ -2146,7 +2218,7 @@ ${poster.slice(0, 20).map(p => `<item>
     let kalVecka = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d; })();
     const veckonr = d => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dag = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - dag); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
     const datumNyckel = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const postTyp = p => p.planerad && new Date(p.planerad) > new Date() ? "planerad" : p.vantar ? "vantar" : "skickad";
+    const postTyp = p => p.typ === "paminnelse" ? "planerad" : p.planerad && new Date(p.planerad) > new Date() ? "planerad" : p.vantar ? "vantar" : "skickad";
     const klock = d => d.toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" });
     const TIMMAR = Array.from({ length: 17 }, (_, k) => k + 7);   // 07–23
     function ritaKalender() {
@@ -2234,7 +2306,7 @@ ${poster.slice(0, 20).map(p => `<item>
 <link>${SIDA}</link>
 <description>Inlägg från De Evigt Unga å Vackra (för Facebook, Instagram och YouTube via Make)</description>
 <language>sv</language>
-${data.inlagg.filter(p => !p.planerad || new Date(p.planerad) <= new Date()).slice(0, 20).map(p => `<item>
+${data.inlagg.filter(p => p.typ !== "paminnelse" && (!p.planerad || new Date(p.planerad) <= new Date())).slice(0, 20).map(p => `<item>
   <title>${x((p.text.split("\n")[0] || "Nytt från De Evigt Unga å Vackra").slice(0, 90))}</title>
   <description>${x(p.text)}</description>
   <link>${x(p.lank || SIDA)}</link>

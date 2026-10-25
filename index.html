@@ -727,7 +727,7 @@
     const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     // --- Egna inlägg från backoffice (video/bild + text) ---
     (() => {
-      const poster = (DATA.inlagg || []).filter(p => !p.planerad || new Date(p.planerad) <= new Date()).slice(0, 6); if (!poster.length) return;   // planerade syns först när det är dags
+      const poster = (DATA.inlagg || []).filter(p => p.typ !== "paminnelse" && (!p.planerad || new Date(p.planerad) <= new Date())).slice(0, 6); if (!poster.length) return;   // planerade syns först när det är dags
       const media = p => !p.media ? "" : p.typ === "video"
         ? `<video src="${esc(p.media)}#t=0.1" controls playsinline preload="metadata"></video>`
         : `<img src="${esc(p.media)}" alt="" loading="lazy">`;
