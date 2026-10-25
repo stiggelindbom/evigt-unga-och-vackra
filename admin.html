@@ -369,6 +369,7 @@
       <div class="inlagg-rad">
         <label class="kryss"><input type="radio" name="videoFormat" value="hel" checked> Hela låten – liggande (YouTube, YouTube Music)</label>
         <label class="kryss"><input type="radio" name="videoFormat" value="klipp"> Klippet – stående (Shorts, Reels, TikTok)</label>
+        <label class="kryss"><input type="radio" name="videoFormat" value="kvadrat"> Klippet – fyrkant 1:1 (Instagram- och Facebook-flödet)</label>
       </div>
       <div class="rutnat">
         <label>Artist<select id="videoArtist"></select></label>
@@ -405,7 +406,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025162554";
+    const VERSION = "v20261025200059";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1518,7 +1519,7 @@ ${poster.slice(0, 20).map(p => `<item>
     let videoBilder = {};
     async function ritaVideoRuta(pos, analys) {
       const l = videoLat, t = videoTema(l), hel = videoFormat() === "hel", duk = $("videoDuk");
-      const W = hel ? 1280 : 720, H = hel ? 720 : 1280;
+      const kv = videoFormat() === "kvadrat", W = hel ? 1280 : kv ? 960 : 720, H = hel ? 720 : kv ? 960 : 1280;
       if (duk.width !== W) { duk.width = W; duk.height = H; }
       const nyckel = [t.omslag, t.artist, t.bakgrund, t.logga].join("|");
       if (videoBilder.nyckel !== nyckel) {
@@ -1541,7 +1542,7 @@ ${poster.slice(0, 20).map(p => `<item>
     }
     const fdataVideo = new Uint8Array(256);
     function ritaVideoBild(cx, W, H, l, t, b, pos, analys) {
-      const hel = W > H, langdS = videoLangd(l);
+      const hel = W > H, kv = W === H, langdS = videoLangd(l);
       cx.save(); cx.clearRect(0, 0, W, H); cx.fillStyle = "#0b0a08"; cx.fillRect(0, 0, W, H);
       // bakgrund
       if (t.bakgrund && b.bak) { tackAlla(cx, b.bak, W, H); cx.fillStyle = t.bak === "guld" ? "rgba(0,0,0,.45)" : "rgba(0,0,0,.6)"; cx.fillRect(0, 0, W, H); }
@@ -1553,24 +1554,24 @@ ${poster.slice(0, 20).map(p => `<item>
       let bas = 0;
       if (analys) { analys.getByteFrequencyData(fdataVideo); for (let k = 1; k < 8; k++) bas += fdataVideo[k]; bas /= 7 * 255; }
       // omslag med puls
-      const S = hel ? H * .62 : W * .78, ox = hel ? H * .12 : (W - S) / 2, oy = hel ? (H - S) / 2 : H * .11, puls = 1 + bas * .035;
+      const S = hel ? H * .62 : kv ? W * .46 : W * .78, ox = hel ? H * .12 : (W - S) / 2, oy = hel ? (H - S) / 2 : H * (kv ? .1 : .11), puls = 1 + bas * .035;
       cx.save(); cx.translate(ox + S / 2, oy + S / 2); cx.scale(puls, puls);
       cx.shadowColor = t.accent; cx.shadowBlur = 30 + bas * 40;
       if (b.omslag) cx.drawImage(b.omslag, -S / 2, -S / 2, S, S); else { cx.fillStyle = "#222"; cx.fillRect(-S / 2, -S / 2, S, S); }
       cx.restore();
       // text
       const tx = hel ? ox + S + H * .08 : W * .08, tb = hel ? W - tx - H * .08 : W * .84;
-      let ty = hel ? H * .3 : oy + S + H * .075;
+      let ty = hel ? H * .3 : oy + S + H * (kv ? .07 : .075);
       cx.shadowColor = "rgba(0,0,0,.8)"; cx.shadowBlur = 12;
       cx.textAlign = hel ? "left" : "center"; const ax = hel ? tx : W / 2;
-      cx.fillStyle = t.accent; cx.font = `700 ${hel ? 30 : 34}px Oswald, sans-serif`;
+      cx.fillStyle = t.accent; cx.font = `700 ${hel ? 30 : kv ? 28 : 34}px Oswald, sans-serif`;
       cx.fillText(t.artist.toUpperCase(), ax, ty); ty += hel ? 18 : 22;
-      cx.fillStyle = "#fff"; const fs = hel ? 58 : 60; cx.font = `700 ${fs}px Oswald, sans-serif`;
+      cx.fillStyle = "#fff"; const fs = hel ? 58 : kv ? 46 : 60; cx.font = `700 ${fs}px Oswald, sans-serif`;
       const titel = ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "");
-      for (const rad of radbryt(cx, titel, tb, 3)) { ty += fs * 1.1; cx.fillText(rad, ax, ty); }
+      for (const rad of radbryt(cx, titel, tb, kv ? 2 : 3)) { ty += fs * 1.1; cx.fillText(rad, ax, ty); }
       cx.shadowBlur = 0;
       // spektrum
-      const sx = hel ? tx : W * .08, sb = hel ? tb : W * .84, sh = hel ? H * .16 : H * .09, sy = ty + (hel ? 40 : 50) + sh, N = 40, g = 4, bw = (sb - g * (N - 1)) / N;
+      const sx = hel ? tx : W * .08, sb = hel ? tb : W * .84, sh = hel ? H * .16 : H * (kv ? .07 : .09), sy = ty + (hel ? 40 : kv ? 36 : 50) + sh, N = 40, g = 4, bw = (sb - g * (N - 1)) / N;
       cx.fillStyle = t.accent;
       for (let k = 0; k < N; k++) {
         const v = analys ? fdataVideo[Math.floor(2 * Math.pow(110 / 2, k / N))] / 255 : .08;
@@ -1582,9 +1583,9 @@ ${poster.slice(0, 20).map(p => `<item>
       const py = sy + 26; cx.fillStyle = "rgba(255,255,255,.2)"; cx.fillRect(sx, py, sb, 4);
       cx.fillStyle = t.accent; cx.fillRect(sx, py, sb * Math.min(1, pos / langdS), 4);
       // sidfot
-      cx.fillStyle = "rgba(255,255,255,.9)"; cx.font = `600 ${hel ? 24 : 30}px Inter, sans-serif`; cx.textAlign = "center";
-      cx.fillText("Lyssna & ladda ner gratis på devigtunga.se", W / 2, H - (hel ? 30 : 70));
-      if (b.logga) { const lh = hel ? 70 : 90, lw = lh * b.logga.width / b.logga.height; cx.globalAlpha = .9; cx.drawImage(b.logga, hel ? W - lw - 30 : (W - lw) / 2, hel ? 24 : 18, lw * (hel ? 1 : .8), lh * (hel ? 1 : .8)); cx.globalAlpha = 1; }
+      cx.fillStyle = "rgba(255,255,255,.9)"; cx.font = `600 ${hel ? 24 : kv ? 24 : 30}px Inter, sans-serif`; cx.textAlign = "center";
+      cx.fillText("Lyssna & ladda ner gratis på devigtunga.se", W / 2, H - (hel ? 30 : kv ? 36 : 70));
+      if (b.logga) { const lh = hel ? 70 : kv ? 70 : 90, lw = lh * b.logga.width / b.logga.height; cx.globalAlpha = .9; cx.drawImage(b.logga, hel ? W - lw - 30 : (W - lw) / 2, hel ? 24 : 18, lw * (hel ? 1 : .8), lh * (hel ? 1 : .8)); cx.globalAlpha = 1; }
       cx.restore();
     }
     function videoLangd(l) {
@@ -1597,7 +1598,8 @@ ${poster.slice(0, 20).map(p => `<item>
       if (!typ) return $("videoStatus").textContent = "Den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn.";
       $("videoStart").disabled = true; $("videoKlar").hidden = true;
       for (const id of ["videoArtist", "videoBakgrund", "videoOmslag"]) $(id).disabled = true;
-      const hel = videoFormat() === "hel", langdS = videoLangd(l);
+      document.querySelectorAll('[name="videoFormat"]').forEach(x => x.disabled = true);
+      const fmt = videoFormat(), hel = fmt === "hel", langdS = videoLangd(l);
       const start = hel ? 0 : (l.klipp ?? bastaDelen(d, langd(l)));
       await ritaVideoRuta(0, null);
       const ac = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: d.buffer.sampleRate });
@@ -1624,12 +1626,13 @@ ${poster.slice(0, 20).map(p => `<item>
       rec.onstop = () => {
         klar = true; videoPagar = null; ac.close();
         for (const id of ["videoArtist", "videoBakgrund", "videoOmslag"]) $(id).disabled = false;
+        document.querySelectorAll('[name="videoFormat"]').forEach(x => x.disabled = false);
         $("videoStart").disabled = false;
         if (avbruten) return $("videoStatus").textContent = "Inspelningen avbröts.";
         videoBlob = new Blob(delar, { type: typ.split(";")[0] });
         const ext = typ.startsWith("video/mp4") ? "mp4" : "webm";
-        const namn = `${filnamn((tema.artist + " " + ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "")).trim()).replace(/\.mp3$/, "")}-${hel ? "youtube" : "short"}.${ext}`;
-        $("videoNer").href = URL.createObjectURL(videoBlob); $("videoNer").download = namn; videoBlob.namn = namn; videoBlob.format = hel ? "liggande" : "staende";
+        const namn = `${filnamn((tema.artist + " " + ren(l.titel).replace(/^dj stigge\s*[-–—]\s*/i, "")).trim()).replace(/\.mp3$/, "")}-${hel ? "youtube" : fmt === "kvadrat" ? "fyrkant" : "short"}.${ext}`;
+        $("videoNer").href = URL.createObjectURL(videoBlob); $("videoNer").download = namn; videoBlob.namn = namn; videoBlob.format = hel ? "liggande" : fmt === "kvadrat" ? "kvadrat" : "staende";
         $("videoKlar").hidden = false;
         $("videoStatus").textContent = `✓ Klar! ${(videoBlob.size / 1048576).toFixed(1)} MB ${ext}.` + (!/avc1/.test(typ) ? " Tips: YouTube tar alla format, men Instagram vill ha mp4 med H.264 – strular det där, spela in i Safari eller senaste Chrome." : "");
       };
