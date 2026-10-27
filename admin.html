@@ -470,7 +470,7 @@
         <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
       <div class="rutnat">
         <label>Låten från (sekunder)<input type="number" id="aiStart" min="0" step="1" value="0"></label>
-        <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="30" step="1" value="15"></label>
+        <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="60" step="1" value="15"></label>
       </div>
       <p class="hjalp" data-ai-for="sjung">Bilden ska visa ett ansikte (t.ex. ett foto på Ingvar eller bandet). Delen av låten skickas med, och personen sjunger den.</p>
       <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet <span class="ai-pris" id="aiVideoPris"></span></button><button class="knapp kontur liten" type="button" id="aiEgetKlipp" title="T.ex. ett klipp du gjort i DeeVid">📂 Eget klipp (DeeVid m.fl.)</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter.</span></div>
@@ -552,7 +552,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027102233";
+    const VERSION = "v20261027105249";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1947,12 +1947,18 @@ ${poster.slice(0, 20).map(p => `<item>
       dj: { namn: "DJ Stigge intro", text: "D J Stigge… in the mix!", ljud: "deep house club drop, riser into sub bass hit, reverb tail", sek: 5 },
       hitnet: { namn: "HitNet-mixen", text: "De Evigt Unga å Vackra och HitNet Radio – blandat och klart!", ljud: "energetic radio sweeper whoosh with drum fill", sek: 5 }
     };
-    const EL_ROSTER = [["JBFqnCBsd6RMkjVDRZzb", "George – varm berättare"], ["nPczCjzI2devNBz1zQrb", "Brian – djup"], ["pNInz6obpgDQGcFmaJgB", "Adam – kraftfull"], ["21m00Tcm4TlvDq8ikWAM", "Rachel – lugn"], ["EXAVITQu4vr4xnSDxMaL", "Sarah – mjuk"]];
+    // inbyggda (engelska) röster – läser svenska med engelsk brytning. Svenska röster (Bengt, Christer, Evelina, Louise …): välj "Svensk röst" och klistra in röst-id från ElevenLabs röstbibliotek.
+    const EL_ROSTER = [["JBFqnCBsd6RMkjVDRZzb", "George – varm berättare"], ["nPczCjzI2devNBz1zQrb", "Brian – djup"], ["21m00Tcm4TlvDq8ikWAM", "Rachel – lugn"], ["EXAVITQu4vr4xnSDxMaL", "Sarah – mjuk"]];
     let aiRosterHamtade = false, aiRostBlob = null;
     async function hamtaRoster() {
       if (aiRosterHamtade) return;
-      const fyll = lista => { const v = $("aiRost").value || las("deu-ai-rost"); $("aiRost").innerHTML = lista.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join(""); if (v && lista.some(x => x[0] === v)) $("aiRost").value = v; };
-      if (!$("aiRost").options.length) fyll(EL_ROSTER);
+      const fyll = (lista, inbyggd) => {
+        const v = $("aiRost").value || las("deu-ai-rost"), egna = las("deu-ai-roster").split(",").filter(Boolean);
+        $("aiRost").innerHTML = lista.map(([id, n]) => `<option value="${esc(id)}"${inbyggd ? ` data-namn="${esc(n.split(" – ")[0])}"` : ""}>${esc(n)}</option>`).join("")
+          + egna.map(id => `<option value="${esc(id)}">🇸🇪 Svensk röst ${esc(id.slice(0, 6))}…</option>`).join("") + `<option value="__ny">🇸🇪 Svensk röst – klistra in röst-id…</option>`;
+        if (v && [...$("aiRost").options].some(o => o.value === v)) $("aiRost").value = v;
+      };
+      if (!$("aiRost").options.length) fyll(EL_ROSTER, true);
       let nyckel; try { nyckel = aiNyckel("elevenlabs"); } catch { return; }
       try {
         const r = await fetch("https://api.elevenlabs.io/v1/voices", { headers: { "xi-api-key": nyckel } });
@@ -1966,12 +1972,14 @@ ${poster.slice(0, 20).map(p => `<item>
     const rostViaFal = () => !hemlighet("elevenlabs") && !!hemlighet("fal");
     const hamtaBlob = async url => { const r = await fetch(url); if (!r.ok) throw new Error("ljudet kunde inte hämtas"); return r.blob(); };
     async function aiTal(text, st) {
+      if ($("aiRost").value === "__ny") throw new Error("välj en röst");
       if (!rostViaFal()) return elevenlabs(`/text-to-speech/${encodeURIComponent($("aiRost").value)}?output_format=mp3_44100_128`, {
-        text, model_id: $("aiRostModell").value, voice_settings: { stability: .45, similarity_boost: .8, style: .35, use_speaker_boost: true }
+        text, model_id: $("aiRostModell").value, voice_settings: { stability: .45, similarity_boost: .8, style: .35, use_speaker_boost: true },
+        ...($("aiRostModell").value === "eleven_v3" ? { language_code: "sv" } : {})
       });
-      const rost = $("aiRost").selectedOptions[0].textContent.split(" – ")[0];
-      return hamtaBlob(await falKor($("aiRostModell").value === "eleven_v3" ? "fal-ai/elevenlabs/tts/eleven-v3" : "fal-ai/elevenlabs/tts/multilingual-v2",
-        { text, voice: rost, stability: .45, similarity_boost: .8, style: .35 }, st, "audio"));
+      const o = $("aiRost").selectedOptions[0], v3 = $("aiRostModell").value === "eleven_v3";
+      return hamtaBlob(await falKor(v3 ? "fal-ai/elevenlabs/tts/eleven-v3" : "fal-ai/elevenlabs/tts/multilingual-v2",
+        { text, voice: o.dataset.namn || o.value, stability: .45, similarity_boost: .8, style: .35, ...(v3 ? { language_code: "sv" } : {}) }, st, "audio"));
     }
     async function aiEffekt(text, sek, st) {
       if (!rostViaFal()) return elevenlabs("/sound-generation", { text, duration_seconds: sek, prompt_influence: .4 });
@@ -1987,7 +1995,17 @@ ${poster.slice(0, 20).map(p => `<item>
       const t = AI_MALLAR[m.dataset.aiMall];
       $("aiText").value = t.text; $("aiLjud").value = t.ljud; $("aiLjudLangd").value = String(t.sek); $("aiJingelNamn").value = t.namn;
     });
-    $("aiRost").addEventListener("change", () => { try { localStorage.setItem("deu-ai-rost", $("aiRost").value); } catch {} });
+    $("aiRost").addEventListener("change", () => {
+      if ($("aiRost").value === "__ny") {
+        const id = (prompt("Röst-id från ElevenLabs röstbibliotek (elevenlabs.io → Voices → sök Swedish → ⋯ → Copy voice ID):") || "").trim();
+        if (!/^[A-Za-z0-9]{16,40}$/.test(id)) { $("aiRost").selectedIndex = 0; return; }
+        const egna = las("deu-ai-roster").split(",").filter(Boolean); if (!egna.includes(id)) egna.push(id);
+        try { localStorage.setItem("deu-ai-roster", egna.join(",")); } catch {}
+        $("aiRost").insertAdjacentHTML("afterbegin", `<option value="${esc(id)}">🇸🇪 Svensk röst ${esc(id.slice(0, 6))}…</option>`); $("aiRost").selectedIndex = 0;
+        $("aiRostModell").value = "eleven_v3";   // v3 kan låsas till svenska
+      }
+      try { localStorage.setItem("deu-ai-rost", $("aiRost").value); } catch {}
+    });
     $("aiRostKor").onclick = async () => {
       const text = $("aiText").value.trim(), ljudText = $("aiLjud").value.trim(), pris = aiRostKostnad();
       if (!text && !ljudText) return status("Skriv vad rösten ska säga (eller beskriv ett ljud).", "fel");
@@ -2030,18 +2048,22 @@ ${poster.slice(0, 20).map(p => `<item>
 
     // --- Video (fal.ai kö: skicka → fråga status → hämta resultat) ---
     const AI_MODELLER = {
-      text: [["fal-ai/kling-video/v2.1/master/text-to-video", "Kling 2.1 – snygga rörelser"], ["fal-ai/veo3/fast", "Google Veo 3 Fast – med ljud, 8 s"]],
-      bild: [["fal-ai/kling-video/v2.1/standard/image-to-video", "Kling 2.1 – bilden får liv"], ["fal-ai/veo3/fast/image-to-video", "Google Veo 3 Fast – 8 s"]],
-      sjung: [["fal-ai/bytedance/omnihuman", "OmniHuman – sjunger till låten"], ["veed/fabric-1.0", "VEED Fabric – sjungande bild"]]
+      text: [["fal-ai/veo3.1/fast", "Google Veo 3.1 Fast – snyggast"], ["kling/v4/text-to-video", "Kling 4.0 – nyast, eget ljud"]],
+      bild: [["fal-ai/kling-video/v2.6/pro/image-to-video", "Kling 2.6 Pro – bäst för pengarna"], ["fal-ai/kling-video/v2.1/standard/image-to-video", "Kling 2.1 Standard – billigast"], ["fal-ai/veo3.1/fast/image-to-video", "Google Veo 3.1 Fast"], ["kling/v4/image-to-video", "Kling 4.0 – nyast, eget ljud"]],
+      sjung: [["fal-ai/bytedance/omnihuman/v1.5", "OmniHuman 1.5 – upp till 60 s"], ["fal-ai/bytedance/omnihuman", "OmniHuman – upp till 30 s"], ["veed/fabric-1.0", "VEED Fabric – mest för tal, 60 s"]]
     };
     const AI_STORLEK = { staende: [720, 1280, "9:16"], liggande: [1280, 720, "16:9"], kvadrat: [1024, 1024, "1:1"] };
     const aiSlag = () => document.querySelector('[name="aiSlag"]:checked').value;
     let aiEgenBild = null, aiVideoUrl = null, aiVideoBlob = null;
     // Uppskattad kostnad (fal.ai-priser i dollar, omräknat till kronor) – visas på knapparna och som månadssumma
     const KURS = 10.5;
-    const AI_PRIS = [[/kling.*master/i, s => 1.40 * s / 5], [/kling/i, s => .28 + Math.max(0, s - 5) * .056], [/veo/i, () => 8 * .15], [/omnihuman/i, s => .14 * s], [/fabric/i, s => .15 * s]];
+    // dollar per klipp efter antal sekunder (fal.ai, research 2026-10-27; 720p, utan ljud där det går)
+    const AI_PRIS = [[/kling\/v4/i, s => .157 * s], [/kling.*v2\.6/i, s => .07 * s], [/kling.*v2\.5-turbo/i, s => .35 + Math.max(0, s - 5) * .07], [/kling.*v2\.1\/standard/i, s => .05 * s], [/kling/i, s => .112 * s],
+      [/veo/i, s => .10 * s], [/omnihuman\/v1\.5/i, s => .16 * s], [/omnihuman\/v2/i, s => .105 * s], [/omnihuman/i, s => .14 * s], [/fabric/i, s => .15 * s]];
+    const aiMaxSek = () => aiSlag() === "sjung" && !/omnihuman\/v1\.5|fabric|omnihuman\/v2/i.test($("aiModell").value) ? 30 : 60;
+    const veoLangd = l => l >= 10 ? 8 : 6;
     const aiKr = v => !v ? "0 kr" : v < 1 ? `${Math.max(1, Math.round(v * 100))} öre` : `${v < 10 ? v.toFixed(1).replace(".", ",") : Math.round(v)} kr`;
-    const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, 30)) : /veo/i.test($("aiModell").value) ? 8 : +$("aiLangd").value;
+    const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : /veo/i.test($("aiModell").value) ? veoLangd(+$("aiLangd").value) : +$("aiLangd").value;
     function aiVideoKostnad() { const m = $("aiModell").value, p = AI_PRIS.find(([r]) => r.test(m)); return (p ? p[1](aiSekunder()) : .10 * aiSekunder()) * KURS; }
     function aiRostKostnad() {
       if (valv && hemlighet("elevenlabs")) return 0;   // eget ElevenLabs-konto: ingår i abonnemanget
@@ -2122,7 +2144,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const l = aiLatObj(); if (!l) throw new Error("välj en låt");
       const r = await fetch(forhands[l.fil] || "musik/" + encodeURIComponent(l.fil)); if (!r.ok) throw new Error("låtfilen kunde inte hämtas");
       const ljud = await avkoda(await r.blob());
-      const start = Math.max(0, Math.min(+$("aiStart").value || 0, ljud.duration - 3)), sek = Math.max(3, Math.min(+$("aiSek").value || 15, 30, ljud.duration - start));
+      const start = Math.max(0, Math.min(+$("aiStart").value || 0, ljud.duration - 3)), sek = Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek(), ljud.duration - start));
       const off = new OfflineAudioContext(mono ? 1 : 2, Math.ceil(sek * rate), rate);
       const k = off.createBufferSource(), g = off.createGain(); k.buffer = ljud; k.connect(g); g.connect(off.destination);
       g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, .3); g.gain.setValueAtTime(1, sek - 1); g.gain.linearRampToValueAtTime(0, sek);
@@ -2132,9 +2154,11 @@ ${poster.slice(0, 20).map(p => `<item>
     const tillDataUrl = blob => new Promise(ok => { const f = new FileReader(); f.onload = () => ok(f.result); f.readAsDataURL(blob); });
     function aiIndata(modell, s) {
       const [, , ar] = AI_STORLEK[s.format];
-      if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric/.test(modell) ? { resolution: "720p" } : {}) };
-      if (/veo/i.test(modell)) return { prompt: s.prompt, duration: "8s", generate_audio: true, ...(s.bild ? { image_url: s.bild } : { aspect_ratio: ar === "1:1" ? "16:9" : ar }) };
-      return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, negative_prompt: "blur, distortion, low quality, text, watermark", ...(s.bild ? { image_url: s.bild } : {}) };
+      if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric|omnihuman\/v1\.5/.test(modell) ? { resolution: "720p" } : {}) };
+      // Veo: 9:16 eller 16:9 (ingen fyrkant) – med bild följer formatet bilden. Utan eget ljud, låten läggs på efteråt.
+      if (/veo/i.test(modell)) return { prompt: s.prompt, duration: veoLangd(s.langd) + "s", resolution: "720p", generate_audio: false, aspect_ratio: s.bild ? "auto" : ar === "1:1" ? "16:9" : ar, ...(s.bild ? { image_url: s.bild } : {}) };
+      if (/kling\/v4/i.test(modell)) return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, ...(s.bild ? { image_url: s.bild } : {}) };
+      return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, generate_audio: false, negative_prompt: "blur, distortion, low quality, text, watermark", ...(s.bild ? { image_url: s.bild } : {}) };
     }
     function hittaFil(o, slag) {
       if (!o || typeof o !== "object") return null;
@@ -2184,7 +2208,7 @@ ${poster.slice(0, 20).map(p => `<item>
         $("aiVideoSpelare").src = aiVideoBlob ? URL.createObjectURL(aiVideoBlob) : aiVideoUrl;
         $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `ai-klipp-${Date.now().toString(36)}.mp4`;
         $("aiVideoKlar").hidden = false; aiSlagByt();
-        st(s === "sjung" || /veo/i.test(modell) ? "✓ Klart!" : "✓ Klart! Klippet är tyst – tryck 🎵 Lägg låten på.");
+        st(s === "sjung" ? "✓ Klart!" : /kling\/v4/i.test(modell) ? "✓ Klart! Klippet har eget ljud – vill du ha låten i stället, tryck 🎵 Lägg låten på." : "✓ Klart! Klippet är tyst – tryck 🎵 Lägg låten på.");
       } catch (e) { st(""); status("Klippet kunde inte göras: " + e.message, "fel"); }
       $("aiVideoKor").disabled = false;
     };
