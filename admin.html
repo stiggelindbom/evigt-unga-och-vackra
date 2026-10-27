@@ -114,7 +114,7 @@
     .hjalp ol { padding-left: 20px; margin-top: 6px; display: grid; gap: 4px; }
 
     label { display: grid; gap: 4px; font-size: .8rem; color: var(--dampad); min-width: 0; }
-    input[type=text], input[type=url], input[type=email], input[type=password], select, textarea {
+    input[type=text], input[type=url], input[type=email], input[type=password], input[type=number], select, textarea {
       width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--kant);
       background: #0f0e0b; color: var(--text); font: inherit; font-size: .95rem;
     }
@@ -266,6 +266,7 @@
       <button type="button" data-flik="latar">🎵 Låtar</button>
       <button type="button" data-flik="inlagg">📣 Inlägg</button>
       <button type="button" data-flik="artister">🎤 Artister & länkar</button>
+      <button type="button" data-flik="ai">✨ AI-studio</button>
       <button type="button" data-flik="valv">🔐 Valv & koder</button>
     </nav>
     <section class="flik" data-flik-del="oversikt">
@@ -403,6 +404,81 @@
       <div class="latlista" id="vannerLista"></div>
     </div>
     </section>
+    <section class="flik" data-flik-del="ai">
+    <div>
+      <h2>✨ AI-studio</h2>
+      <p class="hjalp">Gör jinglar, röster och videoklipp direkt här. Nycklarna ligger i 🔐 Valvet (ElevenLabs och fal.ai) – lås upp valvet först. Det färdiga går rakt till Jinglar eller Nytt inlägg.</p>
+    </div>
+    <div class="kort" style="display:grid;gap:12px">
+      <h3>🎙 Röst &amp; jinglar <small class="hjalp">ElevenLabs</small></h3>
+      <div class="inlagg-rad">
+        <button class="knapp kontur liten" type="button" data-ai-mall="radio">📻 Radiojingel</button>
+        <button class="knapp kontur liten" type="button" data-ai-mall="kommande">🆕 Före Kommande</button>
+        <button class="knapp kontur liten" type="button" data-ai-mall="dj">🎧 DJ Stigge</button>
+        <button class="knapp kontur liten" type="button" data-ai-mall="hitnet">📡 HitNet-mixen</button>
+      </div>
+      <label>Vad ska rösten säga?<textarea id="aiText" rows="3" placeholder="Du lyssnar på De Evigt Unga å Vackra – devigtunga punkt se!"></textarea></label>
+      <div class="rutnat">
+        <label>Röst<select id="aiRost"></select></label>
+        <label>Röstmodell<select id="aiRostModell">
+          <option value="eleven_multilingual_v2">Stabil – bra svenska</option>
+          <option value="eleven_v3">Mest känsla – tål [excited] [laughs] [whispers]</option>
+        </select></label>
+        <label>Namn på jingeln<input type="text" id="aiJingelNamn" placeholder="t.ex. Radiojingel 1"></label>
+      </div>
+      <label>Ljud under rösten (valfritt – beskriv på engelska)<input type="text" id="aiLjud" placeholder="short radio jingle stinger, brass hit and whoosh"></label>
+      <div class="rutnat">
+        <label>Ljudets längd<select id="aiLjudLangd"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select></label>
+        <label>Ljudets nivå under rösten<input type="range" id="aiLjudNiva" min="10" max="100" value="45"></label>
+      </div>
+      <div class="inlagg-rad"><button class="knapp" type="button" id="aiRostKor">🎙 Gör ljudet</button><span class="hjalp" id="aiRostStatus"></span></div>
+      <div id="aiRostKlar" hidden class="inlagg-rad">
+        <audio id="aiRostSpelare" controls style="flex:1;min-width:240px"></audio>
+        <button class="knapp liten" type="button" id="aiRostJingel">🎺 Spara som jingel</button>
+        <a class="knapp kontur liten" id="aiRostNer" download>⬇ Ladda ner</a>
+      </div>
+    </div>
+    <div class="kort" style="display:grid;gap:12px">
+      <h3>🎬 Video <small class="hjalp">fal.ai – Kling, Google Veo, sjungande bild</small></h3>
+      <div class="inlagg-rad">
+        <label class="kryss"><input type="radio" name="aiSlag" value="text" checked> Från text</label>
+        <label class="kryss"><input type="radio" name="aiSlag" value="bild"> Bild får liv</label>
+        <label class="kryss"><input type="radio" name="aiSlag" value="sjung"> Bild sjunger låten (lipsync)</label>
+      </div>
+      <div class="rutnat">
+        <label>Modell<select id="aiModell"></select></label>
+        <label>Format<select id="aiFormat"><option value="staende">Stående 9:16 – Reels/Shorts</option><option value="liggande">Liggande 16:9 – YouTube</option><option value="kvadrat">Fyrkant 1:1 – flödet</option></select></label>
+        <label data-ai-for="text bild">Längd<select id="aiLangd"><option value="5">5 s</option><option value="10">10 s</option></select></label>
+      </div>
+      <div class="rutnat">
+        <label>Låt<select id="aiLat"></select></label>
+        <label>Artist<select id="aiArtist"></select></label>
+        <label data-ai-for="bild sjung">Bild<select id="aiBild">
+          <option value="omslag">Låtens omslag</option>
+          <option value="popkonst">DJ Stigge popkonst</option>
+          <option value="band">Bandets mosaik</option>
+          <option value="egen">Egen bild…</option>
+        </select></label>
+      </div>
+      <input type="file" id="aiBildFil" accept="image/jpeg,image/png,image/webp" hidden>
+      <div data-ai-for="text bild"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
+        <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
+      <div class="rutnat">
+        <label>Låten från (sekunder)<input type="number" id="aiStart" min="0" step="1" value="0"></label>
+        <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="30" step="1" value="15"></label>
+      </div>
+      <p class="hjalp" data-ai-for="sjung">Bilden ska visa ett ansikte (t.ex. ett foto på Ingvar eller bandet). Delen av låten skickas med, och personen sjunger den.</p>
+      <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter. Det kostar några kronor per klipp på fal.ai.</span></div>
+      <div id="aiVideoKlar" hidden style="display:grid;gap:10px">
+        <video id="aiVideoSpelare" controls playsinline style="max-width:100%;max-height:60vh;border-radius:10px;background:#000"></video>
+        <div class="inlagg-rad">
+          <button class="knapp liten" type="button" id="aiVideoLat" data-ai-for="text bild">🎵 Lägg låten på</button>
+          <button class="knapp liten" type="button" id="aiVideoInlagg">📣 Lägg i Nytt inlägg</button>
+          <a class="knapp kontur liten" id="aiVideoNer" download target="_blank" rel="noopener">⬇ Ladda ner</a>
+        </div>
+      </div>
+    </div>
+    </section>
     <section class="flik" data-flik-del="valv">
     <div>
       <h2>🔐 Nyckelvalv</h2>
@@ -471,7 +547,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027084828";
+    const VERSION = "v20261027093853";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -621,6 +697,7 @@
       filer = new Set(mapp.filter(x => x.type === "file").map(x => x.name));
       flodeSha = await gh(`/contents/${FLODE}?ref=${GREN}`).then(f => f.sha).catch(() => null);
       await hamtaKvitton();
+      if (!document.querySelector('[data-flik-del="ai"]').hidden) ritaAi();
     }
 
     // ===== Inloggning =====
@@ -1287,19 +1364,20 @@
     }
     $("nyJingel").onclick = () => { $("jingelFil").value = ""; $("jingelFil").click(); };
     $("jingelFil").addEventListener("change", async () => {
-      let f = $("jingelFil").files[0]; if (!f) return;
-      const namn = f.name.replace(/\.(mp3|wav)$/i, "").replace(/[_-]+/g, " ").trim() || "Jingel";
-      try {
-        if (/\.wav$/i.test(f.name)) { status("Gör om jingeln till mp3…"); f = await wavTillMp3(f, p => status(`Gör om till mp3… ${Math.round(p * 100)} %`)); }
-        if (f.size > 10 * 1048576) throw new Error("jingeln är större än 10 MB – gör den kortare");
-        const fil = "jingel-" + filnamn(namn).replace(/\.mp3$/, "") + "-" + Date.now().toString(36).slice(-4) + ".mp3";
-        status(`Laddar upp ${fil}…`);
-        await gh(`/contents/musik/${encodeURIComponent(fil)}`, { method: "PUT", body: JSON.stringify({ message: `Jingel ${namn} via backoffice`, content: bytesTillBase64(new Uint8Array(await f.arrayBuffer())), branch: GREN }) });
-        filer.add(fil); forhands[fil] = URL.createObjectURL(f);
-        data.jinglar.push({ namn, fil }); ritaJinglar(); andrat();
-        status(`🎺 ${namn} uppladdad – tryck Spara ändringar.`, "osparat");
-      } catch (e) { status("Jingeln kunde inte laddas upp: " + e.message, "fel"); }
+      const f = $("jingelFil").files[0]; if (!f) return;
+      try { await laddaUppJingel(f, f.name.replace(/\.(mp3|wav)$/i, "").replace(/[_-]+/g, " ").trim() || "Jingel"); }
+      catch (e) { status("Jingeln kunde inte laddas upp: " + e.message, "fel"); }
     });
+    async function laddaUppJingel(f, namn) {
+      if (/\.wav$/i.test(f.name)) { status("Gör om jingeln till mp3…"); f = await wavTillMp3(f, p => status(`Gör om till mp3… ${Math.round(p * 100)} %`)); }
+      if (f.size > 10 * 1048576) throw new Error("jingeln är större än 10 MB – gör den kortare");
+      const fil = "jingel-" + filnamn(namn).replace(/\.mp3$/, "") + "-" + Date.now().toString(36).slice(-4) + ".mp3";
+      status(`Laddar upp ${fil}…`);
+      await gh(`/contents/musik/${encodeURIComponent(fil)}`, { method: "PUT", body: JSON.stringify({ message: `Jingel ${namn} via backoffice`, content: bytesTillBase64(new Uint8Array(await f.arrayBuffer())), branch: GREN }) });
+      filer.add(fil); forhands[fil] = URL.createObjectURL(f);
+      data.jinglar.push({ namn, fil }); ritaJinglar(); andrat();
+      status(`🎺 ${namn} uppladdad – tryck Spara ändringar.`, "osparat");
+    }
     $("jingelLista").addEventListener("input", e => {
       if (!e.target.matches("[data-jingel-namn]")) return;
       data.jinglar[+e.target.closest("[data-jingel]").dataset.jingel].namn = e.target.value.trim(); andrat();
@@ -1826,6 +1904,285 @@ ${poster.slice(0, 20).map(p => `<item>
       status("🎬 Videon ligger i Nytt inlägg – kolla texten och tryck Skicka.", "osparat");
     };
 
+    // ===== ✨ AI-studio: röst och jinglar (ElevenLabs) och videoklipp (fal.ai). Nycklarna ligger i valvet. =====
+    function aiNyckel(id) {
+      const namn = VALV_FAST.find(x => x[0] === id)[1];
+      if (!harValv() || !valv) throw new Error(`lås upp 🔐 Valvet först (där ligger ${namn})`);
+      const v = hemlighet(id); if (!v) throw new Error(`lägg in ${namn} i 🔐 Valvet först`);
+      return v;
+    }
+    const aiFelText = async r => {
+      const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch {}
+      const d = j.detail ?? j.error ?? j.message ?? t;
+      const text = typeof d === "string" ? d : Array.isArray(d) ? d.map(x => x.msg || x.message || JSON.stringify(x)).join("; ") : d.message || JSON.stringify(d);
+      return (r.status === 401 ? "nyckeln godtas inte – kolla den i valvet. " : "") + String(text).slice(0, 300);
+    };
+    const vanta = ms => new Promise(ok => setTimeout(ok, ms));
+
+    // Ljud ↔ wav (16-bit) så att röst och ljudeffekt kan mixas i webbläsaren
+    function tillWav(buf) {
+      const ch = buf.numberOfChannels, n = buf.length, b = new DataView(new ArrayBuffer(44 + n * ch * 2));
+      const skriv = (o, t) => { for (let i = 0; i < t.length; i++) b.setUint8(o + i, t.charCodeAt(i)); };
+      skriv(0, "RIFF"); b.setUint32(4, 36 + n * ch * 2, true); skriv(8, "WAVE"); skriv(12, "fmt "); b.setUint32(16, 16, true); b.setUint16(20, 1, true);
+      b.setUint16(22, ch, true); b.setUint32(24, buf.sampleRate, true); b.setUint32(28, buf.sampleRate * ch * 2, true); b.setUint16(32, ch * 2, true); b.setUint16(34, 16, true);
+      skriv(36, "data"); b.setUint32(40, n * ch * 2, true);
+      const d = [...Array(ch)].map((_, c) => buf.getChannelData(c));
+      for (let i = 0, o = 44; i < n; i++) for (let c = 0; c < ch; c++, o += 2) { const v = Math.max(-1, Math.min(1, d[c][i])); b.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7fff, true); }
+      return new Blob([b], { type: "audio/wav" });
+    }
+    async function avkoda(blob) {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      try { return await ctx.decodeAudioData(await blob.arrayBuffer()); } finally { ctx.close && ctx.close(); }
+    }
+
+    // --- Röst ---
+    const AI_MALLAR = {
+      radio: { namn: "Radiojingel", text: "Du lyssnar på De Evigt Unga å Vackra… devigtunga punkt se!", ljud: "short upbeat radio station jingle stinger, brass hit and whoosh", sek: 5 },
+      kommande: { namn: "Före Kommande", text: "Och nu… något helt nytt från studion. Det här har ingen hört förut!", ljud: "mysterious riser with sparkle and soft impact, anticipation", sek: 5 },
+      dj: { namn: "DJ Stigge intro", text: "D J Stigge… in the mix!", ljud: "deep house club drop, riser into sub bass hit, reverb tail", sek: 5 },
+      hitnet: { namn: "HitNet-mixen", text: "De Evigt Unga å Vackra och HitNet Radio – blandat och klart!", ljud: "energetic radio sweeper whoosh with drum fill", sek: 5 }
+    };
+    const EL_ROSTER = [["JBFqnCBsd6RMkjVDRZzb", "George – varm berättare"], ["nPczCjzI2devNBz1zQrb", "Brian – djup"], ["pNInz6obpgDQGcFmaJgB", "Adam – kraftfull"], ["21m00Tcm4TlvDq8ikWAM", "Rachel – lugn"], ["EXAVITQu4vr4xnSDxMaL", "Sarah – mjuk"]];
+    let aiRosterHamtade = false, aiRostBlob = null;
+    async function hamtaRoster() {
+      if (aiRosterHamtade) return;
+      const fyll = lista => { const v = $("aiRost").value || las("deu-ai-rost"); $("aiRost").innerHTML = lista.map(([id, n]) => `<option value="${esc(id)}">${esc(n)}</option>`).join(""); if (v && lista.some(x => x[0] === v)) $("aiRost").value = v; };
+      if (!$("aiRost").options.length) fyll(EL_ROSTER);
+      let nyckel; try { nyckel = aiNyckel("elevenlabs"); } catch { return; }
+      try {
+        const r = await fetch("https://api.elevenlabs.io/v1/voices", { headers: { "xi-api-key": nyckel } });
+        if (!r.ok) return;
+        const j = await r.json();
+        const lista = (j.voices || []).map(x => [x.voice_id, [x.name, x.labels && [x.labels.gender, x.labels.accent, x.labels.description || x.labels.descriptive].filter(Boolean).join(", ")].filter(Boolean).join(" – ")]);
+        if (lista.length) { fyll(lista); aiRosterHamtade = true; }
+      } catch {}
+    }
+    async function elevenlabs(sokvag, kropp) {
+      const r = await fetch("https://api.elevenlabs.io/v1" + sokvag, { method: "POST", headers: { "xi-api-key": aiNyckel("elevenlabs"), "Content-Type": "application/json", Accept: "audio/mpeg" }, body: JSON.stringify(kropp) });
+      if (!r.ok) throw new Error("ElevenLabs: " + await aiFelText(r));
+      return r.blob();
+    }
+    document.querySelector('[data-flik-del="ai"]').addEventListener("click", e => {
+      const m = e.target.closest("[data-ai-mall]"); if (!m) return;
+      const t = AI_MALLAR[m.dataset.aiMall];
+      $("aiText").value = t.text; $("aiLjud").value = t.ljud; $("aiLjudLangd").value = String(t.sek); $("aiJingelNamn").value = t.namn;
+    });
+    $("aiRost").addEventListener("change", () => { try { localStorage.setItem("deu-ai-rost", $("aiRost").value); } catch {} });
+    $("aiRostKor").onclick = async () => {
+      const text = $("aiText").value.trim(), ljudText = $("aiLjud").value.trim();
+      if (!text && !ljudText) return status("Skriv vad rösten ska säga (eller beskriv ett ljud).", "fel");
+      $("aiRostKor").disabled = true; $("aiRostKlar").hidden = true;
+      const st = t => $("aiRostStatus").textContent = t;
+      try {
+        await hamtaRoster();
+        st("Gör rösten…");
+        const rost = text ? await elevenlabs(`/text-to-speech/${encodeURIComponent($("aiRost").value)}?output_format=mp3_44100_128`, {
+          text, model_id: $("aiRostModell").value, voice_settings: { stability: .45, similarity_boost: .8, style: .35, use_speaker_boost: true }
+        }) : null;
+        st(ljudText ? "Gör ljudet under…" : "");
+        const ljud = ljudText ? await elevenlabs("/sound-generation", { text: ljudText, duration_seconds: +$("aiLjudLangd").value, prompt_influence: .4 }) : null;
+        if (rost && ljud) {
+          st("Mixar…");
+          const [r, l] = await Promise.all([avkoda(rost), avkoda(ljud)]);
+          const rate = 44100, fore = .25, tot = Math.max(l.duration, fore + r.duration + .3);
+          const off = new OfflineAudioContext(2, Math.ceil(tot * rate), rate);
+          const spela = (buf, nar, niva) => { const k = off.createBufferSource(), g = off.createGain(); k.buffer = buf; g.gain.value = niva; k.connect(g); g.connect(off.destination); k.start(nar); };
+          spela(l, 0, +$("aiLjudNiva").value / 100); spela(r, fore, 1);
+          const mix = await off.startRendering();
+          let topp = 0; for (let c = 0; c < 2; c++) for (const v of mix.getChannelData(c)) topp = Math.max(topp, Math.abs(v));
+          if (topp > 0) for (let c = 0; c < 2; c++) { const d = mix.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= .94 / topp; }   // topp på −0,5 dB
+          aiRostBlob = await wavTillMp3(tillWav(mix), p => st(`Gör mp3… ${Math.round(p * 100)} %`));
+        } else aiRostBlob = rost || ljud;
+        $("aiRostSpelare").src = URL.createObjectURL(aiRostBlob);
+        $("aiRostNer").href = $("aiRostSpelare").src; $("aiRostNer").download = filnamn($("aiJingelNamn").value || "jingel");
+        $("aiRostKlar").hidden = false; st("✓ Klar – lyssna!"); $("aiRostSpelare").play().catch(() => {});
+      } catch (e) { st(""); status("Ljudet kunde inte göras: " + e.message, "fel"); }
+      $("aiRostKor").disabled = false;
+    };
+    $("aiRostJingel").onclick = async () => {
+      if (!aiRostBlob) return;
+      const namn = $("aiJingelNamn").value.trim() || "AI-jingel";
+      $("aiRostJingel").disabled = true;
+      try { await laddaUppJingel(new File([aiRostBlob], filnamn(namn), { type: "audio/mpeg" }), namn); await $("spara").onclick(); if (!osparat) status(`🎺 ${namn} ligger nu bland jinglarna (🎵 Låtar → Kommande) och spelas före Kommande-låtar i radion.`, "ok"); }
+      catch (e) { status("Jingeln kunde inte sparas: " + e.message, "fel"); }
+      $("aiRostJingel").disabled = false;
+    };
+
+    // --- Video (fal.ai kö: skicka → fråga status → hämta resultat) ---
+    const AI_MODELLER = {
+      text: [["fal-ai/kling-video/v2.1/master/text-to-video", "Kling 2.1 – snygga rörelser"], ["fal-ai/veo3/fast", "Google Veo 3 Fast – med ljud, 8 s"]],
+      bild: [["fal-ai/kling-video/v2.1/standard/image-to-video", "Kling 2.1 – bilden får liv"], ["fal-ai/veo3/fast/image-to-video", "Google Veo 3 Fast – 8 s"]],
+      sjung: [["fal-ai/bytedance/omnihuman", "OmniHuman – sjunger till låten"], ["veed/fabric-1.0", "VEED Fabric – sjungande bild"]]
+    };
+    const AI_STORLEK = { staende: [720, 1280, "9:16"], liggande: [1280, 720, "16:9"], kvadrat: [1024, 1024, "1:1"] };
+    const aiSlag = () => document.querySelector('[name="aiSlag"]:checked').value;
+    let aiEgenBild = null, aiVideoUrl = null, aiVideoBlob = null;
+    function ritaAi() {
+      hamtaRoster();
+      const latar = data.latar.filter(l => l.fil && l.titel && !l.dold);
+      const v = $("aiLat").value;
+      $("aiLat").innerHTML = latar.map(l => `<option value="${esc(l.fil)}">${esc(ren(l.titel))}</option>`).join("");
+      if (v && latar.some(l => l.fil === v)) $("aiLat").value = v; else aiLatVald();
+      const a = $("aiArtist").value;
+      $("aiArtist").innerHTML = ["De Evigt Unga å Vackra", ...data.artister.map(x => ren(x.namn)).filter(Boolean)].map(n => `<option>${esc(n)}</option>`).join("");
+      if (a) $("aiArtist").value = a; else { const l = aiLatObj(); if (l) $("aiArtist").value = artistFor(l); }
+      aiSlagByt();
+    }
+    const aiLatObj = () => data.latar.find(l => l.fil === $("aiLat").value);
+    function aiLatVald() {
+      const l = aiLatObj(); if (!l) return;
+      $("aiStart").value = Math.round(l.klipp || 0); $("aiSek").value = Math.min(15, l.klippLangd || 30);
+      if ([...$("aiArtist").options].some(o => o.value === artistFor(l))) $("aiArtist").value = artistFor(l);
+    }
+    function aiSlagByt() {
+      const s = aiSlag(), v = $("aiModell").value;
+      $("aiModell").innerHTML = AI_MODELLER[s].map(([id, n]) => `<option value="${id}">${n}</option>`).join("") + `<option value="__egen">Annan modell (skriv id)…</option>`;
+      if (AI_MODELLER[s].some(x => x[0] === v)) $("aiModell").value = v;
+      document.querySelectorAll('[data-flik-del="ai"] [data-ai-for]').forEach(x => x.hidden = !x.dataset.aiFor.split(" ").includes(s));
+    }
+    document.querySelectorAll('[name="aiSlag"]').forEach(r => r.addEventListener("change", aiSlagByt));
+    $("aiLat").addEventListener("change", aiLatVald);
+    $("aiModell").addEventListener("change", () => {
+      if ($("aiModell").value !== "__egen") return;
+      const id = prompt("Modellens id på fal.ai (t.ex. fal-ai/kling-video/v2.1/pro/image-to-video):", las("deu-ai-egen") || "");
+      if (!id || !/^[\w.-]+\/[\w./-]+$/.test(id.trim())) { $("aiModell").selectedIndex = 0; return; }
+      try { localStorage.setItem("deu-ai-egen", id.trim()); } catch {}
+      $("aiModell").insertAdjacentHTML("afterbegin", `<option value="${esc(id.trim())}">${esc(id.trim())}</option>`); $("aiModell").selectedIndex = 0;
+    });
+    $("aiBild").addEventListener("change", () => { if ($("aiBild").value === "egen") { $("aiBildFil").value = ""; $("aiBildFil").click(); } });
+    $("aiBildFil").addEventListener("change", () => { aiEgenBild = $("aiBildFil").files[0] || aiEgenBild; if (!aiEgenBild) $("aiBild").value = "omslag"; });
+    $("aiForslag").onclick = () => {
+      const l = aiLatObj(), dj = /stigge/i.test($("aiArtist").value), titel = l ? utanArtist(l.titel) : "";
+      $("aiPrompt").value = aiSlag() === "bild"
+        ? (dj ? "Slow cinematic push-in, neon pink and cyan lights pulse to a deep house beat, subtle glitter in the air, pop-art colors, keep the image intact, no text" : "Slow cinematic push-in, warm golden light flickers, gentle movement as if the picture breathes to the music, keep the image intact, no text")
+        : dj ? `Club at night, neon pink and cyan lights, pop-art style, crowd dancing to deep house, DJ silhouette behind the decks, slow camera push-in, cinematic, music video for "${titel}", no text`
+        : `Happy Swedish party with friends, dancing and laughing, golden hour, warm film look, handheld camera, music video for "${titel}", no text`;
+    };
+    // bilden beskärs till valt format och skickas som data-URI (inget behöver laddas upp någonstans)
+    async function aiBildData() {
+      const [b, h] = AI_STORLEK[$("aiFormat").value], val = $("aiBild").value, l = aiLatObj();
+      const src = val === "egen" && aiEgenBild ? URL.createObjectURL(aiEgenBild) : val === "popkonst" ? BAKGRUNDER.popkonst : val === "band" ? BAKGRUNDER.band : l ? omslagUrl(l) : "assets/omslag.jpg";
+      const im = await laddaBild(src); if (!im) throw new Error("bilden kunde inte läsas");
+      const c = document.createElement("canvas"); c.width = b; c.height = h;
+      const s = Math.max(b / im.width, h / im.height);
+      c.getContext("2d").drawImage(im, (b - im.width * s) / 2, (h - im.height * s) / 2, im.width * s, im.height * s);
+      return c.toDataURL("image/jpeg", .9);
+    }
+    async function aiLatDel(rate = 32000, mono = true) {
+      const l = aiLatObj(); if (!l) throw new Error("välj en låt");
+      const r = await fetch(forhands[l.fil] || "musik/" + encodeURIComponent(l.fil)); if (!r.ok) throw new Error("låtfilen kunde inte hämtas");
+      const ljud = await avkoda(await r.blob());
+      const start = Math.max(0, Math.min(+$("aiStart").value || 0, ljud.duration - 3)), sek = Math.max(3, Math.min(+$("aiSek").value || 15, 30, ljud.duration - start));
+      const off = new OfflineAudioContext(mono ? 1 : 2, Math.ceil(sek * rate), rate);
+      const k = off.createBufferSource(), g = off.createGain(); k.buffer = ljud; k.connect(g); g.connect(off.destination);
+      g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, .3); g.gain.setValueAtTime(1, sek - 1); g.gain.linearRampToValueAtTime(0, sek);
+      k.start(0, start, sek);
+      return off.startRendering();
+    }
+    const tillDataUrl = blob => new Promise(ok => { const f = new FileReader(); f.onload = () => ok(f.result); f.readAsDataURL(blob); });
+    function aiIndata(modell, s) {
+      const [, , ar] = AI_STORLEK[s.format];
+      if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric/.test(modell) ? { resolution: "720p" } : {}) };
+      if (/veo/i.test(modell)) return { prompt: s.prompt, duration: "8s", generate_audio: true, ...(s.bild ? { image_url: s.bild } : { aspect_ratio: ar === "1:1" ? "16:9" : ar }) };
+      return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, negative_prompt: "blur, distortion, low quality, text, watermark", ...(s.bild ? { image_url: s.bild } : {}) };
+    }
+    function hittaVideo(o) {
+      if (!o || typeof o !== "object") return null;
+      if (typeof o.url === "string" && (/video/.test(o.content_type || "") || /\.(mp4|webm|mov)(\?|$)/i.test(o.url))) return o.url;
+      for (const v of Object.values(o)) { const u = hittaVideo(v); if (u) return u; }
+      return null;
+    }
+    async function falKor(modell, indata, st) {
+      const h = { Authorization: "Key " + aiNyckel("fal"), "Content-Type": "application/json" };
+      const r = await fetch("https://queue.fal.run/" + modell, { method: "POST", headers: h, body: JSON.stringify(indata) });
+      if (!r.ok) throw new Error("fal.ai: " + await aiFelText(r));
+      const jobb = await r.json(), t0 = Date.now();
+      for (;;) {
+        await vanta(4000);
+        const s = await fetch(jobb.status_url, { headers: h });
+        if (!s.ok) throw new Error("fal.ai: " + await aiFelText(s));
+        const j = await s.json(), tid = Math.round((Date.now() - t0) / 1000), klocka = `${Math.floor(tid / 60)}:${String(tid % 60).padStart(2, "0")}`;
+        if (j.status === "COMPLETED") break;
+        st(j.status === "IN_QUEUE" ? `I kö${j.queue_position != null ? ` (plats ${j.queue_position + 1})` : ""}… ${klocka}` : `Skapar klippet… ${klocka} – du kan jobba vidare i de andra flikarna`);
+        if (Date.now() - t0 > 25 * 60e3) throw new Error("det har tagit över 25 minuter – kolla på fal.ai under Requests");
+      }
+      const svar = await fetch(jobb.response_url, { headers: h });
+      if (!svar.ok) throw new Error("fal.ai: " + await aiFelText(svar));
+      const url = hittaVideo(await svar.json()); if (!url) throw new Error("fal.ai svarade utan video");
+      return url;
+    }
+    $("aiVideoKor").onclick = async () => {
+      const s = aiSlag(), modell = $("aiModell").value, st = t => $("aiVideoStatus").textContent = t;
+      const prompt = $("aiPrompt").value.trim();
+      if (s !== "sjung" && !prompt) return status("Beskriv klippet först (eller tryck 💡 Förslag).", "fel");
+      $("aiVideoKor").disabled = true; $("aiVideoKlar").hidden = true;
+      try {
+        aiNyckel("fal");
+        st("Förbereder…");
+        const indata = aiIndata(modell, {
+          format: $("aiFormat").value, prompt, langd: +$("aiLangd").value,
+          bild: s === "text" ? null : await aiBildData(),
+          ljud: s === "sjung" ? await tillDataUrl(tillWav(await aiLatDel())) : null
+        });
+        st("Skickar till fal.ai…");
+        aiVideoUrl = await falKor(modell, indata, st);
+        aiVideoBlob = null;
+        try { const r = await fetch(aiVideoUrl); if (r.ok) aiVideoBlob = await r.blob(); } catch {}
+        $("aiVideoSpelare").src = aiVideoBlob ? URL.createObjectURL(aiVideoBlob) : aiVideoUrl;
+        $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `ai-klipp-${Date.now().toString(36)}.mp4`;
+        $("aiVideoKlar").hidden = false; aiSlagByt();
+        st(s === "sjung" || /veo/i.test(modell) ? "✓ Klart!" : "✓ Klart! Klippet är tyst – tryck 🎵 Lägg låten på.");
+      } catch (e) { st(""); status("Klippet kunde inte göras: " + e.message, "fel"); }
+      $("aiVideoKor").disabled = false;
+    };
+    // Låten läggs på klippet: spelas in i realtid (klippet loopas om det är kortare än låtdelen)
+    $("aiVideoLat").onclick = async () => {
+      const st = t => $("aiVideoStatus").textContent = t;
+      const typ = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+      if (!typ) return status("Den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn.", "fel");
+      if (!aiVideoBlob) return status("Klippet kunde inte hämtas hit – ladda ner det och använd 📣 Nytt inlägg i stället.", "fel");
+      $("aiVideoLat").disabled = true;
+      try {
+        st("Hämtar låten…");
+        const ljud = await aiLatDel(48000, false);
+        const v = document.createElement("video"); v.muted = true; v.playsInline = true; v.loop = true; v.src = URL.createObjectURL(aiVideoBlob);
+        await new Promise((ok, fel) => { v.onloadeddata = ok; v.onerror = () => fel(new Error("klippet kunde inte läsas")); });
+        const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; const cx = c.getContext("2d");
+        const ac = new AudioContext({ sampleRate: 48000 }), k = ac.createBufferSource(), mal = ac.createMediaStreamDestination();
+        k.buffer = ljud; k.connect(mal);
+        const strom = c.captureStream(30); mal.stream.getAudioTracks().forEach(t => strom.addTrack(t));
+        const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }), delar = [];
+        rec.ondataavailable = e => { if (e.data.size) delar.push(e.data); };
+        const klar = new Promise(ok => rec.onstop = ok);
+        await v.play(); cx.drawImage(v, 0, 0);
+        rec.start(1000); k.start();
+        const t0 = ac.currentTime;
+        let igang = true;
+        const loop = () => { if (!igang) return; cx.drawImage(v, 0, 0, c.width, c.height); st(`Lägger på låten… ${Math.round(ac.currentTime - t0)} av ${Math.round(ljud.duration)} s – låt fliken vara synlig`); requestAnimationFrame(loop); };
+        loop();
+        k.onended = () => setTimeout(() => { igang = false; rec.stop(); }, 200);
+        await klar; v.pause(); ac.close();
+        aiVideoBlob = new Blob(delar, { type: typ.split(";")[0] }); aiVideoBlob.medLat = true;
+        $("aiVideoSpelare").src = URL.createObjectURL(aiVideoBlob);
+        $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `ai-klipp-${Date.now().toString(36)}.${typ.startsWith("video/mp4") ? "mp4" : "webm"}`;
+        st("✓ Klart med låten – lyssna och tryck 📣 Lägg i Nytt inlägg.");
+      } catch (e) { st(""); status("Låten kunde inte läggas på: " + e.message, "fel"); }
+      $("aiVideoLat").disabled = false;
+    };
+    $("aiVideoInlagg").onclick = () => {
+      if (!aiVideoBlob) { window.open(aiVideoUrl, "_blank"); return status("Klippet öppnades i en ny flik – spara det och välj det under 📣 Nytt inlägg.", "osparat"); }
+      const l = aiLatObj(), artist = $("aiArtist").value;
+      valjInlaggFil(new File([aiVideoBlob], $("aiVideoNer").download, { type: aiVideoBlob.type }));
+      visaFlik("inlagg"); ritaInlagg();
+      if ([...$("inlaggArtist").options].some(o => o.value === artist)) $("inlaggArtist").value = artist;
+      if (l) {
+        if (!$("inlaggText").value.trim()) $("inlaggText").value = `${artist} – ${utanArtist(l.titel)}${l.slappt ? "" : " (demo)"} 🎶\n\n🎧 Lyssna gratis på devigtunga.se\n\n${hashtaggar(artist)}`;
+        const lank = [...$("inlaggLank").options].find(o => o.textContent.startsWith(ren(l.titel))); if (lank) $("inlaggLank").value = lank.value;
+      }
+      $("inlaggText").scrollIntoView({ behavior: "smooth", block: "center" });
+      status("🎬 Klippet ligger i Nytt inlägg – kolla texten och tryck Skicka.", "osparat");
+    };
+
     // ===== Flikar =====
     function visaFlik(n) {
       if (!document.querySelector(`[data-flik-del="${n}"]`)) n = "latar";
@@ -1834,6 +2191,7 @@ ${poster.slice(0, 20).map(p => `<item>
       try { localStorage.setItem("deu-admin-flik", n); } catch {}
       if (n === "latar" && data) setTimeout(ritaAllaVagformer);
       if (n === "valv") ritaValv();
+      if (n === "ai" && data) ritaAi();
     }
     $("flikar").onclick = e => { const b = e.target.closest("[data-flik]"); if (b) { visaFlik(b.dataset.flik); scrollTo({ top: 0 }); } };
 
@@ -1865,7 +2223,9 @@ ${poster.slice(0, 20).map(p => `<item>
       ["goatcounter", "GoatCounter API-nyckel", "Statistiken under Översikt", "https://devigtunga.goatcounter.com/user/api"],
       ["server", "Server-adminnyckel", "Engångskoder för smakprov", ""],
       ["make", "Make-webhook", "Adressen från Make (https://hook.…make.com/…) – inlägg skickas dit direkt. Guide och färdig mall: verktyg/make.html", "verktyg/make.html"],
-      ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"]
+      ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"],
+      ["elevenlabs", "ElevenLabs API-nyckel", "Röster och jinglar i ✨ AI-studio", "https://elevenlabs.io/app/settings/api-keys"],
+      ["fal", "fal.ai API-nyckel", "Videoklipp i ✨ AI-studio (Kling, Veo, lipsync)", "https://fal.ai/dashboard/keys"]
     ];
     let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
     const tillB64 = u8 => bytesTillBase64(u8), franB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
