@@ -432,6 +432,7 @@
       </div>
       <label>Ljud under rösten (valfritt – beskriv på engelska)<input type="text" id="aiLjud" placeholder="short radio jingle stinger, brass hit and whoosh"></label>
       <div class="rutnat">
+        <label>Sorts ljud<select id="aiLjudTyp"><option value="effekt">Ljudeffekt (whoosh, drop …)</option><option value="musik">Musik (Lyria 3 via fal)</option></select></label>
         <label>Ljudets längd<select id="aiLjudLangd"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select></label>
         <label>Ljudets nivå under rösten<input type="range" id="aiLjudNiva" min="10" max="100" value="45"></label>
       </div>
@@ -552,7 +553,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027105249";
+    const VERSION = "v20261027141518";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1942,10 +1943,10 @@ ${poster.slice(0, 20).map(p => `<item>
 
     // --- Röst ---
     const AI_MALLAR = {
-      radio: { namn: "Radiojingel", text: "Du lyssnar på De Evigt Unga å Vackra… devigtunga punkt se!", ljud: "short upbeat radio station jingle stinger, brass hit and whoosh", sek: 5 },
-      kommande: { namn: "Före Kommande", text: "Och nu… något helt nytt från studion. Det här har ingen hört förut!", ljud: "mysterious riser with sparkle and soft impact, anticipation", sek: 5 },
-      dj: { namn: "DJ Stigge intro", text: "D J Stigge… in the mix!", ljud: "deep house club drop, riser into sub bass hit, reverb tail", sek: 5 },
-      hitnet: { namn: "HitNet-mixen", text: "De Evigt Unga å Vackra och HitNet Radio – blandat och klart!", ljud: "energetic radio sweeper whoosh with drum fill", sek: 5 }
+      radio: { namn: "Radiojingel", text: "Du lyssnar på De Evigt Unga å Vackra… devigtunga punkt se!", ljud: "short upbeat radio station jingle stinger, brass hit and whoosh", musik: "upbeat Swedish party pop jingle, brass and claps, festive", sek: 5 },
+      kommande: { namn: "Före Kommande", text: "Och nu… något helt nytt från studion. Det här har ingen hört förut!", ljud: "mysterious riser with sparkle and soft impact, anticipation", musik: "dreamy anticipation intro, soft synth pads and building drums", sek: 5 },
+      dj: { namn: "DJ Stigge intro", text: "D J Stigge… in the mix!", ljud: "deep house club drop, riser into sub bass hit, reverb tail", musik: "deep house club groove, 124 bpm, warm bass and crisp hi-hats", sek: 8 },
+      hitnet: { namn: "HitNet-mixen", text: "De Evigt Unga å Vackra och HitNet Radio – blandat och klart!", ljud: "energetic radio sweeper whoosh with drum fill", musik: "energetic pop radio sweeper, punchy drums and synth stabs", sek: 5 }
     };
     // inbyggda (engelska) röster – läser svenska med engelsk brytning. Svenska röster (Bengt, Christer, Evelina, Louise …): välj "Svensk röst" och klistra in röst-id från ElevenLabs röstbibliotek.
     const EL_ROSTER = [["JBFqnCBsd6RMkjVDRZzb", "George – varm berättare"], ["nPczCjzI2devNBz1zQrb", "Brian – djup"], ["21m00Tcm4TlvDq8ikWAM", "Rachel – lugn"], ["EXAVITQu4vr4xnSDxMaL", "Sarah – mjuk"]];
@@ -1981,6 +1982,11 @@ ${poster.slice(0, 20).map(p => `<item>
       return hamtaBlob(await falKor(v3 ? "fal-ai/elevenlabs/tts/eleven-v3" : "fal-ai/elevenlabs/tts/multilingual-v2",
         { text, voice: o.dataset.namn || o.value, stability: .45, similarity_boost: .8, style: .35, ...(v3 ? { language_code: "sv" } : {}) }, st, "audio"));
     }
+    // musik under jinglar: Lyria 3 (30 s, märkt för kommersiellt bruk på fal) – finns bara via fal
+    async function aiMusik(text, st) {
+      if (!hemlighet("fal")) throw new Error("musik under jinglar går via fal.ai – lägg in fal.ai API-nyckel i 🔐 Valvet");
+      return hamtaBlob(await falKor("fal-ai/lyria3", { prompt: text }, st, "audio"));
+    }
     async function aiEffekt(text, sek, st) {
       if (!rostViaFal()) return elevenlabs("/sound-generation", { text, duration_seconds: sek, prompt_influence: .4 });
       return hamtaBlob(await falKor("fal-ai/elevenlabs/sound-effects/v2", { text, duration_seconds: sek, prompt_influence: .4 }, st, "audio"));
@@ -1993,7 +1999,7 @@ ${poster.slice(0, 20).map(p => `<item>
     document.querySelector('[data-flik-del="ai"]').addEventListener("click", e => {
       const m = e.target.closest("[data-ai-mall]"); if (!m) return;
       const t = AI_MALLAR[m.dataset.aiMall];
-      $("aiText").value = t.text; $("aiLjud").value = t.ljud; $("aiLjudLangd").value = String(t.sek); $("aiJingelNamn").value = t.namn;
+      $("aiText").value = t.text; $("aiLjud").value = $("aiLjudTyp").value === "musik" ? t.musik : t.ljud; $("aiLjudLangd").value = String(t.sek); $("aiJingelNamn").value = t.namn;
     });
     $("aiRost").addEventListener("change", () => {
       if ($("aiRost").value === "__ny") {
@@ -2017,14 +2023,18 @@ ${poster.slice(0, 20).map(p => `<item>
         st("Gör rösten…");
         const rost = text ? await aiTal(text, t => st("Rösten: " + t)) : null;
         st(ljudText ? "Gör ljudet under…" : "");
-        const ljud = ljudText ? await aiEffekt(ljudText, +$("aiLjudLangd").value, t => st("Ljudet: " + t)) : null;
-        if (rost && ljud) {
+        const musik = $("aiLjudTyp").value === "musik", sek = +$("aiLjudLangd").value;
+        const ljud = ljudText ? await (musik ? aiMusik(ljudText, t => st("Musiken: " + t)) : aiEffekt(ljudText, sek, t => st("Ljudet: " + t))) : null;
+        if (rost && ljud || musik && ljud) {
           st("Mixar…");
-          const [r, l] = await Promise.all([avkoda(rost), avkoda(ljud)]);
-          const rate = 44100, fore = .25, tot = Math.max(l.duration, fore + r.duration + .3);
+          const [r, l] = await Promise.all([rost ? avkoda(rost) : null, avkoda(ljud)]);
+          // musiken (30 s) kortas till vald längd – eller så lång rösten behöver – och tonas ut
+          const rate = 44100, fore = r ? .25 : 0, tot = musik ? Math.min(l.duration, Math.max(sek, fore + (r ? r.duration + 1.2 : 0))) : Math.max(l.duration, fore + r.duration + .3);
           const off = new OfflineAudioContext(2, Math.ceil(tot * rate), rate);
-          const spela = (buf, nar, niva) => { const k = off.createBufferSource(), g = off.createGain(); k.buffer = buf; g.gain.value = niva; k.connect(g); g.connect(off.destination); k.start(nar); };
-          spela(l, 0, +$("aiLjudNiva").value / 100); spela(r, fore, 1);
+          const spela = (buf, nar, niva) => { const k = off.createBufferSource(), g = off.createGain(); k.buffer = buf; g.gain.value = niva; k.connect(g); g.connect(off.destination); k.start(nar); return g; };
+          const under = spela(l, 0, +$("aiLjudNiva").value / 100);
+          if (musik) { const n = +$("aiLjudNiva").value / 100; under.gain.setValueAtTime(n, Math.max(0, tot - 1.2)); under.gain.linearRampToValueAtTime(0, tot); }
+          if (r) spela(r, fore, 1);
           const mix = await off.startRendering();
           let topp = 0; for (let c = 0; c < 2; c++) for (const v of mix.getChannelData(c)) topp = Math.max(topp, Math.abs(v));
           if (topp > 0) for (let c = 0; c < 2; c++) { const d = mix.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= .94 / topp; }   // topp på −0,5 dB
@@ -2066,12 +2076,13 @@ ${poster.slice(0, 20).map(p => `<item>
     const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : /veo/i.test($("aiModell").value) ? veoLangd(+$("aiLangd").value) : +$("aiLangd").value;
     function aiVideoKostnad() { const m = $("aiModell").value, p = AI_PRIS.find(([r]) => r.test(m)); return (p ? p[1](aiSekunder()) : .10 * aiSekunder()) * KURS; }
     function aiRostKostnad() {
-      if (valv && hemlighet("elevenlabs")) return 0;   // eget ElevenLabs-konto: ingår i abonnemanget
-      const ljud = $("aiLjud").value.trim() ? +$("aiLjudLangd").value : 0;
-      return ($("aiText").value.trim().length / 1000 * .10 + ljud * .002) * KURS;
+      const musik = $("aiLjud").value.trim() && $("aiLjudTyp").value === "musik" ? .04 : 0;   // Lyria 3: 0,04 $ per låt
+      if (valv && hemlighet("elevenlabs")) return musik * KURS;   // eget ElevenLabs-konto: rösten ingår i abonnemanget
+      const ljud = $("aiLjud").value.trim() && !musik ? +$("aiLjudLangd").value : 0;
+      return ($("aiText").value.trim().length / 1000 * .10 + ljud * .002 + musik) * KURS;
     }
     function visaAiKostnad() {
-      $("aiRostPris").textContent = valv && hemlighet("elevenlabs") ? "· ingår i ElevenLabs" : `· ≈ ${aiKr(aiRostKostnad())}`;
+      $("aiRostPris").textContent = valv && hemlighet("elevenlabs") && !aiRostKostnad() ? "· ingår i ElevenLabs" : `· ≈ ${aiKr(aiRostKostnad())}`;
       $("aiVideoPris").textContent = `· ≈ ${aiKr(aiVideoKostnad())}`;
       const nu = new Date(), manad = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}`;
       const denna = (data.aiLogg || []).filter(x => x.tid.startsWith(manad)), summa = denna.reduce((a, x) => a + x.kr, 0);
@@ -2157,8 +2168,12 @@ ${poster.slice(0, 20).map(p => `<item>
       if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric|omnihuman\/v1\.5/.test(modell) ? { resolution: "720p" } : {}) };
       // Veo: 9:16 eller 16:9 (ingen fyrkant) – med bild följer formatet bilden. Utan eget ljud, låten läggs på efteråt.
       if (/veo/i.test(modell)) return { prompt: s.prompt, duration: veoLangd(s.langd) + "s", resolution: "720p", generate_audio: false, aspect_ratio: s.bild ? "auto" : ar === "1:1" ? "16:9" : ar, ...(s.bild ? { image_url: s.bild } : {}) };
-      if (/kling\/v4/i.test(modell)) return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, ...(s.bild ? { image_url: s.bild } : {}) };
-      return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, generate_audio: false, negative_prompt: "blur, distortion, low quality, text, watermark", ...(s.bild ? { image_url: s.bild } : {}) };
+      // Kling 4.0: längd som tal, startbild i start_image_url (formatet följer bilden), ljud ingår alltid
+      if (/kling\/v4/i.test(modell)) return { prompt: s.prompt, duration: s.langd, resolution: "720p", ...(s.bild ? { start_image_url: s.bild } : { aspect_ratio: ar }) };
+      const neg = "blur, distortion, low quality, text, watermark";
+      // Kling 2.6: startbild i start_image_url, ljud på som standard (av = billigare)
+      if (/kling.*v2\.6/i.test(modell)) return { prompt: s.prompt, duration: String(s.langd), generate_audio: false, negative_prompt: neg, ...(s.bild ? { start_image_url: s.bild } : { aspect_ratio: ar }) };
+      return { prompt: s.prompt, duration: String(s.langd), negative_prompt: neg, ...(s.bild ? { image_url: s.bild } : { aspect_ratio: ar }) };
     }
     function hittaFil(o, slag) {
       if (!o || typeof o !== "object") return null;
