@@ -13,6 +13,14 @@ data.inlagg ||= []; data.artister ||= []; data.lankar ||= {};
 const mediaUrl = m => /^https?:/.test(m) ? m : SIDA + m.split("/").map(encodeURIComponent).join("/");
 const ren = t => String(t || "").trim().toLowerCase();
 
+// TikTok tar max 150 tecken: första raden + så många hashtaggar som får plats (samma som i backoffice)
+function tiktokText(text) {
+  const forsta = String(text || "").split("\n")[0].trim(), taggar = (String(text || "").match(/#[\p{L}\p{N}_]+/gu) || []).filter(h => !forsta.includes(h));
+  let ut = forsta.slice(0, 150);
+  for (const h of taggar) { if ((ut + " " + h).length > 150) break; ut += " " + h; }
+  return ut;
+}
+
 const dags = data.inlagg.filter(p => p.vantar && !p.skickad && (!p.planerad || new Date(p.planerad) <= nu));
 let andrat = false;
 if (!dags.length) console.log("Inget att skicka just nu.");
@@ -27,7 +35,8 @@ else for (const p of dags) {
   const k = art || data.lankar, kan = p.kanaler || ["facebook", "instagram", "youtube"];
   const falt = { id: p.id, text: p.text, artist: p.artist || "De Evigt Unga å Vackra", typ: p.typ, format: p.format || "", media_url: p.media ? mediaUrl(p.media) : "", mime: p.mime || "",
     lank: p.lank || SIDA, datum: p.datum, youtube: k.youtube || "", instagram: k.instagram || "", facebook: k.facebook || "", tiktok: k.tiktok || "",
-    till_facebook: kan.includes("facebook") ? "ja" : "nej", till_instagram: kan.includes("instagram") ? "ja" : "nej", till_youtube: kan.includes("youtube") ? "ja" : "nej" };
+    till_facebook: kan.includes("facebook") ? "ja" : "nej", till_instagram: kan.includes("instagram") ? "ja" : "nej", till_youtube: kan.includes("youtube") ? "ja" : "nej",
+    ai_realistisk: p.aiRealistisk ? "ja" : "nej", tiktok_text: tiktokText(p.text) };
   const svar = await fetch(webhook, { method: "POST", body: new URLSearchParams(falt) });
   if (!svar.ok) { console.log(`Make svarade ${svar.status} för ${p.id} – försöker igen nästa körning.`); continue; }
   p.skickad = nu.toISOString(); delete p.vantar; andrat = true;

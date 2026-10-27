@@ -362,6 +362,7 @@
         <label class="kryss"><input type="checkbox" data-kanal="youtube" checked> YouTube</label>
         <span class="hjalp">· alltid på hemsidan · TikTok lägger du upp själv</span>
       </div>
+      <label class="kryss"><input type="checkbox" id="inlaggAi"> 🤖 Realistisk AI-video (märks som AI på YouTube och Facebook/Instagram)</label>
       <div class="inlagg-rad">
         <label class="kryss"><input type="radio" name="inlaggNar" value="nu" checked> Skicka nu</label>
         <label class="kryss"><input type="radio" name="inlaggNar" value="senare"> Planera till</label>
@@ -553,7 +554,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027141518";
+    const VERSION = "v20261027154843";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2277,6 +2278,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const l = aiLatObj(), artist = $("aiArtist").value;
       valjInlaggFil(new File([aiVideoBlob], $("aiVideoNer").download, { type: aiVideoBlob.type }));
       visaFlik("inlagg"); ritaInlagg();
+      $("inlaggAi").checked = true;   // från AI-studion = AI-video (bocka ur om den inte ser verklig ut)
       if ([...$("inlaggArtist").options].some(o => o.value === artist)) $("inlaggArtist").value = artist;
       if (l) {
         if (!$("inlaggText").value.trim()) $("inlaggText").value = `${artist} – ${utanArtist(l.titel)}${l.slappt ? "" : " (demo)"} 🎶\n\n🎧 Lyssna gratis på devigtunga.se\n\n${hashtaggar(artist)}`;
@@ -2646,6 +2648,7 @@ ${poster.slice(0, 20).map(p => `<item>
           <div><p>${esc(p.text)}</p><div class="prickar">${prickar(p)}</div><small>${statusFor(p)}${p.kanaler ? (p.kanaler.length ? p.kanaler.join(", ") : "bara hemsidan") + " · " : ""}${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
           <div style="display:grid;gap:6px">
             ${p.typ === "paminnelse" ? "" : `<button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>`}
+            ${p.skickad && !p.ute && !kvitton[p.id] && p.typ !== "paminnelse" && (p.kanaler || [1]).length ? `<button class="knapp kontur liten" type="button" data-inlagg-ute="${k}" title="För inlägg som ligger ute men saknar kvitto från Make">✓ Markera som ute</button>` : ""}
             <button class="knapp kontur liten" type="button" data-inlagg-andra="${k}">✏️ Redigera</button>
             <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
           </div>
@@ -2663,6 +2666,7 @@ ${poster.slice(0, 20).map(p => `<item>
           <label class="kryss">${vantar ? "Läggs ut" : "Datum"} <input type="datetime-local" data-red-tid value="${lokal}" style="width:auto;height:auto"></label>
           ${vantar && p.typ !== "paminnelse" ? ["facebook", "instagram", "youtube"].map(k => `<label class="kryss"><input type="checkbox" data-red-kanal="${k}" ${(p.kanaler || ["facebook", "instagram", "youtube"]).includes(k) ? "checked" : ""}> ${KANAL_NAMN[k]}</label>`).join("") : ""}
         </div>
+        ${vantar && p.typ !== "paminnelse" ? `<label class="kryss"><input type="checkbox" data-red-ai ${p.aiRealistisk ? "checked" : ""}> 🤖 Realistisk AI-video</label>` : ""}
         ${vantar ? "" : `<small>Inlägget är redan skickat – ändringen syns på hemsidan. På Facebook/Instagram/YouTube ändrar du där, eller trycker ↻ Skicka igen.</small>`}
         <div class="rad"><button class="knapp liten" type="button" data-red-spara>💾 Spara</button><button class="knapp kontur liten" type="button" data-red-avbryt>Avbryt</button></div>
       </div>`;
@@ -2695,6 +2699,7 @@ ${poster.slice(0, 20).map(p => `<item>
         const kanaler = [...document.querySelectorAll("[data-kanal]:checked")].map(c => c.dataset.kanal);
         const id = tid.toISOString().slice(0, 10) + "-" + (slugga(text.split("\n")[0]).slice(0, 40) || "inlagg") + "-" + nu.getTime().toString(36).slice(-4);
         const post = { id, datum: tid.toISOString(), text, artist: $("inlaggArtist").value || "De Evigt Unga å Vackra", lank: $("inlaggLank").value || SIDA, typ: "text", kanaler };
+        if ($("inlaggAi").checked) post.aiRealistisk = true;
         if (senare) { post.planerad = tid.toISOString(); post.vantar = true; }
         else if (!kanaler.length) post.skickad = nu.toISOString();   // bara hemsidan
         else if (hemlighet("make")) post.skickad = nu.toISOString();   // skickas till Make direkt nedan
@@ -2708,7 +2713,7 @@ ${poster.slice(0, 20).map(p => `<item>
           forhands[post.media] = URL.createObjectURL(inlaggFil);
         }
         data.inlagg.unshift(post);
-        $("inlaggText").value = ""; inlaggFil = null; $("inlaggFilNamn").textContent = "Ingen fil vald (går att skicka bara text)"; $("inlaggForhand").hidden = true; $("inlaggForhand").innerHTML = "";
+        $("inlaggText").value = ""; $("inlaggAi").checked = false; inlaggFil = null; $("inlaggFilNamn").textContent = "Ingen fil vald (går att skicka bara text)"; $("inlaggForhand").hidden = true; $("inlaggForhand").innerHTML = "";
         ritaInlagg(); andrat();
         await $("spara").onclick();   // sparar låtlistan, nyhetsflödet och inläggsflödet
         if (senare) return status(`🗓 Planerat till ${tid.toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}. Det publiceras automatiskt (inom ca 15 min efter tiden).`, "ok");
@@ -2737,15 +2742,26 @@ ${poster.slice(0, 20).map(p => `<item>
         if (isNaN(ny)) return status("Välj datum och tid.", "fel");
         if (p.vantar && ny < new Date(Date.now() - 6e4)) return status("Tiden har redan passerat – välj en tid framåt (eller tryck 📣 Skicka nu).", "fel");
         p.text = text; p.datum = ny.toISOString(); if (p.planerad) p.planerad = p.datum;
+        const ai = ruta.querySelector("[data-red-ai]"); if (ai) { if (ai.checked) p.aiRealistisk = true; else delete p.aiRealistisk; }
         const kryss = ruta.querySelectorAll("[data-red-kanal]");
         if (kryss.length) p.kanaler = [...kryss].filter(c => c.checked).map(c => c.dataset.redKanal);
         redigerar = null; ritaInlagg(); andrat(); await $("spara").onclick();
         if (!osparat) status("✏️ Inlägget är ändrat och sparat.", "ok");
         return;
       }
+      const ute = e.target.closest("[data-inlagg-ute]");
+      if (ute) {
+        const p = data.inlagg[+ute.dataset.inlaggUte];
+        if (!confirm("Ligger inlägget ute på kanalerna? Då blir prickarna gröna.")) return;
+        p.ute = true; ritaInlagg(); andrat(); await $("spara").onclick();
+        if (!osparat) status("✓ Markerat som ute.", "ok");
+        return;
+      }
       const igen = e.target.closest("[data-inlagg-igen]");
       if (igen) {
-        const p = data.inlagg[+igen.dataset.inlaggIgen]; igen.disabled = true;
+        const p = data.inlagg[+igen.dataset.inlaggIgen];
+        if (p.skickad && !p.vantar && !confirm(`Inlägget skickades redan ${new Date(p.skickad).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}. Skickar du igen blir det dubbletter på kanalerna. Skicka ändå?`)) return;
+        igen.disabled = true;
         try {
           const svar = await skickaTillMake(p);
           if (svar === true && (p.vantar || !p.skickad)) {
@@ -2784,17 +2800,17 @@ ${poster.slice(0, 20).map(p => `<item>
       if (p.planerad && new Date(p.planerad) > new Date()) return "";
       const kv = kvitton[p.id], skickad = p.skickad ? new Date(p.skickad) : null;
       return (p.kanaler || ["facebook", "instagram", "youtube"]).map(k => {
-        const ok = kv && kv.klar && (kv.kanaler?.[k] ?? "ja") === "ja";
+        const ok = p.ute || kv && kv.klar && (kv.kanaler?.[k] ?? "ja") === "ja";
         const typ = ok ? "ute" : !skickad || Date.now() - skickad < 2 * 3600e3 ? "vantar" : "fel";
-        const titel = ok ? `Ligger ute på ${KANAL_NAMN[k]}` : typ === "vantar" ? `Väntar på kvitto från Make (${KANAL_NAMN[k]})` : `Inget kvitto från Make efter 2 timmar – kolla History i Make (${KANAL_NAMN[k]})`;
-        const lank = ok && kv.lankar?.[k];
+        const titel = ok ? `Ligger ute på ${KANAL_NAMN[k]}${p.ute && !kv ? " (markerat för hand)" : ""}` : typ === "vantar" ? `Väntar på kvitto från Make (${KANAL_NAMN[k]})` : `Inget kvitto från Make efter 2 timmar – kolla History i Make (${KANAL_NAMN[k]})`;
+        const lank = ok && kv?.lankar?.[k];
         return lank ? `<a class="kanal-prick ${typ}" href="${esc(lank)}" target="_blank" rel="noopener" title="${titel}">${KANAL_NAMN[k]}</a>` : `<span class="kanal-prick ${typ}" title="${titel}">${KANAL_NAMN[k]}</span>`;
       }).join("");
     }
     // så länge något väntar på kvitto: titta efter nya var 30:e sekund (bara när fliken Inlägg är öppen)
     function bevakaKvitton() {
       clearTimeout(kvittoTimer);
-      const vantar = data && data.inlagg.some(p => p.skickad && !kvitton[p.id] && Date.now() - new Date(p.skickad) < 2 * 3600e3 && (p.kanaler || [1]).length);
+      const vantar = data && data.inlagg.some(p => p.skickad && !p.ute && !kvitton[p.id] && Date.now() - new Date(p.skickad) < 2 * 3600e3 && (p.kanaler || [1]).length);
       if (!vantar) return;
       kvittoTimer = setTimeout(async () => {
         if (!document.hidden && !document.querySelector('[data-flik-del="inlagg"]').hidden) { const fore = Object.keys(kvitton).length; await hamtaKvitton(); if (Object.keys(kvitton).length !== fore) ritaInlagg(); }
@@ -2871,6 +2887,13 @@ ${poster.slice(0, 20).map(p => `<item>
     $("inlaggTid").addEventListener("input", () => { document.querySelector('[name="inlaggNar"][value="senare"]').checked = true; });
 
     // Make: admin skickar inlägget direkt till en webhook (adressen ligger i valvet). Make lägger sedan ut det.
+    // TikTok tar max 150 tecken: första raden + så många hashtaggar som får plats
+    function tiktokText(t) {
+      const forsta = String(t || "").split("\n")[0].trim(), taggar = (String(t || "").match(/#[\p{L}\p{N}_]+/gu) || []).filter(h => !forsta.includes(h));
+      let ut = forsta.slice(0, 150);
+      for (const h of taggar) { if ((ut + " " + h).length > 150) break; ut += " " + h; }
+      return ut;
+    }
     async function skickaTillMake(post) {
       const url = hemlighet("make");
       if (!url) return harValv() && !valv ? "last" : false;
@@ -2888,7 +2911,8 @@ ${poster.slice(0, 20).map(p => `<item>
       const kan = post.kanaler || ["facebook", "instagram", "youtube"];
       const falt = { id: post.id, text: post.text, artist: post.artist || "De Evigt Unga å Vackra", typ: post.typ, format: post.format || "", media_url: post.media ? mediaUrl(post.media) : "", mime: post.mime || "",
         lank: post.lank || SIDA, datum: post.datum, youtube: k.youtube || "", instagram: k.instagram || "", facebook: k.facebook || "", tiktok: k.tiktok || "",
-        till_facebook: kan.includes("facebook") ? "ja" : "nej", till_instagram: kan.includes("instagram") ? "ja" : "nej", till_youtube: kan.includes("youtube") ? "ja" : "nej" };
+        till_facebook: kan.includes("facebook") ? "ja" : "nej", till_instagram: kan.includes("instagram") ? "ja" : "nej", till_youtube: kan.includes("youtube") ? "ja" : "nej",
+        ai_realistisk: post.aiRealistisk ? "ja" : "nej", tiktok_text: tiktokText(post.text) };
       status("Skickar till Make…");
       await fetch(url, { method: "POST", mode: "no-cors", body: new URLSearchParams(falt) });   // enkelt formulär: inget svar behövs
       return true;
