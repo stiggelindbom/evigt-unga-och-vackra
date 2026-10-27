@@ -71,6 +71,9 @@
     .inlagg-post .tumme { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #2a2418; display: grid; place-items: center; font-size: 1.4rem; }
     .inlagg-post p { font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .inlagg-post small { color: var(--dampad); }
+    .ai-pris { font: 600 .78em system-ui, sans-serif; letter-spacing: 0; text-transform: none; opacity: .85; }
+    .ai-manad { margin-top: 8px; padding: 10px 14px; border: 1px solid var(--kant); border-radius: 10px; background: var(--yta); font-size: .95rem; }
+    .ai-manad b { color: var(--guld); }
     .inlagg-redigera { grid-column: 1 / -1; display: grid; gap: 10px; background: #1a1610; border: 1px solid var(--guld); border-radius: 10px; padding: 12px; }
     .inlagg-redigera textarea { width: 100%; min-height: 180px; }
     .inlagg-redigera .rad { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
@@ -266,7 +269,7 @@
       <button type="button" data-flik="latar">🎵 Låtar</button>
       <button type="button" data-flik="inlagg">📣 Inlägg</button>
       <button type="button" data-flik="artister">🎤 Artister & länkar</button>
-      <button type="button" data-flik="ai">✨ AI-studio</button>
+      <button type="button" data-flik="ai">✨ AI-studio <small id="aiFlikPris" class="ai-pris"></small></button>
       <button type="button" data-flik="valv">🔐 Valv & koder</button>
     </nav>
     <section class="flik" data-flik-del="oversikt">
@@ -407,6 +410,7 @@
     <section class="flik" data-flik-del="ai">
     <div>
       <h2>✨ AI-studio</h2>
+      <div class="ai-manad" id="aiManad"></div>
       <p class="hjalp">Gör jinglar, röster och videoklipp direkt här. Nycklarna ligger i 🔐 Valvet (ElevenLabs och fal.ai) – lås upp valvet först. Det färdiga går rakt till Jinglar eller Nytt inlägg.</p>
     </div>
     <div class="kort" style="display:grid;gap:12px">
@@ -431,7 +435,7 @@
         <label>Ljudets längd<select id="aiLjudLangd"><option value="3">3 s</option><option value="5" selected>5 s</option><option value="8">8 s</option><option value="12">12 s</option></select></label>
         <label>Ljudets nivå under rösten<input type="range" id="aiLjudNiva" min="10" max="100" value="45"></label>
       </div>
-      <div class="inlagg-rad"><button class="knapp" type="button" id="aiRostKor">🎙 Gör ljudet</button><span class="hjalp" id="aiRostStatus"></span></div>
+      <div class="inlagg-rad"><button class="knapp" type="button" id="aiRostKor">🎙 Gör ljudet <span class="ai-pris" id="aiRostPris"></span></button><span class="hjalp" id="aiRostStatus"></span></div>
       <div id="aiRostKlar" hidden class="inlagg-rad">
         <audio id="aiRostSpelare" controls style="flex:1;min-width:240px"></audio>
         <button class="knapp liten" type="button" id="aiRostJingel">🎺 Spara som jingel</button>
@@ -469,7 +473,7 @@
         <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="30" step="1" value="15"></label>
       </div>
       <p class="hjalp" data-ai-for="sjung">Bilden ska visa ett ansikte (t.ex. ett foto på Ingvar eller bandet). Delen av låten skickas med, och personen sjunger den.</p>
-      <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet</button><button class="knapp kontur liten" type="button" id="aiEgetKlipp" title="T.ex. ett klipp du gjort i DeeVid">📂 Eget klipp (DeeVid m.fl.)</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter. Det kostar några kronor per klipp på fal.ai.</span></div>
+      <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet <span class="ai-pris" id="aiVideoPris"></span></button><button class="knapp kontur liten" type="button" id="aiEgetKlipp" title="T.ex. ett klipp du gjort i DeeVid">📂 Eget klipp (DeeVid m.fl.)</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter.</span></div>
       <div id="aiVideoKlar" hidden style="display:grid;gap:10px">
         <video id="aiVideoSpelare" controls playsinline style="max-width:100%;max-height:60vh;border-radius:10px;background:#000"></video>
         <div class="inlagg-rad">
@@ -548,7 +552,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027101946";
+    const VERSION = "v20261027102233";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -691,7 +695,7 @@
       const f = await gh(`/contents/${DATAFIL}?ref=${GREN}`);
       sha = f.sha;
       data = JSON.parse(franBase64(f.content));
-      data.lankar ||= {}; data.latar ||= []; data.vanner ||= []; data.inlagg ||= []; data.jinglar ||= []; data.radio ||= {};
+      data.lankar ||= {}; data.latar ||= []; data.vanner ||= []; data.inlagg ||= []; data.jinglar ||= []; data.radio ||= {}; data.aiLogg ||= [];
       data.artister ||= [{ namn: "DJ Stigge", spotify: "", youtube: "", instagram: "", facebook: "", tiktok: "", soundcloud: "", webb: "https://stigges.se" }];
       for (const l of data.latar) if (!l.kredit) { l.kredit = FORVAL(); fyllda.push(l); }
       const mapp = await gh(`/contents/musik?ref=${GREN}`).catch(() => []);
@@ -1985,7 +1989,7 @@ ${poster.slice(0, 20).map(p => `<item>
     });
     $("aiRost").addEventListener("change", () => { try { localStorage.setItem("deu-ai-rost", $("aiRost").value); } catch {} });
     $("aiRostKor").onclick = async () => {
-      const text = $("aiText").value.trim(), ljudText = $("aiLjud").value.trim();
+      const text = $("aiText").value.trim(), ljudText = $("aiLjud").value.trim(), pris = aiRostKostnad();
       if (!text && !ljudText) return status("Skriv vad rösten ska säga (eller beskriv ett ljud).", "fel");
       $("aiRostKor").disabled = true; $("aiRostKlar").hidden = true;
       const st = t => $("aiRostStatus").textContent = t;
@@ -2010,7 +2014,8 @@ ${poster.slice(0, 20).map(p => `<item>
         } else aiRostBlob = rost || ljud;
         $("aiRostSpelare").src = URL.createObjectURL(aiRostBlob);
         $("aiRostNer").href = $("aiRostSpelare").src; $("aiRostNer").download = filnamn($("aiJingelNamn").value || "jingel");
-        $("aiRostKlar").hidden = false; st("✓ Klar – lyssna!"); $("aiRostSpelare").play().catch(() => {});
+        $("aiRostKlar").hidden = false; st(`✓ Klar – lyssna! (≈ ${aiKr(pris)})`); $("aiRostSpelare").play().catch(() => {});
+        aiLogga("ljud", $("aiJingelNamn").value.trim() || (text ? "Röst" : "Ljudeffekt"), pris);
       } catch (e) { st(""); status("Ljudet kunde inte göras: " + e.message, "fel"); }
       $("aiRostKor").disabled = false;
     };
@@ -2032,6 +2037,36 @@ ${poster.slice(0, 20).map(p => `<item>
     const AI_STORLEK = { staende: [720, 1280, "9:16"], liggande: [1280, 720, "16:9"], kvadrat: [1024, 1024, "1:1"] };
     const aiSlag = () => document.querySelector('[name="aiSlag"]:checked').value;
     let aiEgenBild = null, aiVideoUrl = null, aiVideoBlob = null;
+    // Uppskattad kostnad (fal.ai-priser i dollar, omräknat till kronor) – visas på knapparna och som månadssumma
+    const KURS = 10.5;
+    const AI_PRIS = [[/kling.*master/i, s => 1.40 * s / 5], [/kling/i, s => .28 + Math.max(0, s - 5) * .056], [/veo/i, () => 8 * .15], [/omnihuman/i, s => .14 * s], [/fabric/i, s => .15 * s]];
+    const aiKr = v => !v ? "0 kr" : v < 1 ? `${Math.max(1, Math.round(v * 100))} öre` : `${v < 10 ? v.toFixed(1).replace(".", ",") : Math.round(v)} kr`;
+    const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, 30)) : /veo/i.test($("aiModell").value) ? 8 : +$("aiLangd").value;
+    function aiVideoKostnad() { const m = $("aiModell").value, p = AI_PRIS.find(([r]) => r.test(m)); return (p ? p[1](aiSekunder()) : .10 * aiSekunder()) * KURS; }
+    function aiRostKostnad() {
+      if (valv && hemlighet("elevenlabs")) return 0;   // eget ElevenLabs-konto: ingår i abonnemanget
+      const ljud = $("aiLjud").value.trim() ? +$("aiLjudLangd").value : 0;
+      return ($("aiText").value.trim().length / 1000 * .10 + ljud * .002) * KURS;
+    }
+    function visaAiKostnad() {
+      $("aiRostPris").textContent = valv && hemlighet("elevenlabs") ? "· ingår i ElevenLabs" : `· ≈ ${aiKr(aiRostKostnad())}`;
+      $("aiVideoPris").textContent = `· ≈ ${aiKr(aiVideoKostnad())}`;
+      const nu = new Date(), manad = `${nu.getFullYear()}-${String(nu.getMonth() + 1).padStart(2, "0")}`;
+      const denna = (data.aiLogg || []).filter(x => x.tid.startsWith(manad)), summa = denna.reduce((a, x) => a + x.kr, 0);
+      const klipp = denna.filter(x => x.typ === "video").length, ljud = denna.length - klipp;
+      $("aiFlikPris").textContent = summa ? `≈ ${aiKr(summa)}` : "";
+      $("aiManad").innerHTML = `💰 ${nu.toLocaleDateString("sv-SE", { month: "long" })}: <b>≈ ${aiKr(summa)}</b> · ${klipp} klipp · ${ljud} ljud`
+        + `<br><small class="hjalp">Uppskattning från fal.ai:s priser (1 $ ≈ ${String(KURS).replace(".", ",")} kr). Exakt belopp: fal.ai → Billing.${denna.length ? ` Senast: ${esc(denna[denna.length - 1].vad)} ≈ ${aiKr(denna[denna.length - 1].kr)}.` : ""}</small>`;
+    }
+    async function aiLogga(typ, vad, kr) {
+      if (!kr) return visaAiKostnad();
+      data.aiLogg.push({ tid: new Date().toISOString(), typ, vad, kr: Math.round(kr * 100) / 100 });
+      data.aiLogg = data.aiLogg.slice(-300);
+      visaAiKostnad(); andrat();
+      try { await $("spara").onclick(); } catch {}
+    }
+    document.querySelector('[data-flik-del="ai"]').addEventListener("input", () => data && visaAiKostnad());
+    document.querySelector('[data-flik-del="ai"]').addEventListener("change", () => data && visaAiKostnad());
     function ritaAi() {
       hamtaRoster();
       const latar = data.latar.filter(l => l.fil && l.titel && !l.dold);
@@ -2041,7 +2076,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const a = $("aiArtist").value;
       $("aiArtist").innerHTML = ["De Evigt Unga å Vackra", ...data.artister.map(x => ren(x.namn)).filter(Boolean)].map(n => `<option>${esc(n)}</option>`).join("");
       if (a) $("aiArtist").value = a; else { const l = aiLatObj(); if (l) $("aiArtist").value = artistFor(l); }
-      aiSlagByt();
+      aiSlagByt(); visaAiKostnad();
     }
     const aiLatObj = () => data.latar.find(l => l.fil === $("aiLat").value);
     function aiLatVald() {
@@ -2141,7 +2176,9 @@ ${poster.slice(0, 20).map(p => `<item>
           ljud: s === "sjung" ? await tillDataUrl(tillWav(await aiLatDel())) : null
         });
         st("Skickar till fal.ai…");
+        const pris = aiVideoKostnad();
         aiVideoUrl = await falKor(modell, indata, st);
+        aiLogga("video", ({ text: "Klipp från text", bild: "Bild får liv", sjung: "Sjungande bild" })[s] + " – " + $("aiModell").selectedOptions[0].textContent.split(" – ")[0], pris);
         aiVideoBlob = null;
         try { const r = await fetch(aiVideoUrl); if (r.ok) aiVideoBlob = await r.blob(); } catch {}
         $("aiVideoSpelare").src = aiVideoBlob ? URL.createObjectURL(aiVideoBlob) : aiVideoUrl;
