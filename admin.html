@@ -71,6 +71,9 @@
     .inlagg-post .tumme { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; background: #2a2418; display: grid; place-items: center; font-size: 1.4rem; }
     .inlagg-post p { font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .inlagg-post small { color: var(--dampad); }
+    .inlagg-redigera { grid-column: 1 / -1; display: grid; gap: 10px; background: #1a1610; border: 1px solid var(--guld); border-radius: 10px; padding: 12px; }
+    .inlagg-redigera textarea { width: 100%; min-height: 180px; }
+    .inlagg-redigera .rad { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
     .prickar { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px; }
     .kanal-prick { font-size: .75rem; color: var(--dampad); text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
     .kanal-prick::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #6b5a2e; }
@@ -468,7 +471,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261025214310";
+    const VERSION = "v20261027084828";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2180,10 +2183,26 @@ ${poster.slice(0, 20).map(p => `<item>
           <div><p>${esc(p.text)}</p><div class="prickar">${prickar(p)}</div><small>${statusFor(p)}${p.kanaler ? (p.kanaler.length ? p.kanaler.join(", ") : "bara hemsidan") + " · " : ""}${p.artist ? esc(p.artist) + " · " : ""}${new Date(p.datum).toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}</small></div>
           <div style="display:grid;gap:6px">
             ${p.typ === "paminnelse" ? "" : `<button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>`}
-            ${p.vantar || p.typ === "paminnelse" ? `<button class="knapp kontur liten" type="button" data-inlagg-andra="${k}">✏️ Ändra</button>` : ""}
+            <button class="knapp kontur liten" type="button" data-inlagg-andra="${k}">✏️ Redigera</button>
             <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
           </div>
+          ${redigerar === p.id ? redigeraForm(p) : ""}
         </div>`).join("") : "";
+    }
+    // ✏️ Redigera: öppnar inlägget direkt i listan (text med radbrytningar, tid och kanaler)
+    let redigerar = null;
+    function redigeraForm(p) {
+      const d = new Date(p.planerad || p.datum), lokal = `${datumNyckel(d)}T${klock(d)}`;
+      const vantar = p.vantar || p.typ === "paminnelse";
+      return `<div class="inlagg-redigera">
+        <textarea data-red-text>${esc(p.text)}</textarea>
+        <div class="rad">
+          <label class="kryss">${vantar ? "Läggs ut" : "Datum"} <input type="datetime-local" data-red-tid value="${lokal}" style="width:auto;height:auto"></label>
+          ${vantar && p.typ !== "paminnelse" ? ["facebook", "instagram", "youtube"].map(k => `<label class="kryss"><input type="checkbox" data-red-kanal="${k}" ${(p.kanaler || ["facebook", "instagram", "youtube"]).includes(k) ? "checked" : ""}> ${KANAL_NAMN[k]}</label>`).join("") : ""}
+        </div>
+        ${vantar ? "" : `<small>Inlägget är redan skickat – ändringen syns på hemsidan. På Facebook/Instagram/YouTube ändrar du där, eller trycker ↻ Skicka igen.</small>`}
+        <div class="rad"><button class="knapp liten" type="button" data-red-spara>💾 Spara</button><button class="knapp kontur liten" type="button" data-red-avbryt>Avbryt</button></div>
+      </div>`;
     }
     const slugga = t => String(t).toLowerCase().replace(/[åä]/g, "a").replace(/ö/g, "o").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     $("inlaggValj").onclick = () => { $("inlaggFil").value = ""; $("inlaggFil").click(); };
@@ -2241,13 +2260,25 @@ ${poster.slice(0, 20).map(p => `<item>
       const andra = e.target.closest("[data-inlagg-andra]");
       if (andra) {
         const p = data.inlagg[+andra.dataset.inlaggAndra];
-        const text = prompt("Texten i inlägget:", p.text); if (text === null) return;
-        const d = new Date(p.datum), nuvarande = `${datumNyckel(d)} ${klock(d)}`;
-        const tid = prompt("Datum och tid (ÅÅÅÅ-MM-DD TT:MM):", nuvarande); if (tid === null) return;
-        const ny = new Date(tid.trim().replace(" ", "T"));
-        if (isNaN(ny)) return status("Tiden ska skrivas som 2026-11-14 18:00.", "fel");
-        p.text = text.trim() || p.text; p.datum = ny.toISOString(); if (p.planerad) p.planerad = p.datum;
-        ritaInlagg(); andrat(); return status("✏️ Ändrat – tryck Spara ändringar.", "osparat");
+        redigerar = redigerar === p.id ? null : p.id; ritaInlagg();
+        const t = document.querySelector("[data-red-text]"); if (t) { t.focus(); t.scrollIntoView({ block: "center", behavior: "smooth" }); }
+        return;
+      }
+      if (e.target.closest("[data-red-avbryt]")) { redigerar = null; return ritaInlagg(); }
+      const redSpara = e.target.closest("[data-red-spara]");
+      if (redSpara) {
+        const p = data.inlagg.find(x => x.id === redigerar), ruta = redSpara.closest(".inlagg-redigera"); if (!p) return;
+        const text = ruta.querySelector("[data-red-text]").value.trim();
+        if (!text) return status("Inlägget behöver en text.", "fel");
+        const ny = new Date(ruta.querySelector("[data-red-tid]").value);
+        if (isNaN(ny)) return status("Välj datum och tid.", "fel");
+        if (p.vantar && ny < new Date(Date.now() - 6e4)) return status("Tiden har redan passerat – välj en tid framåt (eller tryck 📣 Skicka nu).", "fel");
+        p.text = text; p.datum = ny.toISOString(); if (p.planerad) p.planerad = p.datum;
+        const kryss = ruta.querySelectorAll("[data-red-kanal]");
+        if (kryss.length) p.kanaler = [...kryss].filter(c => c.checked).map(c => c.dataset.redKanal);
+        redigerar = null; ritaInlagg(); andrat(); await $("spara").onclick();
+        if (!osparat) status("✏️ Inlägget är ändrat och sparat.", "ok");
+        return;
       }
       const igen = e.target.closest("[data-inlagg-igen]");
       if (igen) {
