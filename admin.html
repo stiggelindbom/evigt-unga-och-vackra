@@ -461,6 +461,7 @@
         </select></label>
       </div>
       <input type="file" id="aiBildFil" accept="image/jpeg,image/png,image/webp" hidden>
+      <input type="file" id="aiKlippFil" accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm" hidden>
       <div data-ai-for="text bild"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
         <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
       <div class="rutnat">
@@ -468,7 +469,7 @@
         <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="30" step="1" value="15"></label>
       </div>
       <p class="hjalp" data-ai-for="sjung">Bilden ska visa ett ansikte (t.ex. ett foto på Ingvar eller bandet). Delen av låten skickas med, och personen sjunger den.</p>
-      <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter. Det kostar några kronor per klipp på fal.ai.</span></div>
+      <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet</button><button class="knapp kontur liten" type="button" id="aiEgetKlipp" title="T.ex. ett klipp du gjort i DeeVid">📂 Eget klipp (DeeVid m.fl.)</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter. Det kostar några kronor per klipp på fal.ai.</span></div>
       <div id="aiVideoKlar" hidden style="display:grid;gap:10px">
         <video id="aiVideoSpelare" controls playsinline style="max-width:100%;max-height:60vh;border-radius:10px;background:#000"></video>
         <div class="inlagg-rad">
@@ -547,7 +548,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027093853";
+    const VERSION = "v20261027094207";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2135,6 +2136,17 @@ ${poster.slice(0, 20).map(p => `<item>
       } catch (e) { st(""); status("Klippet kunde inte göras: " + e.message, "fel"); }
       $("aiVideoKor").disabled = false;
     };
+    // Klipp gjorda någon annanstans (t.ex. DeeVid): samma väg vidare – lägg på låten och skicka som inlägg
+    $("aiEgetKlipp").onclick = () => { $("aiKlippFil").value = ""; $("aiKlippFil").click(); };
+    $("aiKlippFil").addEventListener("change", () => {
+      const f = $("aiKlippFil").files[0]; if (!f) return;
+      if (f.size > 45 * 1048576) return status(`Klippet är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB.`, "fel");
+      aiVideoBlob = f; aiVideoUrl = null;
+      $("aiVideoSpelare").src = URL.createObjectURL(f);
+      $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = f.name.replace(/\.mov$/i, ".mp4");
+      $("aiVideoKlar").hidden = false; $("aiVideoLat").hidden = false;
+      $("aiVideoStatus").textContent = `✓ ${f.name} – har det redan ljud, tryck 📣 Lägg i Nytt inlägg. Annars 🎵 Lägg låten på.`;
+    });
     // Låten läggs på klippet: spelas in i realtid (klippet loopas om det är kortare än låtdelen)
     $("aiVideoLat").onclick = async () => {
       const st = t => $("aiVideoStatus").textContent = t;
@@ -2164,7 +2176,7 @@ ${poster.slice(0, 20).map(p => `<item>
         await klar; v.pause(); ac.close();
         aiVideoBlob = new Blob(delar, { type: typ.split(";")[0] }); aiVideoBlob.medLat = true;
         $("aiVideoSpelare").src = URL.createObjectURL(aiVideoBlob);
-        $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `ai-klipp-${Date.now().toString(36)}.${typ.startsWith("video/mp4") ? "mp4" : "webm"}`;
+        $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `klipp-med-lat-${Date.now().toString(36)}.${typ.startsWith("video/mp4") ? "mp4" : "webm"}`;
         st("✓ Klart med låten – lyssna och tryck 📣 Lägg i Nytt inlägg.");
       } catch (e) { st(""); status("Låten kunde inte läggas på: " + e.message, "fel"); }
       $("aiVideoLat").disabled = false;
