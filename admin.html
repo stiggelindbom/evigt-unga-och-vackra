@@ -410,7 +410,7 @@
       <p class="hjalp">Gör jinglar, röster och videoklipp direkt här. Nycklarna ligger i 🔐 Valvet (ElevenLabs och fal.ai) – lås upp valvet först. Det färdiga går rakt till Jinglar eller Nytt inlägg.</p>
     </div>
     <div class="kort" style="display:grid;gap:12px">
-      <h3>🎙 Röst &amp; jinglar <small class="hjalp">ElevenLabs</small></h3>
+      <h3>🎙 Röst &amp; jinglar <small class="hjalp">ElevenLabs – via fal.ai (ca 20 öre per jingel) eller eget ElevenLabs-konto</small></h3>
       <div class="inlagg-rad">
         <button class="knapp kontur liten" type="button" data-ai-mall="radio">📻 Radiojingel</button>
         <button class="knapp kontur liten" type="button" data-ai-mall="kommande">🆕 Före Kommande</button>
@@ -548,7 +548,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261027094207";
+    const VERSION = "v20261027101946";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1908,7 +1908,7 @@ ${poster.slice(0, 20).map(p => `<item>
     // ===== ✨ AI-studio: röst och jinglar (ElevenLabs) och videoklipp (fal.ai). Nycklarna ligger i valvet. =====
     function aiNyckel(id) {
       const namn = VALV_FAST.find(x => x[0] === id)[1];
-      if (!harValv() || !valv) throw new Error(`lås upp 🔐 Valvet först (där ligger ${namn})`);
+      if (!harValv() || !valv) throw new Error("lås upp 🔐 Valvet först (där ligger nycklarna)");
       const v = hemlighet(id); if (!v) throw new Error(`lägg in ${namn} i 🔐 Valvet först`);
       return v;
     }
@@ -1958,6 +1958,21 @@ ${poster.slice(0, 20).map(p => `<item>
         if (lista.length) { fyll(lista); aiRosterHamtade = true; }
       } catch {}
     }
+    // Utan egen ElevenLabs-nyckel går rösten och ljudet via fal.ai (samma ElevenLabs-modeller, betala per användning)
+    const rostViaFal = () => !hemlighet("elevenlabs") && !!hemlighet("fal");
+    const hamtaBlob = async url => { const r = await fetch(url); if (!r.ok) throw new Error("ljudet kunde inte hämtas"); return r.blob(); };
+    async function aiTal(text, st) {
+      if (!rostViaFal()) return elevenlabs(`/text-to-speech/${encodeURIComponent($("aiRost").value)}?output_format=mp3_44100_128`, {
+        text, model_id: $("aiRostModell").value, voice_settings: { stability: .45, similarity_boost: .8, style: .35, use_speaker_boost: true }
+      });
+      const rost = $("aiRost").selectedOptions[0].textContent.split(" – ")[0];
+      return hamtaBlob(await falKor($("aiRostModell").value === "eleven_v3" ? "fal-ai/elevenlabs/tts/eleven-v3" : "fal-ai/elevenlabs/tts/multilingual-v2",
+        { text, voice: rost, stability: .45, similarity_boost: .8, style: .35 }, st, "audio"));
+    }
+    async function aiEffekt(text, sek, st) {
+      if (!rostViaFal()) return elevenlabs("/sound-generation", { text, duration_seconds: sek, prompt_influence: .4 });
+      return hamtaBlob(await falKor("fal-ai/elevenlabs/sound-effects/v2", { text, duration_seconds: sek, prompt_influence: .4 }, st, "audio"));
+    }
     async function elevenlabs(sokvag, kropp) {
       const r = await fetch("https://api.elevenlabs.io/v1" + sokvag, { method: "POST", headers: { "xi-api-key": aiNyckel("elevenlabs"), "Content-Type": "application/json", Accept: "audio/mpeg" }, body: JSON.stringify(kropp) });
       if (!r.ok) throw new Error("ElevenLabs: " + await aiFelText(r));
@@ -1975,13 +1990,12 @@ ${poster.slice(0, 20).map(p => `<item>
       $("aiRostKor").disabled = true; $("aiRostKlar").hidden = true;
       const st = t => $("aiRostStatus").textContent = t;
       try {
+        if (valv && !hemlighet("elevenlabs") && !hemlighet("fal")) throw new Error("lägg in fal.ai API-nyckel i 🔐 Valvet först");
         await hamtaRoster();
         st("Gör rösten…");
-        const rost = text ? await elevenlabs(`/text-to-speech/${encodeURIComponent($("aiRost").value)}?output_format=mp3_44100_128`, {
-          text, model_id: $("aiRostModell").value, voice_settings: { stability: .45, similarity_boost: .8, style: .35, use_speaker_boost: true }
-        }) : null;
+        const rost = text ? await aiTal(text, t => st("Rösten: " + t)) : null;
         st(ljudText ? "Gör ljudet under…" : "");
-        const ljud = ljudText ? await elevenlabs("/sound-generation", { text: ljudText, duration_seconds: +$("aiLjudLangd").value, prompt_influence: .4 }) : null;
+        const ljud = ljudText ? await aiEffekt(ljudText, +$("aiLjudLangd").value, t => st("Ljudet: " + t)) : null;
         if (rost && ljud) {
           st("Mixar…");
           const [r, l] = await Promise.all([avkoda(rost), avkoda(ljud)]);
@@ -2087,29 +2101,30 @@ ${poster.slice(0, 20).map(p => `<item>
       if (/veo/i.test(modell)) return { prompt: s.prompt, duration: "8s", generate_audio: true, ...(s.bild ? { image_url: s.bild } : { aspect_ratio: ar === "1:1" ? "16:9" : ar }) };
       return { prompt: s.prompt, duration: String(s.langd), aspect_ratio: ar, negative_prompt: "blur, distortion, low quality, text, watermark", ...(s.bild ? { image_url: s.bild } : {}) };
     }
-    function hittaVideo(o) {
+    function hittaFil(o, slag) {
       if (!o || typeof o !== "object") return null;
-      if (typeof o.url === "string" && (/video/.test(o.content_type || "") || /\.(mp4|webm|mov)(\?|$)/i.test(o.url))) return o.url;
-      for (const v of Object.values(o)) { const u = hittaVideo(v); if (u) return u; }
+      const andelse = slag === "audio" ? /\.(mp3|wav|ogg|m4a)(\?|$)/i : /\.(mp4|webm|mov)(\?|$)/i;
+      if (typeof o.url === "string" && (new RegExp(slag).test(o.content_type || "") || andelse.test(o.url))) return o.url;
+      for (const v of Object.values(o)) { const u = hittaFil(v, slag); if (u) return u; }
       return null;
     }
-    async function falKor(modell, indata, st) {
+    async function falKor(modell, indata, st, slag = "video") {
       const h = { Authorization: "Key " + aiNyckel("fal"), "Content-Type": "application/json" };
       const r = await fetch("https://queue.fal.run/" + modell, { method: "POST", headers: h, body: JSON.stringify(indata) });
       if (!r.ok) throw new Error("fal.ai: " + await aiFelText(r));
       const jobb = await r.json(), t0 = Date.now();
       for (;;) {
-        await vanta(4000);
+        await vanta(slag === "audio" ? 1500 : 4000);
         const s = await fetch(jobb.status_url, { headers: h });
         if (!s.ok) throw new Error("fal.ai: " + await aiFelText(s));
         const j = await s.json(), tid = Math.round((Date.now() - t0) / 1000), klocka = `${Math.floor(tid / 60)}:${String(tid % 60).padStart(2, "0")}`;
         if (j.status === "COMPLETED") break;
-        st(j.status === "IN_QUEUE" ? `I kö${j.queue_position != null ? ` (plats ${j.queue_position + 1})` : ""}… ${klocka}` : `Skapar klippet… ${klocka} – du kan jobba vidare i de andra flikarna`);
+        st(j.status === "IN_QUEUE" ? `I kö${j.queue_position != null ? ` (plats ${j.queue_position + 1})` : ""}… ${klocka}` : `Skapar… ${klocka}${slag === "video" ? " – du kan jobba vidare i de andra flikarna" : ""}`);
         if (Date.now() - t0 > 25 * 60e3) throw new Error("det har tagit över 25 minuter – kolla på fal.ai under Requests");
       }
       const svar = await fetch(jobb.response_url, { headers: h });
       if (!svar.ok) throw new Error("fal.ai: " + await aiFelText(svar));
-      const url = hittaVideo(await svar.json()); if (!url) throw new Error("fal.ai svarade utan video");
+      const url = hittaFil(await svar.json(), slag); if (!url) throw new Error(`fal.ai svarade utan ${slag === "audio" ? "ljud" : "video"}`);
       return url;
     }
     $("aiVideoKor").onclick = async () => {
@@ -2236,8 +2251,8 @@ ${poster.slice(0, 20).map(p => `<item>
       ["server", "Server-adminnyckel", "Engångskoder för smakprov", ""],
       ["make", "Make-webhook", "Adressen från Make (https://hook.…make.com/…) – inlägg skickas dit direkt. Guide och färdig mall: verktyg/make.html", "verktyg/make.html"],
       ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"],
-      ["elevenlabs", "ElevenLabs API-nyckel", "Röster och jinglar i ✨ AI-studio", "https://elevenlabs.io/app/settings/api-keys"],
-      ["fal", "fal.ai API-nyckel", "Videoklipp i ✨ AI-studio (Kling, Veo, lipsync)", "https://fal.ai/dashboard/keys"]
+      ["elevenlabs", "ElevenLabs API-nyckel", "Valfri – bara om du har eget ElevenLabs-konto (annars går rösterna via fal.ai)", "https://elevenlabs.io/app/settings/api-keys"],
+      ["fal", "fal.ai API-nyckel", "Videoklipp, röster och jinglar i ✨ AI-studio (betala per användning)", "https://fal.ai/dashboard/keys"]
     ];
     let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
     const tillB64 = u8 => bytesTillBase64(u8), franB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
