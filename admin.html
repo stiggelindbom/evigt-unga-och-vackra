@@ -213,6 +213,7 @@
     .status.laddar { color: var(--guld); border-color: var(--guld-mork); }
     .tom { color: var(--dampad); font-style: italic; padding: 8px 0; }
 
+    #adminVy { padding-bottom: 120px; }   /* plats för sparraden längst ner */
     .sparrad {
       position: fixed; inset: auto 0 0 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 12px;
       padding: 14px 16px; background: rgba(14,13,11,.97); border-top: 1px solid var(--guld-mork);
@@ -613,7 +614,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028140648";
+    const VERSION = "v20261028141443";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
