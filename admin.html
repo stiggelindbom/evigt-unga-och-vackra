@@ -475,6 +475,7 @@
       <input type="file" id="aiKlippFil" accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm" hidden>
       <div class="inlagg-rad" data-ai-for="lappar stil"><b>📼 Video att göra om:</b> <span class="hjalp" id="aiKallaNamn">ingen vald</span>
         <button class="knapp kontur liten" type="button" id="aiValjKalla">📂 Välj video</button></div>
+      <label class="kryss" data-ai-for="lappar stil"><input type="checkbox" id="aiBehall" checked> 🧩 Ändra bara den valda delen av videon (gula rutan) – resten blir som den är</label>
       <p class="hjalp" data-ai-for="lappar">Personen i videon får munnen att följa delen av låten du väljer nedan. Bäst med en video där ansiktet syns tydligt. Välj lika lång del av videon som av låten – det kortaste bestämmer längden.</p>
       <div data-ai-for="text bild stil"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
         <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
@@ -583,7 +584,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028134619";
+    const VERSION = "v20261028134805";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2363,6 +2364,8 @@ ${poster.slice(0, 20).map(p => `<item>
       const prompt = $("aiPrompt").value.trim();
       if (["text", "bild", "stil"].includes(s) && !prompt) return status("Beskriv klippet först (eller tryck 💡 Förslag).", "fel");
       if ((s === "lappar" || s === "stil") && !aiVideoBlob) return status("Välj videon som ska göras om först (📂 Välj video).", "fel");
+      const vd = vidDel(), helVideo = (s === "lappar" || s === "stil") && $("aiBehall").checked && (vd.start > .1 || vd.start + vd.sek < vd.dur - .1)
+        ? { blob: aiVideoBlob, start: vd.start, sek: vd.sek, dur: vd.dur } : null;
       $("aiVideoKor").disabled = true; $("aiVideoKlar").hidden = true;
       try {
         aiNyckel("fal");
@@ -2379,6 +2382,8 @@ ${poster.slice(0, 20).map(p => `<item>
         aiLogga("video", ({ text: "Klipp från text", bild: "Bild får liv", sjung: "Sjungande bild", lappar: "Video: läppar", stil: "Video: ny stil" })[s] + " – " + $("aiModell").selectedOptions[0].textContent.split(" – ")[0], pris);
         let blob = null;
         try { const r = await fetch(aiVideoUrl); if (r.ok) blob = await r.blob(); } catch {}
+        if (helVideo && blob) blob = await aiSkarva(helVideo, blob, st);
+        else if (helVideo) status("Delen kunde inte sättas tillbaka (klippet gick inte att hämta hit) – du får bara den ändrade delen.", "fel");
         await sattVideo(blob, `ai-klipp-${Date.now().toString(36)}.mp4`, aiVideoUrl); aiSlagByt();
         st(s === "sjung" || s === "lappar" ? "✓ Klart!" : s === "stil" ? "✓ Klart! Vill du ha låten på: 🎵 Lägg låten på. Behålla ljudet: 📐 Bara format." : /kling\/v4/i.test(modell) ? "✓ Klart! Klippet har eget ljud – vill du ha låten i stället, tryck 🎵 Lägg låten på." : "✓ Klart! Klippet är tyst – tryck 🎵 Lägg låten på.");
       } catch (e) { st(""); status("Klippet kunde inte göras: " + e.message, "fel"); }
@@ -2472,6 +2477,39 @@ ${poster.slice(0, 20).map(p => `<item>
     const vidSlapp = () => { if (!aiVDra) return; aiVDra = null; vidFortsatt(); };
     $("aiVidVag").addEventListener("pointerup", vidSlapp); $("aiVidVag").addEventListener("pointercancel", vidSlapp);
     addEventListener("resize", () => ritaVidVag());
+    // 🧩 Sätt tillbaka en ändrad del i hela videon: början (original) + nya delen + slutet (original), inspelat i realtid
+    async function aiSkarva(hel, ny, st) {
+      const typ = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+      if (!typ) throw new Error("den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn");
+      const oppna = async b => { const v = document.createElement("video"); v.playsInline = true; v.src = URL.createObjectURL(b); await new Promise((ok, fel) => { v.onloadeddata = ok; v.onerror = () => fel(new Error("videon kunde inte läsas")); }); return v; };
+      const A = await oppna(hel.blob), N = await oppna(ny);
+      const B = A.videoWidth, H = A.videoHeight, c = document.createElement("canvas"); c.width = B; c.height = H; const cx = c.getContext("2d");
+      const rita = v => { const sk = Math.max(B / v.videoWidth, H / v.videoHeight); cx.drawImage(v, (B - v.videoWidth * sk) / 2, (H - v.videoHeight * sk) / 2, v.videoWidth * sk, v.videoHeight * sk); };
+      const ac = new AudioContext({ sampleRate: 48000 }), mal = ac.createMediaStreamDestination();
+      for (const v of [A, N]) ac.createMediaElementSource(v).connect(mal);
+      const strom = c.captureStream(30); mal.stream.getAudioTracks().forEach(t => strom.addTrack(t));
+      const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }), bitar = [];
+      rec.ondataavailable = e => { if (e.data.size) bitar.push(e.data); };
+      const klar = new Promise(ok => rec.onstop = ok);
+      const nyLangd = isFinite(N.duration) ? Math.min(N.duration, hel.sek + .5) : hel.sek;
+      const delar = [{ v: A, fran: 0, till: hel.start }, { v: N, fran: 0, till: nyLangd }, { v: A, fran: hel.start + hel.sek, till: hel.dur }].filter(d => d.till - d.fran > .05);
+      let gjort = 0; const total = delar.reduce((a, d) => a + d.till - d.fran, 0);
+      rita(delar[0].v); rec.start(1000); rec.pause();
+      for (const d of delar) {
+        d.v.currentTime = d.fran; await new Promise(ok => d.v.onseeked = ok);
+        await d.v.play(); rec.resume();
+        await new Promise(ok => {
+          const loop = () => {
+            if (d.v.currentTime >= d.till - .02 || d.v.ended) { d.v.pause(); rec.pause(); gjort += d.till - d.fran; return ok(); }
+            rita(d.v); st(`Sätter tillbaka delen i hela videon… ${Math.round(gjort + d.v.currentTime - d.fran)} av ${Math.round(total)} s – låt fliken vara synlig`);
+            requestAnimationFrame(loop);
+          };
+          loop();
+        });
+      }
+      rec.resume(); rec.stop(); await klar; ac.close();
+      return new Blob(bitar, { type: typ.split(";")[0] });
+    }
     // vald del som egen fil (för fal): hela videon skickas som den är, annars spelas delen in (tyst)
     async function aiDelAvVideo(st) {
       const { start, sek, dur } = vidDel();
