@@ -55,6 +55,11 @@
     .video-panel { background: var(--yta); border: 1px solid var(--kant); border-radius: 14px; padding: 18px; width: min(900px, 100%); display: grid; gap: 12px; }
     #videoDuk { width: 100%; max-height: 60vh; object-fit: contain; background: #000; border-radius: 10px; }
     .stat-kort { display: grid; gap: 14px; }
+    .film-rad { display: grid; grid-template-columns: 64px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; border-bottom: 1px solid #2a2418; font-size: .88rem; }
+    .film-rad img { width: 64px; height: 36px; object-fit: cover; border-radius: 4px; background: #000; }
+    .film-rad .tal { text-align: right; white-space: nowrap; }
+    .film-rad .tal b { color: var(--guld); font-family: "Oswald", sans-serif; font-size: 1.05rem; }
+    .film-upp { color: var(--ok); font-size: .78rem; }
     .knapp.kontur.vald-period { background: var(--guld); color: #111; }
     .stat-tal { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; }
     .stat-tal div { background: #14110c; border: 1px solid var(--kant); border-radius: 10px; padding: 10px 12px; }
@@ -297,6 +302,10 @@
         <p class="hjalp" style="margin:8px 0">Skapa en nyckel i GoatCounter: logga in → <b>Settings</b> (kugghjulet) → <b>API</b> → <b>New API key</b>, kryssa i <b>Read statistics</b> och kopiera nyckeln hit. Den sparas bara i den här webbläsaren.</p>
         <div class="inlagg-rad"><input type="password" id="statNyckel" placeholder="Klistra in API-nyckeln" style="flex:1;min-width:200px"><button class="knapp liten" type="button" id="statSpara">Spara nyckel</button></div>
       </details>
+    </div>
+    <div class="kort stat-kort" id="filmKort">
+      <div class="inlagg-rad"><h3 style="margin-right:auto">🎬 Filmerna</h3><span class="hjalp" id="filmTid"></span><button class="knapp kontur liten" type="button" id="filmUppdatera">↻ Uppdatera</button></div>
+      <div id="filmInnehall"><p class="hjalp">Laddar…</p></div>
     </div>
 
     </section>
@@ -614,7 +623,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028191214";
+    const VERSION = "v20261028214808";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -944,7 +953,7 @@
       ritaArtister();
       ritaJinglar();
       ritaInlagg();
-      if (!statVisad) { statVisad = true; visaStatistik(); }
+      if (!statVisad) { statVisad = true; visaStatistik(); visaFilmer(); }
       ritaEngangsDel();
       setTimeout(ritaAllaVagformer);
       $("lankar").innerHTML = LANKFALT.map(([k, n, typ]) =>
@@ -2871,6 +2880,7 @@ ${poster.slice(0, 20).map(p => `<item>
       ["make", "Make-webhook", "Adressen från Make (https://hook.…make.com/…) – inlägg skickas dit direkt. Make loggar du in i med Google. Guide: <a href=\"verktyg/make.html\" target=\"_blank\">verktyg/make.html</a>", "https://eu1.make.com/organization/9419232/dashboard"],
       ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"],
       ["elevenlabs", "ElevenLabs API-nyckel", "Valfri – bara om du har eget ElevenLabs-konto (annars går rösterna via fal.ai)", "https://elevenlabs.io/app/settings/api-keys"],
+      ["youtube", "YouTube API-nyckel", "Visningar och likes för filmerna under 📊 Översikt (gratis nyckel från Google Cloud)", "https://console.cloud.google.com/apis/library/youtube.googleapis.com"],
       ["fal", "fal.ai API-nyckel", "Videoklipp, röster och jinglar i ✨ AI-studio (betala per användning)", "https://fal.ai/dashboard/keys"]
     ];
     let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
@@ -3018,7 +3028,7 @@ ${poster.slice(0, 20).map(p => `<item>
           if (a !== b) return status("Lösenfraserna är inte lika.", "fel");
           await valvSkapa(a); ritaValv(); return status("🔐 Valvet är skapat. Spara gärna en säkerhetskopia.", "ok");
         }
-        if (id === "valvOppna") { await valvOppna($("valvFras").value); ritaValv(); if (!statVisad || $("statInnehall").textContent.includes("API-nyckel")) visaStatistik(); return status("🔓 Valvet är öppet.", "ok"); }
+        if (id === "valvOppna") { await valvOppna($("valvFras").value); ritaValv(); if (!statVisad || $("statInnehall").textContent.includes("API-nyckel")) visaStatistik(); visaFilmer(); return status("🔓 Valvet är öppet.", "ok"); }
         if (id === "valvLasKnapp") return valvLas();
         if (id === "valvExport") { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([las(VALV)], { type: "application/json" })); a.download = "devigtunga-nyckelvalv.json"; a.click(); return status("⬇ Säkerhetskopian är krypterad – den går bara att öppna med lösenfrasen.", "ok"); }
         if (id === "valvImport") { valvFil.value = ""; return valvFil.click(); }
@@ -3105,6 +3115,63 @@ ${poster.slice(0, 20).map(p => `<item>
         return c && Date.now() - c.tid < STAT_CACHE_MIN * 60000 ? c : null;
       } catch { return null; }
     }
+    // ===== 🎬 Filmerna: YouTube direkt (API-nyckel i valvet), Facebook/Instagram från Make (statistik/sociala.json) =====
+    const FILM_CACHE = "deu-film-cache", FILM_FORRA = "deu-film-forra";
+    const ytHandtag = url => (String(url || "").match(/youtube\.com\/(@[\w.-]+)/i) || [])[1];
+    async function ytFilmer(nyckel, handtag) {
+      const api = (v, q) => fetch(`https://www.googleapis.com/youtube/v3/${v}?${new URLSearchParams({ ...q, key: nyckel })}`)
+        .then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error?.message || "YouTube svarade " + r.status); return j; });
+      const kanal = (await api("channels", { part: "contentDetails,snippet", forHandle: handtag })).items?.[0];
+      if (!kanal) throw new Error(`hittar inte YouTube-kanalen ${handtag}`);
+      const pl = await api("playlistItems", { part: "contentDetails", playlistId: kanal.contentDetails.relatedPlaylists.uploads, maxResults: 25 });
+      const ids = (pl.items || []).map(x => x.contentDetails.videoId); if (!ids.length) return [];
+      const v = await api("videos", { part: "snippet,statistics", id: ids.join(",") });
+      return (v.items || []).map(x => ({ kanal: "youtube", konto: kanal.snippet.title, id: "yt-" + x.id, titel: x.snippet.title, datum: x.snippet.publishedAt, lank: `https://youtu.be/${x.id}`,
+        tumme: x.snippet.thumbnails?.medium?.url || x.snippet.thumbnails?.default?.url, visningar: +x.statistics.viewCount || 0, likes: +x.statistics.likeCount || 0, kommentarer: +x.statistics.commentCount || 0 }));
+    }
+    async function visaFilmer(tvinga = false) {
+      const ut = $("filmInnehall"), fel = [];
+      let filmer = null;
+      try { const c = JSON.parse(sessionStorage.getItem(FILM_CACHE) || "null"); if (!tvinga && c && Date.now() - c.tid < 30 * 60e3) filmer = c.filmer; } catch {}
+      if (!filmer) {
+        ut.innerHTML = `<p class="hjalp">Hämtar siffrorna…</p>`; filmer = [];
+        const nyckel = hemlighet("youtube");
+        const kanaler = [...new Set([data.lankar.youtube, ...data.artister.map(a => a.youtube)].map(ytHandtag).filter(Boolean))];
+        if (nyckel) for (const h of kanaler) { try { filmer.push(...await ytFilmer(nyckel, h)); } catch (e) { fel.push("YouTube: " + e.message); } }
+        try {
+          const f = await gh(`/contents/statistik/sociala.json?ref=${GREN}`), j = JSON.parse(franBase64(f.content));
+          filmer.push(...(j.poster || []).map(p => ({ ...p, id: p.kanal + "-" + p.id })));
+          filmer.makeTid = j.uppdaterad;
+        } catch (e) { if (e.status !== 404) fel.push("Facebook/Instagram: " + e.message); }
+        try { sessionStorage.setItem(FILM_CACHE, JSON.stringify({ tid: Date.now(), filmer, makeTid: filmer.makeTid })); } catch {}
+      }
+      // jämför med förra gången (sparas högst var 6:e timme)
+      let forra = {}; try { forra = JSON.parse(localStorage.getItem(FILM_FORRA) || "{}"); } catch {}
+      const ikon = { youtube: "▶️", facebook: "📘", instagram: "📸", tiktok: "🎵" };
+      const summa = k => filmer.filter(f => f.kanal === k).reduce((a, f) => a + (f.visningar || 0), 0);
+      const harYt = !!hemlighet("youtube"), harMake = filmer.some(f => f.kanal !== "youtube");
+      const nya = f => forra.varden && forra.varden[f.id] != null ? (f.visningar || 0) - forra.varden[f.id] : 0;
+      const bast = [...filmer].sort((a, b) => nya(b) - nya(a) || (b.visningar || 0) - (a.visningar || 0))[0];
+      ut.innerHTML = (filmer.length ? `<div class="stat-tal">
+          ${["youtube", "facebook", "instagram"].map(k => `<div><b>${summa(k).toLocaleString("sv-SE")}</b><span>${ikon[k]} visningar ${k === "youtube" ? "YouTube" : k === "facebook" ? "Facebook" : "Instagram"}</span></div>`).join("")}
+          <div><b>${filmer.reduce((a, f) => a + (f.likes || 0), 0).toLocaleString("sv-SE")}</b><span>👍 likes totalt</span></div>
+        </div>
+        ${bast ? `<p class="hjalp">🔥 Bäst just nu: <b>${esc(bast.titel || "")}</b>${nya(bast) > 0 ? ` (+${nya(bast)} visningar sedan ${new Date(forra.tid).toLocaleString("sv-SE", { weekday: "short", hour: "2-digit", minute: "2-digit" })})` : ""}</p>` : ""}
+        <div>${[...filmer].sort((a, b) => String(b.datum).localeCompare(String(a.datum))).slice(0, 40).map(f => `
+          <div class="film-rad">${f.tumme ? `<img src="${esc(f.tumme)}" alt="" loading="lazy">` : `<div style="font-size:1.4rem;text-align:center">${ikon[f.kanal] || "🎬"}</div>`}
+            <div>${ikon[f.kanal] || ""} ${f.lank ? `<a href="${esc(f.lank)}" target="_blank" rel="noopener">${esc((f.titel || "").slice(0, 80) || "(utan titel)")}</a>` : esc(f.titel || "")}<br>
+              <small class="hjalp">${f.konto ? esc(f.konto) + " · " : f.artist ? esc(f.artist) + " · " : ""}${f.datum ? new Date(f.datum).toLocaleDateString("sv-SE", { day: "numeric", month: "short" }) : ""}</small></div>
+            <div class="tal"><b>${(f.visningar || 0).toLocaleString("sv-SE")}</b> visn.${nya(f) > 0 ? ` <span class="film-upp">▲${nya(f)}</span>` : ""}<br><small class="hjalp">👍 ${f.likes || 0} · 💬 ${f.kommentarer || 0}${f.delningar ? ` · ↗ ${f.delningar}` : ""}</small></div>
+          </div>`).join("")}</div>` : "")
+        + (!harYt ? `<p class="hjalp">▶️ <b>YouTube:</b> lägg in en <b>YouTube API-nyckel</b> i 🔐 Valvet (gratis från Google Cloud – se att göra-listan), så visas visningar och likes här.</p>` : "")
+        + (!harMake ? `<p class="hjalp">📘📸 <b>Facebook och Instagram</b> kommer när Make-scenariot "Statistik" är på (det skickar siffrorna hit en gång om dagen).</p>` : "")
+        + fel.map(e => `<p class="hjalp" style="color:var(--fel)">${esc(e)}</p>`).join("");
+      $("filmTid").textContent = filmer.length ? `uppdaterat ${new Date().toLocaleTimeString("sv-SE", { hour: "2-digit", minute: "2-digit" })}` : "";
+      if (filmer.length && (!forra.tid || Date.now() - forra.tid > 6 * 3600e3)) {
+        try { localStorage.setItem(FILM_FORRA, JSON.stringify({ tid: Date.now(), varden: Object.fromEntries(filmer.map(f => [f.id, f.visningar || 0])) })); } catch {}
+      }
+    }
+    $("filmUppdatera").onclick = () => visaFilmer(true);
     async function visaStatistik(tvinga = false) {
       const kod = statKod(), ut = $("statInnehall");
       $("statLank").href = kod ? `https://${kod}.goatcounter.com` : "https://www.goatcounter.com";

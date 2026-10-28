@@ -1,0 +1,65 @@
+# Tar emot statistik från Make (Facebook/Instagram) och sparar den i statistik/sociala.json – visas i backoffice → 📊 Översikt → 🎬 Filmerna.
+# Make anropar: POST https://api.github.com/repos/stiggelindbom/evigt-unga-och-vackra/dispatches
+#   {"event_type":"make-statistik","client_payload":{"kanal":"instagram","artist":"De Evigt Unga å Vackra","data":"<JSON-lista från Make>"}}
+# Varje post i listan kan ha Facebook/Instagram-fältnamnen som de kommer (id, caption/message, timestamp/created_time, permalink, like_count, comments_count, views …).
+name: Statistik från Make
+
+on:
+  repository_dispatch:
+    types: [make-statistik]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: make-statistik
+  cancel-in-progress: false
+
+jobs:
+  spara:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Skriv statistiken
+        env:
+          PAYLOAD: ${{ toJSON(github.event.client_payload) }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = JSON.parse(process.env.PAYLOAD || "{}");
+            const kanal = String(p.kanal || "").toLowerCase().replace(/[^a-z]/g, "");
+            if (!["facebook", "instagram", "tiktok"].includes(kanal)) { console.log("Okänd kanal:", p.kanal); process.exit(0); }
+            const artist = String(p.artist || "De Evigt Unga å Vackra").slice(0, 80);
+            let lista = p.data ?? p.poster ?? [];
+            if (typeof lista === "string") { try { lista = JSON.parse(lista); } catch { console.log("data är inte JSON"); process.exit(0); } }
+            if (!Array.isArray(lista)) lista = lista.data || lista.array || [lista];
+            const tal = (...v) => { for (const x of v) { const n = Number(x?.summary?.total_count ?? x?.value ?? x); if (Number.isFinite(n)) return n; } return 0; };
+            const poster = lista.slice(0, 50).map(x => ({
+              kanal, artist,
+              id: String(x.id || x.media_id || x.post_id || "").slice(0, 80),
+              titel: String(x.caption || x.message || x.description || x.title || x.text || "").split("\n")[0].slice(0, 120),
+              datum: x.timestamp || x.created_time || x.datum || null,
+              lank: x.permalink || x.permalink_url || x.lank || null,
+              tumme: x.thumbnail_url || x.full_picture || x.picture || null,
+              visningar: tal(x.views, x.plays, x.video_views, x.ig_reels_aggregated_all_plays_count, x.total_video_views, x.reach, x.impressions, x.visningar),
+              likes: tal(x.like_count, x.likes, x.reactions),
+              kommentarer: tal(x.comments_count, x.comments, x.kommentarer),
+              delningar: tal(x.shares, x.share_count, x.delningar)
+            })).filter(x => x.id);
+            fs.mkdirSync("statistik", { recursive: true });
+            const fil = "statistik/sociala.json";
+            let alla = { poster: [] }; try { alla = JSON.parse(fs.readFileSync(fil, "utf8")); } catch {}
+            alla.poster = (alla.poster || []).filter(x => !(x.kanal === kanal && x.artist === artist)).concat(poster);
+            alla.uppdaterad = new Date().toISOString();
+            fs.writeFileSync(fil, JSON.stringify(alla, null, 2) + "\n");
+            console.log(`Sparade ${poster.length} poster för ${kanal} / ${artist}`);
+          '
+      - name: Spara på GitHub
+        run: |
+          git config user.name "Statistik från Make"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add statistik
+          git diff --cached --quiet && exit 0
+          git commit -m "Statistik från Make"
+          for i in 1 2 3 4 5; do git pull --rebase -q && git push -q && exit 0; sleep $((i * 3)); done
+          exit 1
