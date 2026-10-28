@@ -421,6 +421,7 @@
         <button class="knapp kontur liten" type="button" data-ai-mall="kommande">🆕 Före Kommande</button>
         <button class="knapp kontur liten" type="button" data-ai-mall="dj">🎧 DJ Stigge</button>
         <button class="knapp kontur liten" type="button" data-ai-mall="hitnet">📡 HitNet-mixen</button>
+        <button class="knapp kontur liten" type="button" data-ai-mall="hitnetparty">🎉 HitNet Party</button>
       </div>
       <label>Vad ska rösten säga?<textarea id="aiText" rows="3" placeholder="Du lyssnar på De Evigt Unga å Vackra – devigtunga punkt se!"></textarea></label>
       <div class="rutnat">
@@ -554,7 +555,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028082411";
+    const VERSION = "v20261028130052";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1947,6 +1948,8 @@ ${poster.slice(0, 20).map(p => `<item>
       radio: { namn: "Radiojingel", text: "Du lyssnar på De Evigt Unga å Vackra… devigtunga punkt se!", ljud: "short upbeat radio station jingle stinger, brass hit and whoosh", musik: "upbeat Swedish party pop jingle, brass and claps, festive", sek: 5 },
       kommande: { namn: "Före Kommande", text: "Och nu… något helt nytt från studion. Det här har ingen hört förut!", ljud: "mysterious riser with sparkle and soft impact, anticipation", musik: "dreamy anticipation intro, soft synth pads and building drums", sek: 5 },
       dj: { namn: "DJ Stigge intro", text: "D J Stigge… in the mix!", ljud: "deep house club drop, riser into sub bass hit, reverb tail", musik: "deep house club groove, 124 bpm, warm bass and crisp hi-hats", sek: 8 },
+      // stavat för rösten: "A W" och "D J" läses som bokstäver
+      hitnetparty: { namn: "HitNet Party", text: "Du lyssnar på HitNet Party… din A W-kanal i etern – med D J Fredde och Stigge!", ljud: "party radio jingle, crowd cheer, airhorn and whoosh", musik: "upbeat afterwork party house, claps, brass stabs, festive radio jingle", sek: 5 },
       hitnet: { namn: "HitNet-mixen", text: "De Evigt Unga å Vackra och HitNet Radio – blandat och klart!", ljud: "energetic radio sweeper whoosh with drum fill", musik: "energetic pop radio sweeper, punchy drums and synth stabs", sek: 5 }
     };
     // inbyggda (engelska) röster – läser svenska med engelsk brytning. Svenska röster (Bengt, Christer, Evelina, Louise …): välj "Svensk röst" och klistra in röst-id från ElevenLabs röstbibliotek.
