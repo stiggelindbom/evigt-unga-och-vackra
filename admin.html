@@ -455,7 +455,7 @@
       <div class="rutnat">
         <label>Modell<select id="aiModell"></select></label>
         <label>Format<select id="aiFormat"><option value="staende">Stående 9:16 – Reels/Shorts</option><option value="liggande">Liggande 16:9 – YouTube</option><option value="kvadrat">Fyrkant 1:1 – flödet</option></select></label>
-        <label data-ai-for="text bild">Längd<select id="aiLangd"><option value="5">5 s</option><option value="10">10 s</option></select></label>
+        <label data-ai-for="text bild">Längd <small class="hjalp">(15–30 s: välj Kling 4.0)</small><select id="aiLangd"><option value="5">5 s</option><option value="10">10 s</option></select></label>
       </div>
       <div class="rutnat">
         <label>Låt<select id="aiLat"></select></label>
@@ -555,7 +555,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028130244";
+    const VERSION = "v20261028132541";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2075,9 +2075,15 @@ ${poster.slice(0, 20).map(p => `<item>
     const AI_PRIS = [[/kling\/v4/i, s => .157 * s], [/kling.*v2\.6/i, s => .07 * s], [/kling.*v2\.5-turbo/i, s => .35 + Math.max(0, s - 5) * .07], [/kling.*v2\.1\/standard/i, s => .05 * s], [/kling/i, s => .112 * s],
       [/veo/i, s => .10 * s], [/omnihuman\/v1\.5/i, s => .16 * s], [/omnihuman\/v2/i, s => .105 * s], [/omnihuman/i, s => .14 * s], [/fabric/i, s => .15 * s]];
     const aiMaxSek = () => aiSlag() === "sjung" && !/omnihuman\/v1\.5|fabric|omnihuman\/v2/i.test($("aiModell").value) ? 30 : 60;
-    const veoLangd = l => l >= 10 ? 8 : 6;
+    // längder som modellen klarar: Kling 4.0 3–30 s, Veo 4/6/8 s, övriga Kling 5/10 s
+    const aiLangder = m => /kling\/v4/i.test(m) ? [5, 10, 15, 20, 30] : /veo/i.test(m) ? [4, 6, 8] : [5, 10];
+    function fyllLangd() {
+      const v = +$("aiLangd").value || 5, l = aiLangder($("aiModell").value);
+      $("aiLangd").innerHTML = l.map(x => `<option value="${x}">${x} s</option>`).join("");
+      $("aiLangd").value = l.includes(v) ? v : l.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a);
+    }
     const aiKr = v => !v ? "0 kr" : v < 1 ? `${Math.max(1, Math.round(v * 100))} öre` : `${v < 10 ? v.toFixed(1).replace(".", ",") : Math.round(v)} kr`;
-    const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : /veo/i.test($("aiModell").value) ? veoLangd(+$("aiLangd").value) : +$("aiLangd").value;
+    const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : +$("aiLangd").value;
     function aiVideoKostnad() { const m = $("aiModell").value, p = AI_PRIS.find(([r]) => r.test(m)); return (p ? p[1](aiSekunder()) : .10 * aiSekunder()) * KURS; }
     function aiRostKostnad() {
       const musik = $("aiLjud").value.trim() && $("aiLjudTyp").value === "musik" ? .04 : 0;   // Lyria 3: 0,04 $ per låt
@@ -2126,11 +2132,12 @@ ${poster.slice(0, 20).map(p => `<item>
       $("aiModell").innerHTML = AI_MODELLER[s].map(([id, n]) => `<option value="${id}">${n}</option>`).join("") + `<option value="__egen">Annan modell (skriv id)…</option>`;
       if (AI_MODELLER[s].some(x => x[0] === v)) $("aiModell").value = v;
       document.querySelectorAll('[data-flik-del="ai"] [data-ai-for]').forEach(x => x.hidden = !x.dataset.aiFor.split(" ").includes(s));
+      fyllLangd();
     }
     document.querySelectorAll('[name="aiSlag"]').forEach(r => r.addEventListener("change", aiSlagByt));
     $("aiLat").addEventListener("change", aiLatVald);
     $("aiModell").addEventListener("change", () => {
-      if ($("aiModell").value !== "__egen") return;
+      if ($("aiModell").value !== "__egen") return fyllLangd();
       const id = prompt("Modellens id på fal.ai (t.ex. fal-ai/kling-video/v2.1/pro/image-to-video):", las("deu-ai-egen") || "");
       if (!id || !/^[\w.-]+\/[\w./-]+$/.test(id.trim())) { $("aiModell").selectedIndex = 0; return; }
       try { localStorage.setItem("deu-ai-egen", id.trim()); } catch {}
@@ -2171,7 +2178,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const [, , ar] = AI_STORLEK[s.format];
       if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric|omnihuman\/v1\.5/.test(modell) ? { resolution: "720p" } : {}) };
       // Veo: 9:16 eller 16:9 (ingen fyrkant) – med bild följer formatet bilden. Utan eget ljud, låten läggs på efteråt.
-      if (/veo/i.test(modell)) return { prompt: s.prompt, duration: veoLangd(s.langd) + "s", resolution: "720p", generate_audio: false, aspect_ratio: s.bild ? "auto" : ar === "1:1" ? "16:9" : ar, ...(s.bild ? { image_url: s.bild } : {}) };
+      if (/veo/i.test(modell)) return { prompt: s.prompt, duration: s.langd + "s", resolution: "720p", generate_audio: false, aspect_ratio: s.bild ? "auto" : ar === "1:1" ? "16:9" : ar, ...(s.bild ? { image_url: s.bild } : {}) };
       // Kling 4.0: längd som tal, startbild i start_image_url (formatet följer bilden), ljud ingår alltid
       if (/kling\/v4/i.test(modell)) return { prompt: s.prompt, duration: s.langd, resolution: "720p", ...(s.bild ? { start_image_url: s.bild } : { aspect_ratio: ar }) };
       const neg = "blur, distortion, low quality, text, watermark";
