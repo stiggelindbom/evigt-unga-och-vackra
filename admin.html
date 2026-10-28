@@ -511,6 +511,8 @@
           </div>
           <div class="inlagg-rad"><button class="knapp kontur liten" type="button" id="aiVidSpela">▶ Spela delen</button>
             <button class="knapp kontur liten" type="button" id="aiVidHela">↔ Hela videon</button></div>
+          <label>🔧 Synka ljudet <span class="hjalp" id="aiVSynkText">0 ms – som filen</span><input type="range" id="aiVSynk" min="-1000" max="1000" step="20" value="0" style="width:100%;accent-color:var(--guld)"></label>
+          <small class="hjalp">Kommer ljudet <b>före</b> bilden: dra åt höger (+). Kommer det <b>efter</b>: dra åt vänster (−). Gäller spelaren här och allt som görs av videon.</small>
         </div>
         <div class="inlagg-rad">
           <button class="knapp liten" type="button" id="aiVideoLat" title="Byter ljudet mot vald del av låten – videon får valt format och längd">🎵 Lägg låten på</button>
@@ -611,7 +613,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028140325";
+    const VERSION = "v20261028140648";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2397,7 +2399,7 @@ ${poster.slice(0, 20).map(p => `<item>
       if (["text", "bild", "stil"].includes(s) && !prompt) return status("Beskriv klippet först (eller tryck 💡 Förslag).", "fel");
       if ((s === "lappar" || s === "stil") && !aiVideoBlob) return status("Välj videon som ska göras om först (📂 Välj video).", "fel");
       const vd = vidDel(), helVideo = (s === "lappar" || s === "stil") && $("aiBehall").checked && (vd.start > .1 || vd.start + vd.sek < vd.dur - .1)
-        ? { blob: aiVideoBlob, start: vd.start, sek: vd.sek, dur: vd.dur } : null;
+        ? { blob: aiVideoBlob, start: vd.start, sek: vd.sek, dur: vd.dur, synk: (aiVid.synk || 0) / 1000 } : null;
       $("aiVideoKor").disabled = true; $("aiVideoKlar").hidden = true;
       try {
         aiNyckel("fal");
@@ -2435,7 +2437,8 @@ ${poster.slice(0, 20).map(p => `<item>
       vidSpelaStopp();
       $("aiVideoSpelare").src = src; $("aiVideoNer").href = src; $("aiVideoNer").download = namn;
       $("aiVideoKlar").hidden = false; $("aiKallaNamn").textContent = namn;
-      aiVid = { sek: 0, bilder: [], spelar: false };
+      aiVid = { sek: 0, bilder: [], spelar: false, synk: 0 };
+      $("aiVSynk").value = 0; visaSynk();
       try {
         const v = await vidLangd(src); if ($("aiVideoNer").href !== src) return;
         aiVid.sek = v.duration; $("aiVStart").value = 0; $("aiVSek").value = Math.round(v.duration * 2) / 2;
@@ -2444,12 +2447,40 @@ ${poster.slice(0, 20).map(p => `<item>
         // miniatyrer längs tidslinjen
         const N = 12, h = 80, w = Math.round(h * v.videoWidth / v.videoHeight) || 45;
         for (let i = 0; i < N; i++) {
+          while (!$("aiVideoSpelare").paused && $("aiVideoNer").href === src) await vanta(400);   // stör inte uppspelningen
           v.currentTime = (i + .5) / N * v.duration; await new Promise(ok => v.onseeked = ok);
           const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(v, 0, 0, w, h);
           if ($("aiVideoNer").href !== src) return;
           aiVid.bilder[i] = c; ritaVidVag();
         }
       } catch (e) { $("aiVidText").textContent = e.message; }
+    }
+    // 🔧 Synka ljudet: + = ljudet senare, − = ljudet tidigare. Ljudet spelas då från ett eget element, förskjutet.
+    function visaSynk() { const m = aiVid.synk || 0; $("aiVSynkText").textContent = m ? `${m > 0 ? "+" : ""}${m} ms – ljudet ${m > 0 ? "senare" : "tidigare"}` : "0 ms – som filen"; }
+    let synkPrev = null;
+    function synkForhand() {
+      const v = $("aiVideoSpelare"), sk = (aiVid.synk || 0) / 1000;
+      if (!sk) { if (synkPrev) { synkPrev.pause(); synkPrev = null; v.muted = false; } return; }
+      v.muted = true;
+      if (!synkPrev || synkPrev._src !== v.src) { if (synkPrev) synkPrev.pause(); synkPrev = new Audio(v.src); synkPrev._src = v.src; }
+      clearTimeout(synkPrev._t);
+      if (v.paused || v.ended) return synkPrev.pause();
+      const pos = v.currentTime - sk, p = synkPrev;
+      p.currentTime = Math.max(0, pos); p.playbackRate = v.playbackRate;
+      if (pos >= 0) p.play().catch(() => {}); else p._t = setTimeout(() => p.play().catch(() => {}), -pos * 1000);
+    }
+    ["play", "pause", "seeked", "ratechange", "ended"].forEach(ev => $("aiVideoSpelare").addEventListener(ev, synkForhand));
+    $("aiVSynk").addEventListener("input", () => { aiVid.synk = +$("aiVSynk").value; visaSynk(); synkForhand(); });
+    // ljudspår som eget element, förskjutet s sekunder – för inspelningarna
+    async function synkSpar(ac, mal, blob, s) {
+      const a = new Audio(URL.createObjectURL(blob)); a.preload = "auto";
+      await new Promise((ok, fel) => { a.onloadedmetadata = ok; a.onerror = () => fel(new Error("ljudet kunde inte läsas")); });
+      ac.createMediaElementSource(a).connect(mal);
+      let t = null;
+      return {
+        spela(fran) { clearTimeout(t); const pos = fran - s; a.currentTime = Math.max(0, pos); if (pos >= 0) a.play(); else t = setTimeout(() => a.play(), -pos * 1000); },
+        paus() { clearTimeout(t); a.pause(); }
+      };
     }
     const vidDel = () => { const sek = aiVid.sek || 1, start = Math.max(0, Math.min(+$("aiVStart").value || 0, sek - .5)); return { start, sek: Math.max(.5, Math.min(+$("aiVSek").value || sek, sek - start)), dur: sek }; };
     function ritaVidVag(spelhuvud) {
@@ -2518,7 +2549,9 @@ ${poster.slice(0, 20).map(p => `<item>
       const B = A.videoWidth, H = A.videoHeight, c = document.createElement("canvas"); c.width = B; c.height = H; const cx = c.getContext("2d");
       const rita = v => { const sk = Math.max(B / v.videoWidth, H / v.videoHeight); cx.drawImage(v, (B - v.videoWidth * sk) / 2, (H - v.videoHeight * sk) / 2, v.videoWidth * sk, v.videoHeight * sk); };
       const ac = new AudioContext({ sampleRate: 48000 }), mal = ac.createMediaStreamDestination();
-      for (const v of [A, N]) ac.createMediaElementSource(v).connect(mal);
+      let spA = null;
+      if (hel.synk) { A.muted = true; spA = await synkSpar(ac, mal, hel.blob, hel.synk); } else ac.createMediaElementSource(A).connect(mal);
+      ac.createMediaElementSource(N).connect(mal);
       const strom = c.captureStream(30); mal.stream.getAudioTracks().forEach(t => strom.addTrack(t));
       const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }), bitar = [];
       rec.ondataavailable = e => { if (e.data.size) bitar.push(e.data); };
@@ -2529,10 +2562,10 @@ ${poster.slice(0, 20).map(p => `<item>
       rita(delar[0].v); rec.start(1000); rec.pause();
       for (const d of delar) {
         d.v.currentTime = d.fran; await new Promise(ok => d.v.onseeked = ok);
-        await d.v.play(); rec.resume();
+        await d.v.play(); if (spA && d.v === A) spA.spela(d.fran); rec.resume();
         await new Promise(ok => {
           const loop = () => {
-            if (d.v.currentTime >= d.till - .02 || d.v.ended) { d.v.pause(); rec.pause(); gjort += d.till - d.fran; return ok(); }
+            if (d.v.currentTime >= d.till - .02 || d.v.ended) { d.v.pause(); if (spA && d.v === A) spA.paus(); rec.pause(); gjort += d.till - d.fran; return ok(); }
             rita(d.v); st(`Sätter tillbaka delen i hela videon… ${Math.round(gjort + d.v.currentTime - d.fran)} av ${Math.round(total)} s – låt fliken vara synlig`);
             requestAnimationFrame(loop);
           };
@@ -2590,23 +2623,27 @@ ${poster.slice(0, 20).map(p => `<item>
       vidSpelaStopp();
       st(medLat ? "Hämtar låten…" : "Förbereder…");
       const ljud = medLat ? await aiLatDel(48000, false) : null, { start: vStart, sek: vSek } = vidDel();
-      const v = document.createElement("video"); v.playsInline = true; v.muted = medLat || tyst; v.src = URL.createObjectURL(aiVideoBlob);
+      const synk = !medLat && !tyst ? (aiVid.synk || 0) / 1000 : 0;
+      const v = document.createElement("video"); v.playsInline = true; v.muted = medLat || tyst || !!synk; v.src = URL.createObjectURL(aiVideoBlob);
       await new Promise((ok, fel) => { v.onloadeddata = ok; v.onerror = () => fel(new Error("klippet kunde inte läsas")); });
       if (vStart > 0) { v.currentTime = vStart; await new Promise(ok => v.onseeked = ok); }
       const [B, H] = format ? AI_STORLEK[$("aiFormat").value] : [v.videoWidth, v.videoHeight], c = document.createElement("canvas"); c.width = B; c.height = H; const cx = c.getContext("2d");
       const rita = () => { const sk = Math.max(B / v.videoWidth, H / v.videoHeight); cx.drawImage(v, (B - v.videoWidth * sk) / 2, (H - v.videoHeight * sk) / 2, v.videoWidth * sk, v.videoHeight * sk); };
       const ac = new AudioContext({ sampleRate: 48000 }), mal = ac.createMediaStreamDestination();
       let k = null;
-      if (ljud) { k = ac.createBufferSource(); k.buffer = ljud; k.connect(mal); } else if (!tyst) ac.createMediaElementSource(v).connect(mal);
+      let sp = null;
+      if (ljud) { k = ac.createBufferSource(); k.buffer = ljud; k.connect(mal); }
+      else if (synk) sp = await synkSpar(ac, mal, aiVideoBlob, synk);
+      else if (!tyst) ac.createMediaElementSource(v).connect(mal);
       const strom = c.captureStream(30); mal.stream.getAudioTracks().forEach(t => strom.addTrack(t));
       const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }), delar = [];
       rec.ondataavailable = e => { if (e.data.size) delar.push(e.data); };
       const klar = new Promise(ok => rec.onstop = ok);
-      await v.play(); rita();
+      await v.play(); rita(); if (sp) sp.spela(vStart);
       rec.start(1000); if (k) k.start();
       const t0 = ac.currentTime, total = ljud ? ljud.duration : vSek;
       let igang = true;
-      const sluta = () => { if (!igang) return; igang = false; setTimeout(() => rec.stop(), 150); };
+      const sluta = () => { if (!igang) return; igang = false; if (sp) sp.paus(); setTimeout(() => rec.stop(), 150); };
       const loop = () => {
         if (!igang) return;
         if (v.currentTime >= vStart + vSek || v.ended) { if (ljud) { v.currentTime = vStart; if (v.paused) v.play(); } else return sluta(); }
@@ -2658,7 +2695,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const { start, sek } = vidDel();
       const v = $("aiVideoSpelare"), c = document.createElement("canvas"); c.width = 144; c.height = 108;
       let tumme = ""; try { c.getContext("2d").drawImage(v, 0, 0, 144, 108); tumme = c.toDataURL("image/jpeg", .7); } catch {}
-      redLista.push({ typ: "video", blob: aiVideoBlob, namn: ($("aiVideoNer").download || "klipp").replace(/\.(mp4|webm|mov)$/i, ""), start, sek, text: "", tumme });
+      redLista.push({ typ: "video", synk: (aiVid.synk || 0) / 1000, blob: aiVideoBlob, namn: ($("aiVideoNer").download || "klipp").replace(/\.(mp4|webm|mov)$/i, ""), start, sek, text: "", tumme });
       ritaRed(); status(`➕ ${mmss(start)}–${mmss(start + sek)} ligger i filmen (${redLista.length} delar, ${mmss(redTotal())}).`, "ok");
       $("redLista").scrollIntoView({ behavior: "smooth", block: "nearest" });
     };
@@ -2702,10 +2739,13 @@ ${poster.slice(0, 20).map(p => `<item>
         ac = new AudioContext({ sampleRate: 48000 }); const mal = ac.createMediaStreamDestination();
         for (const d of delar) {   // varje klipp i ett eget videoelement, redan spolat till sin start
           if (d.typ !== "video") continue;
-          d.v = document.createElement("video"); d.v.playsInline = true; d.v.src = URL.createObjectURL(d.blob); d.v.muted = ljudLage === "lat";
+          d.v = document.createElement("video"); d.v.playsInline = true; d.v.src = URL.createObjectURL(d.blob); d.v.muted = ljudLage === "lat" || !!d.synk;
           await new Promise((ok, fel) => { d.v.onloadeddata = ok; d.v.onerror = () => fel(new Error(`${d.namn} kunde inte läsas`)); });
           d.v.currentTime = d.start; await new Promise(ok => d.v.onseeked = ok);
-          if (ljudLage !== "lat") { const g = ac.createGain(); g.gain.value = ljudLage === "bada" ? .45 : 1; ac.createMediaElementSource(d.v).connect(g); g.connect(mal); }
+          if (ljudLage !== "lat") {
+            const g = ac.createGain(); g.gain.value = ljudLage === "bada" ? .45 : 1; g.connect(mal);
+            if (d.synk) d.sp = await synkSpar(ac, g, d.blob, d.synk); else ac.createMediaElementSource(d.v).connect(g);
+          }
         }
         let lat = null;
         if (ljudLage !== "eget") {
@@ -2726,10 +2766,10 @@ ${poster.slice(0, 20).map(p => `<item>
           await new Promise(async ok => {
             const visa = t => st(`Gör filmen… del ${i + 1} av ${delar.length} · ${Math.round(gjort + t)} av ${Math.round(total)} s – låt fliken vara synlig`);
             if (d.typ === "video") {
-              const v = d.v; await v.play();
+              const v = d.v; await v.play(); if (d.sp) d.sp.spela(d.start);
               const loop = () => {
                 const t = v.currentTime - d.start;
-                if (t >= d.sek || v.ended) { v.pause(); return ok(); }
+                if (t >= d.sek || v.ended) { v.pause(); if (d.sp) d.sp.paus(); return ok(); }
                 const sk = Math.max(B / v.videoWidth, H / v.videoHeight); cx.drawImage(v, (B - v.videoWidth * sk) / 2, (H - v.videoHeight * sk) / 2, v.videoWidth * sk, v.videoHeight * sk);
                 if (d.text) ritaText(cx, d.text, B, H, { storlek: Math.round(B * .075), y: H * .8 });
                 morka(tona(t, d.sek)); visa(t); requestAnimationFrame(loop);
