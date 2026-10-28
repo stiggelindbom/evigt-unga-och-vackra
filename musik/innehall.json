@@ -408,7 +408,7 @@
       "info": "Han skulle bara softa och spela spel …",
       "typ": "Singel",
       "spotify": "",
-      "fil": "svenne-g.mp3",
+      "fil": "svenne-g-lzt3.mp3",
       "ladda": true,
       "kredit": {
         "artist": "De Evigt Unga å Vackra",
@@ -419,7 +419,11 @@
         "mastering": "Stig Lindbom",
         "ar": "2026"
       },
-      "omslag": "omslag-svenne-g.jpg"
+      "omslag": "omslag-svenne-g.jpg",
+      "niva": {
+        "lufs": -10.4,
+        "topp": -0.1
+      }
     },
     {
       "slappt": false,
