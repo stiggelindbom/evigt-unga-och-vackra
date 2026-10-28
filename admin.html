@@ -74,6 +74,11 @@
     .ai-pris { font: 600 .78em system-ui, sans-serif; letter-spacing: 0; text-transform: none; opacity: .85; }
     .ai-del { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--kant); border-radius: 10px; }
     .ai-del input[type=range] { width: 100%; accent-color: var(--guld); }
+    .red-rad { display: grid; grid-template-columns: 72px 1fr auto; gap: 10px; align-items: center; border: 1px solid var(--kant); border-radius: 10px; padding: 8px; }
+    .red-rad .tumme { width: 72px; height: 54px; border-radius: 6px; object-fit: cover; background: #000; display: grid; place-items: center; font-size: 1.4rem; }
+    .red-rad .falt { display: grid; gap: 6px; }
+    .red-rad .falt .inlagg-rad input[type=number] { width: 80px; }
+    .red-rad .knappar { display: flex; gap: 4px; }
     .ai-manad { margin-top: 8px; padding: 10px 14px; border: 1px solid var(--kant); border-radius: 10px; background: var(--yta); font-size: .95rem; }
     .ai-manad b { color: var(--guld); }
     .inlagg-redigera { grid-column: 1 / -1; display: grid; gap: 10px; background: #1a1610; border: 1px solid var(--guld); border-radius: 10px; padding: 12px; }
@@ -515,6 +520,27 @@
         </div>
       </div>
     </div>
+    <div class="kort" style="display:grid;gap:12px">
+      <h3>🎞 Redigera film <small class="hjalp">flera klipp, textskyltar och låten – gratis, görs i webbläsaren</small></h3>
+      <ol class="hjalp" style="margin:0;padding-left:20px">
+        <li>Ladda ett klipp ovan (📂 Eget klipp eller ett AI-klipp) och välj del med den gula rutan under videon.</li>
+        <li>Tryck <b>➕ Lägg till vald del</b>. Upprepa med fler klipp.</li>
+        <li>Lägg in textskyltar, ordna med pilarna, välj övergång och ljud.</li>
+        <li><b>🎬 Gör filmen</b> – den hamnar i spelaren ovan, klar för 📣 Nytt inlägg.</li>
+      </ol>
+      <div class="inlagg-rad">
+        <button class="knapp liten" type="button" id="redLaggTill">➕ Lägg till vald del av videon</button>
+        <button class="knapp kontur liten" type="button" id="redText">➕ Textskylt</button>
+        <button class="knapp kontur liten" type="button" id="redTom">Töm</button>
+      </div>
+      <div id="redLista" style="display:grid;gap:8px"><p class="hjalp">Inga klipp än.</p></div>
+      <div class="rutnat">
+        <label>Övergång<select id="redOver"><option value="tona">Mjuk – tona via svart</option><option value="rak">Rakt klipp</option></select></label>
+        <label>Ljud<select id="redLjud"><option value="lat">Låten under hela filmen</option><option value="bada">Låten + klippens ljud (svagare)</option><option value="eget">Bara klippens eget ljud</option></select></label>
+      </div>
+      <p class="hjalp">Låten börjar där den gula rutan i låtens vågform börjar och tonas ut i slutet av filmen. Formatet (stående/liggande/fyrkant) väljs under Format ovan. Listan försvinner om sidan laddas om.</p>
+      <div class="inlagg-rad"><button class="knapp" type="button" id="redGor">🎬 Gör filmen <span class="ai-pris" id="redInfo">· gratis</span></button><span class="hjalp" id="redStatus"></span></div>
+    </div>
     </section>
     <section class="flik" data-flik-del="valv">
     <div>
@@ -584,7 +610,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028134805";
+    const VERSION = "v20261028135502";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2306,14 +2332,14 @@ ${poster.slice(0, 20).map(p => `<item>
       c.getContext("2d").drawImage(im, (b - im.width * s) / 2, (h - im.height * s) / 2, im.width * s, im.height * s);
       return c.toDataURL("image/jpeg", .9);
     }
-    async function aiLatDel(rate = 32000, mono = true) {
+    async function aiLatDel(rate = 32000, mono = true, fastSek = 0) {
       const l = aiLatObj(); if (!l) throw new Error("välj en låt");
       const r = await fetch(forhands[l.fil] || "musik/" + encodeURIComponent(l.fil)); if (!r.ok) throw new Error("låtfilen kunde inte hämtas");
       const ljud = await avkoda(await r.blob());
-      const start = Math.max(0, Math.min(+$("aiStart").value || 0, ljud.duration - 3)), sek = Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek(), ljud.duration - start));
+      const start = Math.max(0, Math.min(+$("aiStart").value || 0, ljud.duration - 3)), sek = fastSek ? Math.max(1, Math.min(fastSek, ljud.duration - start)) : Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek(), ljud.duration - start));
       const off = new OfflineAudioContext(mono ? 1 : 2, Math.ceil(sek * rate), rate);
       const k = off.createBufferSource(), g = off.createGain(); k.buffer = ljud; k.connect(g); g.connect(off.destination);
-      g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, .3); g.gain.setValueAtTime(1, sek - 1); g.gain.linearRampToValueAtTime(0, sek);
+      g.gain.setValueAtTime(0, 0); g.gain.linearRampToValueAtTime(1, .3); g.gain.setValueAtTime(1, Math.max(.3, sek - (fastSek ? 2 : 1))); g.gain.linearRampToValueAtTime(0, sek);
       k.start(0, start, sek);
       return off.startRendering();
     }
@@ -2596,6 +2622,142 @@ ${poster.slice(0, 20).map(p => `<item>
     }
     $("aiVideoLat").onclick = () => aiSpelaInKnapp($("aiVideoLat"), { medLat: true }, "✓ Klart med låten – lyssna och tryck 📣 Lägg i Nytt inlägg.");
     $("aiVideoFormat").onclick = () => aiSpelaInKnapp($("aiVideoFormat"), {}, "✓ Klart i nytt format – 📣 Lägg i Nytt inlägg, eller 📼 gör om den med AI.");
+    // ===== 🎞 Redigera film: klipp och textskyltar efter varandra, inspelat i realtid i webbläsaren (gratis) =====
+    let redLista = [];   // { typ: "video", blob, namn, start, sek, text, tumme } | { typ: "text", text, sek, bak }
+    const redTotal = () => redLista.reduce((a, k) => a + k.sek, 0);
+    function ritaRed() {
+      $("redLista").innerHTML = redLista.length ? redLista.map((k, i) => `
+        <div class="red-rad" data-red="${i}">
+          ${k.typ === "video" ? `<img class="tumme" src="${k.tumme || ""}" alt="">` : `<div class="tumme" style="background:${k.bak === "guld" ? "#f5c518" : "#000"}">🔤</div>`}
+          <div class="falt">
+            ${k.typ === "video"
+              ? `<b>🎞 ${esc(k.namn)}</b><small class="hjalp">${mmss(k.start)} – ${mmss(k.start + k.sek)} (${Math.round(k.sek * 10) / 10} s)</small>
+                 <input type="text" data-red-falt="text" value="${esc(k.text || "")}" placeholder="Text ovanpå klippet (valfritt)">`
+              : `<input type="text" data-red-falt="text" value="${esc(k.text)}" placeholder="Text på skylten">
+                 <div class="inlagg-rad"><label class="kryss">Sekunder <input type="number" data-red-falt="sek" min="1" max="10" step="0.5" value="${k.sek}"></label>
+                 <select data-red-falt="bak"><option value="svart"${k.bak === "svart" ? " selected" : ""}>Svart</option><option value="guld"${k.bak === "guld" ? " selected" : ""}>Guld</option><option value="forra"${k.bak === "forra" ? " selected" : ""}>Förra bilden (mörk)</option></select></div>`}
+          </div>
+          <div class="knappar">
+            <button class="knapp kontur liten" type="button" data-red-flytta="-1" title="Flytta upp"${i ? "" : " disabled"}>↑</button>
+            <button class="knapp kontur liten" type="button" data-red-flytta="1" title="Flytta ner"${i < redLista.length - 1 ? "" : " disabled"}>↓</button>
+            <button class="knapp kontur liten" type="button" data-red-bort title="Ta bort">✕</button>
+          </div>
+        </div>`).join("") : `<p class="hjalp">Inga klipp än.</p>`;
+      const t = redTotal();
+      $("redInfo").textContent = t ? `· ${mmss(t)} · gratis` : "· gratis";
+    }
+    $("redLaggTill").onclick = () => {
+      if (!aiVideoBlob) return status("Ladda ett klipp först (📂 Eget klipp eller gör ett AI-klipp), välj del med den gula rutan och tryck sedan här.", "fel");
+      const { start, sek } = vidDel();
+      const v = $("aiVideoSpelare"), c = document.createElement("canvas"); c.width = 144; c.height = 108;
+      let tumme = ""; try { c.getContext("2d").drawImage(v, 0, 0, 144, 108); tumme = c.toDataURL("image/jpeg", .7); } catch {}
+      redLista.push({ typ: "video", blob: aiVideoBlob, namn: ($("aiVideoNer").download || "klipp").replace(/\.(mp4|webm|mov)$/i, ""), start, sek, text: "", tumme });
+      ritaRed(); status(`➕ ${mmss(start)}–${mmss(start + sek)} ligger i filmen (${redLista.length} delar, ${mmss(redTotal())}).`, "ok");
+      $("redLista").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    };
+    $("redText").onclick = () => { redLista.push({ typ: "text", text: "⏰ Två timmar senare…", sek: 2, bak: "svart" }); ritaRed(); };
+    $("redTom").onclick = () => { if (redLista.length && confirm("Tömma filmen?")) { redLista = []; ritaRed(); } };
+    $("redLista").addEventListener("input", e => {
+      const f = e.target.closest("[data-red-falt]"); if (!f) return;
+      const k = redLista[+f.closest("[data-red]").dataset.red], namn = f.dataset.redFalt;
+      k[namn] = namn === "sek" ? Math.max(1, Math.min(10, +f.value || 2)) : f.value;
+      if (namn === "sek") $("redInfo").textContent = `· ${mmss(redTotal())} · gratis`;
+      if (namn === "bak") ritaRed();
+    });
+    $("redLista").addEventListener("click", e => {
+      const rad = e.target.closest("[data-red]"); if (!rad) return; const i = +rad.dataset.red;
+      const fl = e.target.closest("[data-red-flytta]");
+      if (fl) { const j = i + +fl.dataset.redFlytta; [redLista[i], redLista[j]] = [redLista[j], redLista[i]]; return ritaRed(); }
+      if (e.target.closest("[data-red-bort]")) { redLista.splice(i, 1); ritaRed(); }
+    });
+    // text med radbrytning, centrerad, med kontur så att den syns på allt
+    function ritaText(cx, text, B, H, { storlek, y, farg = "#fff", kontur = "rgba(0,0,0,.85)" }) {
+      cx.font = `800 ${storlek}px Oswald, Impact, "Arial Black", sans-serif`; cx.textAlign = "center"; cx.textBaseline = "middle";
+      const ord = String(text).split(/\s+/), rader = []; let rad = "";
+      for (const o of ord) { const prov = rad ? rad + " " + o : o; if (cx.measureText(prov).width > B * .86 && rad) { rader.push(rad); rad = o; } else rad = prov; }
+      if (rad) rader.push(rad);
+      const lh = storlek * 1.15, top = y - (rader.length - 1) * lh / 2;
+      rader.forEach((r, i) => { cx.lineWidth = storlek / 7; cx.strokeStyle = kontur; cx.lineJoin = "round"; if (kontur) cx.strokeText(r, B / 2, top + i * lh); cx.fillStyle = farg; cx.fillText(r, B / 2, top + i * lh); });
+      cx.textAlign = "start"; cx.textBaseline = "alphabetic";
+    }
+    $("redGor").onclick = async () => {
+      const st = t => $("redStatus").textContent = t;
+      if (!redLista.length) return status("Lägg till minst ett klipp eller en textskylt först.", "fel");
+      const typ = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
+      if (!typ) return status("Den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn.", "fel");
+      $("redGor").disabled = true; vidSpelaStopp(); aiLyssnaStopp();
+      const delar = redLista.map(k => ({ ...k })), total = redTotal(), over = $("redOver").value === "tona" ? .4 : 0, ljudLage = $("redLjud").value;
+      let ac = null;
+      try {
+        st("Förbereder klippen…");
+        const [B, H] = AI_STORLEK[$("aiFormat").value], c = document.createElement("canvas"); c.width = B; c.height = H; const cx = c.getContext("2d");
+        cx.fillStyle = "#000"; cx.fillRect(0, 0, B, H);
+        ac = new AudioContext({ sampleRate: 48000 }); const mal = ac.createMediaStreamDestination();
+        for (const d of delar) {   // varje klipp i ett eget videoelement, redan spolat till sin start
+          if (d.typ !== "video") continue;
+          d.v = document.createElement("video"); d.v.playsInline = true; d.v.src = URL.createObjectURL(d.blob); d.v.muted = ljudLage === "lat";
+          await new Promise((ok, fel) => { d.v.onloadeddata = ok; d.v.onerror = () => fel(new Error(`${d.namn} kunde inte läsas`)); });
+          d.v.currentTime = d.start; await new Promise(ok => d.v.onseeked = ok);
+          if (ljudLage !== "lat") { const g = ac.createGain(); g.gain.value = ljudLage === "bada" ? .45 : 1; ac.createMediaElementSource(d.v).connect(g); g.connect(mal); }
+        }
+        let lat = null;
+        if (ljudLage !== "eget") {
+          st("Hämtar låten…");
+          const buf = await aiLatDel(48000, false, total);
+          lat = ac.createBufferSource(); lat.buffer = buf; const g = ac.createGain(); g.gain.value = 1; lat.connect(g); g.connect(mal);
+        }
+        const strom = c.captureStream(30); mal.stream.getAudioTracks().forEach(t => strom.addTrack(t));
+        const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }), bitar = [];
+        rec.ondataavailable = e => { if (e.data.size) bitar.push(e.data); };
+        const klar = new Promise(ok => rec.onstop = ok);
+        const tona = (t, sek) => over ? Math.max(0, Math.min(1, t / over, (sek - t) / over)) : 1;
+        const morka = a => { if (a < 1) { cx.fillStyle = `rgba(0,0,0,${1 - a})`; cx.fillRect(0, 0, B, H); } };
+        const forra = document.createElement("canvas"); forra.width = B; forra.height = H;
+        rec.start(1000); if (lat) lat.start();
+        let gjort = 0;
+        for (const [i, d] of delar.entries()) {
+          await new Promise(async ok => {
+            const visa = t => st(`Gör filmen… del ${i + 1} av ${delar.length} · ${Math.round(gjort + t)} av ${Math.round(total)} s – låt fliken vara synlig`);
+            if (d.typ === "video") {
+              const v = d.v; await v.play();
+              const loop = () => {
+                const t = v.currentTime - d.start;
+                if (t >= d.sek || v.ended) { v.pause(); return ok(); }
+                const sk = Math.max(B / v.videoWidth, H / v.videoHeight); cx.drawImage(v, (B - v.videoWidth * sk) / 2, (H - v.videoHeight * sk) / 2, v.videoWidth * sk, v.videoHeight * sk);
+                if (d.text) ritaText(cx, d.text, B, H, { storlek: Math.round(B * .075), y: H * .8 });
+                morka(tona(t, d.sek)); visa(t); requestAnimationFrame(loop);
+              };
+              loop();
+            } else {
+              forra.getContext("2d").drawImage(c, 0, 0);
+              const t0 = performance.now();
+              const loop = () => {
+                const t = (performance.now() - t0) / 1000;
+                if (t >= d.sek) return ok();
+                if (d.bak === "guld") { const gr = cx.createLinearGradient(0, 0, B, H); gr.addColorStop(0, "#f5c518"); gr.addColorStop(1, "#b8860b"); cx.fillStyle = gr; cx.fillRect(0, 0, B, H); }
+                else if (d.bak === "forra") { cx.drawImage(forra, 0, 0); cx.fillStyle = "rgba(0,0,0,.6)"; cx.fillRect(0, 0, B, H); }
+                else { cx.fillStyle = "#000"; cx.fillRect(0, 0, B, H); }
+                ritaText(cx, d.text, B, H, d.bak === "guld" ? { storlek: Math.round(B * .1), y: H / 2, farg: "#111", kontur: null } : { storlek: Math.round(B * .1), y: H / 2 });
+                morka(tona(t, d.sek)); visa(t); requestAnimationFrame(loop);
+              };
+              loop();
+            }
+          });
+          gjort += d.sek;
+        }
+        cx.fillStyle = "#000"; cx.fillRect(0, 0, B, H);
+        await vanta(150); rec.stop(); await klar;
+        const blob = new Blob(bitar, { type: typ.split(";")[0] });
+        await sattVideo(blob, `film-${Date.now().toString(36)}.${/mp4/.test(blob.type) ? "mp4" : "webm"}`);
+        st(`✓ Filmen är klar (${mmss(total)}) – den ligger i spelaren ovan.`);
+        $("aiVideoSpelare").scrollIntoView({ behavior: "smooth", block: "center" });
+        status("🎬 Filmen är klar – titta i spelaren och tryck 📣 Lägg i Nytt inlägg.", "ok");
+      } catch (e) { st(""); status("Filmen kunde inte göras: " + e.message, "fel"); }
+      if (ac) ac.close().catch(() => {});
+      for (const d of delar) if (d.v) { d.v.pause(); URL.revokeObjectURL(d.v.src); }
+      $("redGor").disabled = false;
+    };
+
     $("aiVideoInlagg").onclick = () => {
       if (!aiVideoBlob) { window.open(aiVideoUrl, "_blank"); return status("Klippet öppnades i en ny flik – spara det och välj det under 📣 Nytt inlägg.", "osparat"); }
       const l = aiLatObj(), artist = $("aiArtist").value;
