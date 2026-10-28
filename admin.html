@@ -610,7 +610,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028135502";
+    const VERSION = "v20261028135653";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2570,7 +2570,8 @@ ${poster.slice(0, 20).map(p => `<item>
     $("aiEgetKlipp").onclick = () => { $("aiKlippFil").value = ""; $("aiKlippFil").click(); };
     $("aiKlippFil").addEventListener("change", () => {
       const f = $("aiKlippFil").files[0]; if (!f) return;
-      if (f.size > 45 * 1048576) return status(`Klippet är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB.`, "fel");
+      // stora filer går bra att redigera här – det är bara inlägg som har en gräns (45 MB)
+      if (f.size > 1024 * 1048576) return status(`Klippet är ${(f.size / 1048576).toFixed(0)} MB – max 1 GB.`, "fel");
       aiVideoUrl = null; sattVideo(f, f.name.replace(/\.mov$/i, ".mp4"));
       $("aiVideoStatus").textContent = `✓ ${f.name} – 🎵 Lägg låten på, 📐 ändra format, 📼 gör om med AI eller 📣 lägg i inlägg direkt.`;
     });
@@ -3161,7 +3162,7 @@ ${poster.slice(0, 20).map(p => `<item>
     $("inlaggFil").addEventListener("change", () => valjInlaggFil($("inlaggFil").files[0]));
     function valjInlaggFil(f) {
       if (!f) return;
-      if (f.size > 45 * 1048576) { inlaggFil = null; return status(`Filen är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB. Exportera videon lite mindre.`, "fel"); }
+      if (f.size > 45 * 1048576) { inlaggFil = null; return status(`Filen är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB för inlägg. Gör den mindre i ✨ AI-studio: välj del med gula rutan och tryck 📐 Bara format (eller 🎵 Lägg låten på).`, "fel"); }
       inlaggFil = f; inlaggFormat = "";
       if (f.type.startsWith("video")) {   // stående/liggande avgör vart Make skickar den (Shorts/Reels eller vanlig YouTube)
         const v = document.createElement("video"); v.preload = "metadata"; v.muted = true;
