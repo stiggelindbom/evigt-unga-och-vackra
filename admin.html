@@ -453,6 +453,8 @@
         <label class="kryss"><input type="radio" name="aiSlag" value="text" checked> Från text</label>
         <label class="kryss"><input type="radio" name="aiSlag" value="bild"> Bild får liv</label>
         <label class="kryss"><input type="radio" name="aiSlag" value="sjung"> Bild sjunger låten (lipsync)</label>
+        <label class="kryss"><input type="radio" name="aiSlag" value="lappar"> 📼 Video: läpparna följer låten</label>
+        <label class="kryss"><input type="radio" name="aiSlag" value="stil"> 📼 Video: ny stil</label>
       </div>
       <div class="rutnat">
         <label>Modell<select id="aiModell"></select></label>
@@ -471,7 +473,11 @@
       </div>
       <input type="file" id="aiBildFil" accept="image/jpeg,image/png,image/webp" hidden>
       <input type="file" id="aiKlippFil" accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm" hidden>
-      <div data-ai-for="text bild"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
+      <input type="file" id="aiKallaFil" accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm" hidden>
+      <div class="inlagg-rad" data-ai-for="lappar stil"><b>📼 Video att göra om:</b> <span class="hjalp" id="aiKallaNamn">ingen vald</span>
+        <button class="knapp kontur liten" type="button" id="aiValjKalla">📂 Välj video</button></div>
+      <p class="hjalp" data-ai-for="lappar">Personen i videon får munnen att följa delen av låten du väljer nedan. Bäst med en video där ansiktet syns tydligt.</p>
+      <div data-ai-for="text bild stil"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
         <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
       <div class="ai-del">
         <div class="inlagg-rad"><b>🎵 Vilken del av låten?</b><span class="hjalp" id="aiDelText"></span></div>
@@ -490,7 +496,9 @@
       <div id="aiVideoKlar" hidden style="display:grid;gap:10px">
         <video id="aiVideoSpelare" controls playsinline style="max-width:100%;max-height:60vh;border-radius:10px;background:#000"></video>
         <div class="inlagg-rad">
-          <button class="knapp liten" type="button" id="aiVideoLat" data-ai-for="text bild">🎵 Lägg låten på</button>
+          <button class="knapp liten" type="button" id="aiVideoLat" title="Byter ljudet mot vald del av låten – videon får valt format och längd">🎵 Lägg låten på</button>
+          <button class="knapp kontur liten" type="button" id="aiVideoFormat" title="Behåller videons eget ljud">📐 Bara format (behåll ljudet)</button>
+          <button class="knapp kontur liten" type="button" id="aiVideoGorOm" title="Använd det här klippet i 📼 Video-lägena">📼 Gör om den här</button>
           <button class="knapp liten" type="button" id="aiVideoInlagg">📣 Lägg i Nytt inlägg</button>
           <a class="knapp kontur liten" id="aiVideoNer" download target="_blank" rel="noopener">⬇ Ladda ner</a>
         </div>
@@ -565,7 +573,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028133026";
+    const VERSION = "v20261028133508";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2085,6 +2093,8 @@ ${poster.slice(0, 20).map(p => `<item>
     const AI_MODELLER = {
       text: [["fal-ai/veo3.1/fast", "Google Veo 3.1 Fast – snyggast"], ["kling/v4/text-to-video", "Kling 4.0 – nyast, eget ljud"]],
       bild: [["fal-ai/kling-video/v2.6/pro/image-to-video", "Kling 2.6 Pro – bäst för pengarna"], ["fal-ai/kling-video/v2.1/standard/image-to-video", "Kling 2.1 Standard – billigast"], ["fal-ai/veo3.1/fast/image-to-video", "Google Veo 3.1 Fast"], ["kling/v4/image-to-video", "Kling 4.0 – nyast, eget ljud"]],
+      lappar: [["fal-ai/sync-lipsync/v2", "Sync Lipsync 2 – bäst"], ["fal-ai/latentsync", "LatentSync – billigast"]],
+      stil: [["fal-ai/luma-dream-machine/ray-2/modify", "Luma Ray 2 Modify – ny stil, samma rörelser"]],
       sjung: [["fal-ai/bytedance/omnihuman/v1.5", "OmniHuman 1.5 – upp till 60 s"], ["fal-ai/bytedance/omnihuman", "OmniHuman – upp till 30 s"], ["veed/fabric-1.0", "VEED Fabric – mest för tal, 60 s"]]
     };
     const AI_STORLEK = { staende: [720, 1280, "9:16"], liggande: [1280, 720, "16:9"], kvadrat: [1024, 1024, "1:1"] };
@@ -2093,9 +2103,11 @@ ${poster.slice(0, 20).map(p => `<item>
     // Uppskattad kostnad (fal.ai-priser i dollar, omräknat till kronor) – visas på knapparna och som månadssumma
     const KURS = 10.5;
     // dollar per klipp efter antal sekunder (fal.ai, research 2026-10-27; 720p, utan ljud där det går)
-    const AI_PRIS = [[/kling\/v4/i, s => .157 * s], [/kling.*v2\.6/i, s => .07 * s], [/kling.*v2\.5-turbo/i, s => .35 + Math.max(0, s - 5) * .07], [/kling.*v2\.1\/standard/i, s => .05 * s], [/kling/i, s => .112 * s],
+    // video-om-modellerna: priser uppskattade – rätta när research har bekräftat dem
+    const AI_PRIS_OM = [[/sync-lipsync/i, s => .05 * s], [/latentsync/i, s => .2 + Math.max(0, s - 40) * .005], [/modify|video-to-video/i, s => .12 * s]];
+    const AI_PRIS = [...AI_PRIS_OM, [/kling\/v4/i, s => .157 * s], [/kling.*v2\.6/i, s => .07 * s], [/kling.*v2\.5-turbo/i, s => .35 + Math.max(0, s - 5) * .07], [/kling.*v2\.1\/standard/i, s => .05 * s], [/kling/i, s => .112 * s],
       [/veo/i, s => .10 * s], [/omnihuman\/v1\.5/i, s => .16 * s], [/omnihuman\/v2/i, s => .105 * s], [/omnihuman/i, s => .14 * s], [/fabric/i, s => .15 * s]];
-    const aiMaxSek = () => aiSlag() === "sjung" && !/omnihuman\/v1\.5|fabric|omnihuman\/v2/i.test($("aiModell").value) ? 30 : 60;
+    const aiMaxSek = () => aiSlag() === "lappar" ? 60 : aiSlag() === "sjung" && !/omnihuman\/v1\.5|fabric|omnihuman\/v2/i.test($("aiModell").value) ? 30 : 60;
     // längder som modellen klarar: Kling 4.0 3–30 s, Veo 4/6/8 s, övriga Kling 5/10 s
     const aiLangder = m => /kling\/v4/i.test(m) ? [5, 10, 15, 20, 30] : /veo/i.test(m) ? [4, 6, 8] : [5, 10];
     function fyllLangd() {
@@ -2104,7 +2116,7 @@ ${poster.slice(0, 20).map(p => `<item>
       $("aiLangd").value = l.includes(v) ? v : l.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a);
     }
     const aiKr = v => !v ? "0 kr" : v < 1 ? `${Math.max(1, Math.round(v * 100))} öre` : `${v < 10 ? v.toFixed(1).replace(".", ",") : Math.round(v)} kr`;
-    const aiSekunder = () => aiSlag() === "sjung" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : +$("aiLangd").value;
+    const aiSekunder = () => aiSlag() === "stil" ? Math.min(10, Math.round(aiKalla?.sek || 10)) : aiSlag() === "sjung" || aiSlag() === "lappar" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : +$("aiLangd").value;
     function aiVideoKostnad() { const m = $("aiModell").value, p = AI_PRIS.find(([r]) => r.test(m)); return (p ? p[1](aiSekunder()) : .10 * aiSekunder()) * KURS; }
     function aiRostKostnad() {
       const musik = $("aiLjud").value.trim() && $("aiLjudTyp").value === "musik" ? .04 : 0;   // Lyria 3: 0,04 $ per låt
@@ -2266,7 +2278,9 @@ ${poster.slice(0, 20).map(p => `<item>
     $("aiBildFil").addEventListener("change", () => { aiEgenBild = $("aiBildFil").files[0] || aiEgenBild; if (!aiEgenBild) $("aiBild").value = "omslag"; });
     $("aiForslag").onclick = () => {
       const l = aiLatObj(), dj = /stigge/i.test($("aiArtist").value), titel = l ? utanArtist(l.titel) : "";
-      $("aiPrompt").value = aiSlag() === "bild"
+      $("aiPrompt").value = aiSlag() === "stil"
+        ? (dj ? "Restyle as Andy Warhol pop-art: bold neon pink and cyan, comic halftone dots, club lights, keep the same people and movements" : "Restyle as a warm vintage 1970s music film: golden tones, soft film grain, summer light, keep the same people and movements")
+        : aiSlag() === "bild"
         ? (dj ? "Slow cinematic push-in, neon pink and cyan lights pulse to a deep house beat, subtle glitter in the air, pop-art colors, keep the image intact, no text" : "Slow cinematic push-in, warm golden light flickers, gentle movement as if the picture breathes to the music, keep the image intact, no text")
         : dj ? `Club at night, neon pink and cyan lights, pop-art style, crowd dancing to deep house, DJ silhouette behind the decks, slow camera push-in, cinematic, music video for "${titel}", no text`
         : `Happy Swedish party with friends, dancing and laughing, golden hour, warm film look, handheld camera, music video for "${titel}", no text`;
@@ -2295,6 +2309,9 @@ ${poster.slice(0, 20).map(p => `<item>
     const tillDataUrl = blob => new Promise(ok => { const f = new FileReader(); f.onload = () => ok(f.result); f.readAsDataURL(blob); });
     function aiIndata(modell, s) {
       const [, , ar] = AI_STORLEK[s.format];
+      if (/sync-lipsync/i.test(modell)) return { video_url: s.video, audio_url: s.ljud, sync_mode: "cut_off" };
+      if (/latentsync/i.test(modell)) return { video_url: s.video, audio_url: s.ljud };
+      if (/modify|video-to-video/i.test(modell)) return { video_url: s.video, prompt: s.prompt, mode: "flex_1" };
       if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric|omnihuman\/v1\.5/.test(modell) ? { resolution: "720p" } : {}) };
       // Veo: 9:16 eller 16:9 (ingen fyrkant) – med bild följer formatet bilden. Utan eget ljud, låten läggs på efteråt.
       if (/veo/i.test(modell)) return { prompt: s.prompt, duration: s.langd + "s", resolution: "720p", generate_audio: false, aspect_ratio: s.bild ? "auto" : ar === "1:1" ? "16:9" : ar, ...(s.bild ? { image_url: s.bild } : {}) };
@@ -2334,74 +2351,120 @@ ${poster.slice(0, 20).map(p => `<item>
     $("aiVideoKor").onclick = async () => {
       const s = aiSlag(), modell = $("aiModell").value, st = t => $("aiVideoStatus").textContent = t;
       const prompt = $("aiPrompt").value.trim();
-      if (s !== "sjung" && !prompt) return status("Beskriv klippet först (eller tryck 💡 Förslag).", "fel");
+      if (["text", "bild", "stil"].includes(s) && !prompt) return status("Beskriv klippet först (eller tryck 💡 Förslag).", "fel");
+      if ((s === "lappar" || s === "stil") && !aiKalla) return status("Välj videon som ska göras om först (📂 Välj video).", "fel");
       $("aiVideoKor").disabled = true; $("aiVideoKlar").hidden = true;
       try {
         aiNyckel("fal");
         st("Förbereder…");
         const indata = aiIndata(modell, {
           format: $("aiFormat").value, prompt, langd: +$("aiLangd").value,
-          bild: s === "text" ? null : await aiBildData(),
-          ljud: s === "sjung" ? await tillDataUrl(tillWav(await aiLatDel())) : null
+          bild: s === "bild" || s === "sjung" ? await aiBildData() : null,
+          ljud: s === "sjung" || s === "lappar" ? await tillDataUrl(tillWav(await aiLatDel())) : null,
+          video: s === "lappar" || s === "stil" ? await falLadda(aiKalla.blob, st) : null
         });
         st("Skickar till fal.ai…");
         const pris = aiVideoKostnad();
         aiVideoUrl = await falKor(modell, indata, st);
-        aiLogga("video", ({ text: "Klipp från text", bild: "Bild får liv", sjung: "Sjungande bild" })[s] + " – " + $("aiModell").selectedOptions[0].textContent.split(" – ")[0], pris);
+        aiLogga("video", ({ text: "Klipp från text", bild: "Bild får liv", sjung: "Sjungande bild", lappar: "Video: läppar", stil: "Video: ny stil" })[s] + " – " + $("aiModell").selectedOptions[0].textContent.split(" – ")[0], pris);
         aiVideoBlob = null;
         try { const r = await fetch(aiVideoUrl); if (r.ok) aiVideoBlob = await r.blob(); } catch {}
         $("aiVideoSpelare").src = aiVideoBlob ? URL.createObjectURL(aiVideoBlob) : aiVideoUrl;
         $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `ai-klipp-${Date.now().toString(36)}.mp4`;
         $("aiVideoKlar").hidden = false; aiSlagByt();
-        st(s === "sjung" ? "✓ Klart!" : /kling\/v4/i.test(modell) ? "✓ Klart! Klippet har eget ljud – vill du ha låten i stället, tryck 🎵 Lägg låten på." : "✓ Klart! Klippet är tyst – tryck 🎵 Lägg låten på.");
+        st(s === "sjung" || s === "lappar" ? "✓ Klart!" : s === "stil" ? "✓ Klart! Vill du ha låten på: 🎵 Lägg låten på. Behålla ljudet: 📐 Bara format." : /kling\/v4/i.test(modell) ? "✓ Klart! Klippet har eget ljud – vill du ha låten i stället, tryck 🎵 Lägg låten på." : "✓ Klart! Klippet är tyst – tryck 🎵 Lägg låten på.");
       } catch (e) { st(""); status("Klippet kunde inte göras: " + e.message, "fel"); }
       $("aiVideoKor").disabled = false;
     };
+    // 📼 Video att göra om: en egen fil eller klippet som just gjorts
+    let aiKalla = null;   // { blob, namn, sek }
+    function sattKalla(blob, namn) {
+      aiKalla = { blob, namn, sek: 0 };
+      const v = document.createElement("video"); v.preload = "metadata";
+      v.onloadedmetadata = () => { if (aiKalla && aiKalla.blob === blob) { aiKalla.sek = v.duration; $("aiKallaNamn").textContent = `${namn} (${Math.round(v.duration)} s, ${(blob.size / 1048576).toFixed(1)} MB)`; visaAiKostnad(); } };
+      v.src = URL.createObjectURL(blob);
+      $("aiKallaNamn").textContent = namn;
+    }
+    $("aiValjKalla").onclick = () => { $("aiKallaFil").value = ""; $("aiKallaFil").click(); };
+    $("aiKallaFil").addEventListener("change", () => {
+      const f = $("aiKallaFil").files[0]; if (!f) return;
+      if (f.size > 100 * 1048576) return status(`Videon är ${(f.size / 1048576).toFixed(0)} MB – max 100 MB.`, "fel");
+      sattKalla(f, f.name);
+    });
+    $("aiVideoGorOm").onclick = () => {
+      if (!aiVideoBlob) return;
+      sattKalla(aiVideoBlob, $("aiVideoNer").download || "klippet");
+      if (!["lappar", "stil"].includes(aiSlag())) { document.querySelector('[name="aiSlag"][value="lappar"]').checked = true; aiSlagByt(); }
+      $("aiValjKalla").scrollIntoView({ behavior: "smooth", block: "center" });
+      status("📼 Klippet är valt – välj Läpparna följer låten eller Ny stil och tryck 🎬 Gör klippet.", "ok");
+    };
+    // fal behöver en adress till videon: ladda upp till fal:s lagring (små klipp kan skickas direkt)
+    async function falLadda(blob, st) {
+      st(`Laddar upp videon (${(blob.size / 1048576).toFixed(1)} MB)…`);
+      const typ = blob.type || "video/mp4";
+      try {
+        const r = await fetch("https://rest.alpha.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3", { method: "POST", headers: { Authorization: "Key " + aiNyckel("fal"), "Content-Type": "application/json" }, body: JSON.stringify({ content_type: typ, file_name: `video-${Date.now().toString(36)}.${/webm/.test(typ) ? "webm" : "mp4"}` }) });
+        if (!r.ok) throw new Error(await aiFelText(r));
+        const { upload_url, file_url } = await r.json();
+        const p = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": typ }, body: blob });
+        if (!p.ok) throw new Error("uppladdningen svarade " + p.status);
+        return file_url;
+      } catch (e) {
+        if (blob.size < 8 * 1048576) return tillDataUrl(blob);
+        throw new Error(`videon kunde inte laddas upp till fal (${e.message}). Gör den mindre först med 📐 Bara format`);
+      }
+    }
     // Klipp gjorda någon annanstans (t.ex. DeeVid): samma väg vidare – lägg på låten och skicka som inlägg
     $("aiEgetKlipp").onclick = () => { $("aiKlippFil").value = ""; $("aiKlippFil").click(); };
     $("aiKlippFil").addEventListener("change", () => {
       const f = $("aiKlippFil").files[0]; if (!f) return;
       if (f.size > 45 * 1048576) return status(`Klippet är ${(f.size / 1048576).toFixed(0)} MB – max 45 MB.`, "fel");
-      aiVideoBlob = f; aiVideoUrl = null;
+      aiVideoBlob = f; aiVideoUrl = null; sattKalla(f, f.name);
       $("aiVideoSpelare").src = URL.createObjectURL(f);
       $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = f.name.replace(/\.mov$/i, ".mp4");
-      $("aiVideoKlar").hidden = false; $("aiVideoLat").hidden = false;
-      $("aiVideoStatus").textContent = `✓ ${f.name} – har det redan ljud, tryck 📣 Lägg i Nytt inlägg. Annars 🎵 Lägg låten på.`;
+      $("aiVideoKlar").hidden = false;
+      $("aiVideoStatus").textContent = `✓ ${f.name} – 🎵 Lägg låten på, 📐 ändra format, 📼 gör om med AI eller 📣 lägg i inlägg direkt.`;
     });
-    // Låten läggs på klippet: spelas in i realtid (klippet loopas om det är kortare än låtdelen)
-    $("aiVideoLat").onclick = async () => {
+    // Spela in klippet på nytt i realtid: beskärs till valt format. Med låt: vald del av låten (klippet loopas).
+    // Utan låt: videons eget ljud, hela längden.
+    async function aiSpelaIn(medLat, knapp) {
       const st = t => $("aiVideoStatus").textContent = t;
       const typ = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m));
       if (!typ) return status("Den här webbläsaren kan inte spela in video – använd Chrome eller Edge på datorn.", "fel");
       if (!aiVideoBlob) return status("Klippet kunde inte hämtas hit – ladda ner det och använd 📣 Nytt inlägg i stället.", "fel");
-      $("aiVideoLat").disabled = true;
+      knapp.disabled = true;
       try {
-        st("Hämtar låten…");
-        const ljud = await aiLatDel(48000, false);
-        const v = document.createElement("video"); v.muted = true; v.playsInline = true; v.loop = true; v.src = URL.createObjectURL(aiVideoBlob);
+        st(medLat ? "Hämtar låten…" : "Förbereder…");
+        const ljud = medLat ? await aiLatDel(48000, false) : null;
+        const v = document.createElement("video"); v.playsInline = true; v.loop = medLat; v.muted = medLat; v.src = URL.createObjectURL(aiVideoBlob);
         await new Promise((ok, fel) => { v.onloadeddata = ok; v.onerror = () => fel(new Error("klippet kunde inte läsas")); });
-        const c = document.createElement("canvas"); c.width = v.videoWidth; c.height = v.videoHeight; const cx = c.getContext("2d");
-        const ac = new AudioContext({ sampleRate: 48000 }), k = ac.createBufferSource(), mal = ac.createMediaStreamDestination();
-        k.buffer = ljud; k.connect(mal);
+        const [B, H] = AI_STORLEK[$("aiFormat").value], c = document.createElement("canvas"); c.width = B; c.height = H; const cx = c.getContext("2d");
+        const rita = () => { const sk = Math.max(B / v.videoWidth, H / v.videoHeight); cx.drawImage(v, (B - v.videoWidth * sk) / 2, (H - v.videoHeight * sk) / 2, v.videoWidth * sk, v.videoHeight * sk); };
+        const ac = new AudioContext({ sampleRate: 48000 }), mal = ac.createMediaStreamDestination();
+        let k = null;
+        if (ljud) { k = ac.createBufferSource(); k.buffer = ljud; k.connect(mal); } else ac.createMediaElementSource(v).connect(mal);
         const strom = c.captureStream(30); mal.stream.getAudioTracks().forEach(t => strom.addTrack(t));
         const rec = new MediaRecorder(strom, { mimeType: typ, videoBitsPerSecond: 4_000_000, audioBitsPerSecond: 192_000 }), delar = [];
         rec.ondataavailable = e => { if (e.data.size) delar.push(e.data); };
         const klar = new Promise(ok => rec.onstop = ok);
-        await v.play(); cx.drawImage(v, 0, 0);
-        rec.start(1000); k.start();
-        const t0 = ac.currentTime;
+        await v.play(); rita();
+        rec.start(1000); if (k) k.start();
+        const t0 = ac.currentTime, total = ljud ? ljud.duration : v.duration;
         let igang = true;
-        const loop = () => { if (!igang) return; cx.drawImage(v, 0, 0, c.width, c.height); st(`Lägger på låten… ${Math.round(ac.currentTime - t0)} av ${Math.round(ljud.duration)} s – låt fliken vara synlig`); requestAnimationFrame(loop); };
+        const loop = () => { if (!igang) return; rita(); st(`Spelar in… ${Math.round(ac.currentTime - t0)} av ${Math.round(total)} s – låt fliken vara synlig`); requestAnimationFrame(loop); };
         loop();
-        k.onended = () => setTimeout(() => { igang = false; rec.stop(); }, 200);
+        const sluta = () => setTimeout(() => { if (!igang) return; igang = false; rec.stop(); }, 200);
+        if (k) k.onended = sluta; else v.onended = sluta;
         await klar; v.pause(); ac.close();
-        aiVideoBlob = new Blob(delar, { type: typ.split(";")[0] }); aiVideoBlob.medLat = true;
+        aiVideoBlob = new Blob(delar, { type: typ.split(";")[0] });
         $("aiVideoSpelare").src = URL.createObjectURL(aiVideoBlob);
-        $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `klipp-med-lat-${Date.now().toString(36)}.${typ.startsWith("video/mp4") ? "mp4" : "webm"}`;
-        st("✓ Klart med låten – lyssna och tryck 📣 Lägg i Nytt inlägg.");
-      } catch (e) { st(""); status("Låten kunde inte läggas på: " + e.message, "fel"); }
-      $("aiVideoLat").disabled = false;
-    };
+        $("aiVideoNer").href = $("aiVideoSpelare").src; $("aiVideoNer").download = `klipp-${medLat ? "med-lat" : $("aiFormat").value}-${Date.now().toString(36)}.${typ.startsWith("video/mp4") ? "mp4" : "webm"}`;
+        st(medLat ? "✓ Klart med låten – lyssna och tryck 📣 Lägg i Nytt inlägg." : "✓ Klart i nytt format – 📣 Lägg i Nytt inlägg, eller 📼 gör om den med AI.");
+      } catch (e) { st(""); status((medLat ? "Låten kunde inte läggas på: " : "Formatet kunde inte ändras: ") + e.message, "fel"); }
+      knapp.disabled = false;
+    }
+    $("aiVideoLat").onclick = () => aiSpelaIn(true, $("aiVideoLat"));
+    $("aiVideoFormat").onclick = () => aiSpelaIn(false, $("aiVideoFormat"));
     $("aiVideoInlagg").onclick = () => {
       if (!aiVideoBlob) { window.open(aiVideoUrl, "_blank"); return status("Klippet öppnades i en ny flik – spara det och välj det under 📣 Nytt inlägg.", "osparat"); }
       const l = aiLatObj(), artist = $("aiArtist").value;
