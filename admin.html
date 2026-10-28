@@ -482,7 +482,7 @@
       <div class="inlagg-rad" data-ai-for="lappar stil"><b>📼 Video att göra om:</b> <span class="hjalp" id="aiKallaNamn">ingen vald</span>
         <button class="knapp kontur liten" type="button" id="aiValjKalla">📂 Välj video</button></div>
       <label class="kryss" data-ai-for="lappar stil"><input type="checkbox" id="aiBehall" checked> 🧩 Ändra bara den valda delen av videon (gula rutan) – resten blir som den är</label>
-      <p class="hjalp" data-ai-for="lappar">Personen i videon får munnen att följa delen av låten du väljer nedan. Bäst med en video där ansiktet syns tydligt. Välj lika lång del av videon som av låten – det kortaste bestämmer längden.</p>
+      <p class="hjalp" data-ai-for="lappar">Personen i videon får munnen att följa delen av låten du väljer nedan. Bäst med en video där ansiktet syns tydligt. Välj lika lång del av videon som av låten – det kortaste bestämmer längden. Tips: läpparna träffar bäst med bara sångspåret (utan musik) – välj en låtfil utan komp om du har en.</p>
       <div data-ai-for="text bild stil"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
         <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
       <div class="ai-del">
@@ -614,7 +614,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028141443";
+    const VERSION = "v20261028191214";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2134,8 +2134,8 @@ ${poster.slice(0, 20).map(p => `<item>
     const AI_MODELLER = {
       text: [["fal-ai/veo3.1/fast", "Google Veo 3.1 Fast – snyggast"], ["kling/v4/text-to-video", "Kling 4.0 – nyast, eget ljud"]],
       bild: [["fal-ai/kling-video/v2.6/pro/image-to-video", "Kling 2.6 Pro – bäst för pengarna"], ["fal-ai/kling-video/v2.1/standard/image-to-video", "Kling 2.1 Standard – billigast"], ["fal-ai/veo3.1/fast/image-to-video", "Google Veo 3.1 Fast"], ["kling/v4/image-to-video", "Kling 4.0 – nyast, eget ljud"]],
-      lappar: [["fal-ai/sync-lipsync/v2", "Sync Lipsync 2 – bäst"], ["fal-ai/latentsync", "LatentSync – billigast"]],
-      stil: [["fal-ai/luma-dream-machine/ray-2/modify", "Luma Ray 2 Modify – ny stil, samma rörelser"]],
+      lappar: [["fal-ai/sync-lipsync/v2/pro", "Sync Lipsync 2 Pro – bäst för sång"], ["fal-ai/sync-lipsync/v2", "Sync Lipsync 2"], ["fal-ai/latentsync", "LatentSync – billigast"], ["fal-ai/kling-video/lipsync/audio-to-video", "Kling Lipsync – billig, bara 2–10 s"]],
+      stil: [["fal-ai/wan-vace-apps/video-edit", "Wan VACE – billigast"], ["fal-ai/kling-video/o3/standard/video-to-video/edit", "Kling O3 edit – bäst, 3–15 s"], ["luma/agent/ray/v3.2/video-to-video", "Luma Ray 3.2 – 5 eller 10 s"]],
       sjung: [["fal-ai/bytedance/omnihuman/v1.5", "OmniHuman 1.5 – upp till 60 s"], ["fal-ai/bytedance/omnihuman", "OmniHuman – upp till 30 s"], ["veed/fabric-1.0", "VEED Fabric – mest för tal, 60 s"]]
     };
     const AI_STORLEK = { staende: [720, 1280, "9:16"], liggande: [1280, 720, "16:9"], kvadrat: [1024, 1024, "1:1"] };
@@ -2145,10 +2145,13 @@ ${poster.slice(0, 20).map(p => `<item>
     const KURS = 10.5;
     // dollar per klipp efter antal sekunder (fal.ai, research 2026-10-27; 720p, utan ljud där det går)
     // video-om-modellerna: priser uppskattade – rätta när research har bekräftat dem
-    const AI_PRIS_OM = [[/sync-lipsync/i, s => .05 * s], [/latentsync/i, s => .2 + Math.max(0, s - 40) * .005], [/modify|video-to-video/i, s => .12 * s]];
+    // video-om-modellerna enligt research 2026-10-28 (komplettering 3)
+    const AI_PRIS_OM = [[/sync-lipsync\/v2\/pro/i, s => 5 / 60 * s], [/sync-lipsync\/v3/i, s => 8 / 60 * s], [/sync-lipsync/i, s => 3 / 60 * s], [/latentsync/i, s => .2 + Math.max(0, s - 40) * .005],
+      [/kling-video\/lipsync/i, s => .014 * Math.ceil(s / 5) * 5], [/wan-vace/i, s => .10 * s], [/kling-video\/o3.*edit/i, s => .126 * s], [/ray\/v3\.2/i, s => .216 * s]];
     const AI_PRIS = [...AI_PRIS_OM, [/kling\/v4/i, s => .157 * s], [/kling.*v2\.6/i, s => .07 * s], [/kling.*v2\.5-turbo/i, s => .35 + Math.max(0, s - 5) * .07], [/kling.*v2\.1\/standard/i, s => .05 * s], [/kling/i, s => .112 * s],
       [/veo/i, s => .10 * s], [/omnihuman\/v1\.5/i, s => .16 * s], [/omnihuman\/v2/i, s => .105 * s], [/omnihuman/i, s => .14 * s], [/fabric/i, s => .15 * s]];
-    const aiMaxSek = () => aiSlag() === "lappar" ? 60 : aiSlag() === "sjung" && !/omnihuman\/v1\.5|fabric|omnihuman\/v2/i.test($("aiModell").value) ? 30 : 60;
+    const aiStilMax = () => /kling-video\/o3/i.test($("aiModell").value) ? 15 : /ray\/v3\.2/i.test($("aiModell").value) ? 10 : 30;
+    const aiMaxSek = () => aiSlag() === "lappar" ? (/kling-video\/lipsync/i.test($("aiModell").value) ? 10 : 60) : aiSlag() === "sjung" && !/omnihuman\/v1\.5|fabric|omnihuman\/v2/i.test($("aiModell").value) ? 30 : 60;
     // längder som modellen klarar: Kling 4.0 3–30 s, Veo 4/6/8 s, övriga Kling 5/10 s
     const aiLangder = m => /kling\/v4/i.test(m) ? [5, 10, 15, 20, 30] : /veo/i.test(m) ? [4, 6, 8] : [5, 10];
     function fyllLangd() {
@@ -2157,7 +2160,7 @@ ${poster.slice(0, 20).map(p => `<item>
       $("aiLangd").value = l.includes(v) ? v : l.reduce((a, b) => Math.abs(b - v) < Math.abs(a - v) ? b : a);
     }
     const aiKr = v => !v ? "0 kr" : v < 1 ? `${Math.max(1, Math.round(v * 100))} öre` : `${v < 10 ? v.toFixed(1).replace(".", ",") : Math.round(v)} kr`;
-    const aiSekunder = () => aiSlag() === "stil" ? Math.min(10, Math.round(vidDel().sek || 10)) : aiSlag() === "sjung" || aiSlag() === "lappar" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : +$("aiLangd").value;
+    const aiSekunder = () => aiSlag() === "stil" ? Math.min(aiStilMax(), Math.round(vidDel().sek || 10)) : aiSlag() === "sjung" || aiSlag() === "lappar" ? Math.max(3, Math.min(+$("aiSek").value || 15, aiMaxSek())) : +$("aiLangd").value;
     function aiVideoKostnad() { const m = $("aiModell").value, p = AI_PRIS.find(([r]) => r.test(m)); return (p ? p[1](aiSekunder()) : .10 * aiSekunder()) * KURS; }
     function aiRostKostnad() {
       const musik = $("aiLjud").value.trim() && $("aiLjudTyp").value === "musik" ? .04 : 0;   // Lyria 3: 0,04 $ per låt
@@ -2356,8 +2359,10 @@ ${poster.slice(0, 20).map(p => `<item>
     function aiIndata(modell, s) {
       const [, , ar] = AI_STORLEK[s.format];
       if (/sync-lipsync/i.test(modell)) return { video_url: s.video, audio_url: s.ljud, sync_mode: "cut_off" };
-      if (/latentsync/i.test(modell)) return { video_url: s.video, audio_url: s.ljud };
-      if (/modify|video-to-video/i.test(modell)) return { video_url: s.video, prompt: s.prompt, mode: "flex_1" };
+      if (/latentsync|kling-video\/lipsync/i.test(modell)) return { video_url: s.video, audio_url: s.ljud };
+      if (/wan-vace/i.test(modell)) return { video_url: s.video, prompt: s.prompt, resolution: "auto" };
+      if (/kling-video\/o3.*edit|kling\/v4\/video-to-video/i.test(modell)) return { video_url: s.video, prompt: `@Video1 ${s.prompt}` };
+      if (/video-to-video|modify/i.test(modell)) return { video_url: s.video, prompt: s.prompt };
       if (/omnihuman|fabric|lipsync|avatar/i.test(modell)) return { image_url: s.bild, audio_url: s.ljud, ...(/fabric|omnihuman\/v1\.5/.test(modell) ? { resolution: "720p" } : {}) };
       // Veo: 9:16 eller 16:9 (ingen fyrkant) – med bild följer formatet bilden. Utan eget ljud, låten läggs på efteråt.
       if (/veo/i.test(modell)) return { prompt: s.prompt, duration: s.langd + "s", resolution: "720p", generate_audio: false, aspect_ratio: s.bild ? "auto" : ar === "1:1" ? "16:9" : ar, ...(s.bild ? { image_url: s.bild } : {}) };
@@ -2398,6 +2403,8 @@ ${poster.slice(0, 20).map(p => `<item>
       const s = aiSlag(), modell = $("aiModell").value, st = t => $("aiVideoStatus").textContent = t;
       const prompt = $("aiPrompt").value.trim();
       if (["text", "bild", "stil"].includes(s) && !prompt) return status("Beskriv klippet först (eller tryck 💡 Förslag).", "fel");
+      if (s === "stil" && vidDel().sek > aiStilMax() + .1) return status(`${$("aiModell").selectedOptions[0].textContent.split(" – ")[0]} klarar högst ${aiStilMax()} s – gör den gula rutan under videon kortare.`, "fel");
+      if (/kling-video\/lipsync/i.test(modell) && (vidDel().sek > 10 || vidDel().sek < 2)) return status("Kling Lipsync klarar bara videodelar på 2–10 s – ändra den gula rutan eller välj Sync.", "fel");
       if ((s === "lappar" || s === "stil") && !aiVideoBlob) return status("Välj videon som ska göras om först (📂 Välj video).", "fel");
       const vd = vidDel(), helVideo = (s === "lappar" || s === "stil") && $("aiBehall").checked && (vd.start > .1 || vd.start + vd.sek < vd.dur - .1)
         ? { blob: aiVideoBlob, start: vd.start, sek: vd.sek, dur: vd.dur, synk: (aiVid.synk || 0) / 1000 } : null;
@@ -2595,7 +2602,8 @@ ${poster.slice(0, 20).map(p => `<item>
       st(`Laddar upp videon (${(blob.size / 1048576).toFixed(1)} MB)…`);
       const typ = blob.type || "video/mp4";
       try {
-        const r = await fetch("https://rest.alpha.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3", { method: "POST", headers: { Authorization: "Key " + aiNyckel("fal"), "Content-Type": "application/json" }, body: JSON.stringify({ content_type: typ, file_name: `video-${Date.now().toString(36)}.${/webm/.test(typ) ? "webm" : "mp4"}` }) });
+        const init = q => fetch("https://rest.alpha.fal.ai/storage/upload/initiate" + q, { method: "POST", headers: { Authorization: "Key " + aiNyckel("fal"), "Content-Type": "application/json" }, body: JSON.stringify({ content_type: typ, file_name: `video-${Date.now().toString(36)}.${/webm/.test(typ) ? "webm" : "mp4"}` }) });
+        let r = await init("?storage_type=fal-cdn-v3"); if (!r.ok) r = await init("");
         if (!r.ok) throw new Error(await aiFelText(r));
         const { upload_url, file_url } = await r.json();
         const p = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": typ }, body: blob });
