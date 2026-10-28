@@ -385,7 +385,7 @@
       "info": "Vem snodde sista kalla flaskan i natt?",
       "typ": "Demo",
       "spotify": "",
-      "fil": "sista-kalla-flaskan.mp3",
+      "fil": "sista-kalla-flaskan-cpi4.mp3",
       "ladda": true,
       "kredit": {
         "artist": "De Evigt Unga å Vackra",
@@ -396,7 +396,11 @@
         "mastering": "Stig Lindbom",
         "ar": "2026"
       },
-      "omslag": "omslag-sista-kalla-flaskan.jpg"
+      "omslag": "omslag-sista-kalla-flaskan.jpg",
+      "niva": {
+        "lufs": -10.4,
+        "topp": 0
+      }
     },
     {
       "slappt": false,
@@ -776,5 +780,6 @@
     }
   ],
   "jinglar": [],
-  "radio": {}
+  "radio": {},
+  "aiLogg": []
 }
