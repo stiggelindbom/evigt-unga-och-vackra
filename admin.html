@@ -498,8 +498,9 @@
       </div>
       <p class="hjalp" data-ai-for="sjung">Bilden ska visa ett ansikte (t.ex. ett foto på Ingvar eller bandet). Delen av låten skickas med, och personen sjunger den.</p>
       <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet <span class="ai-pris" id="aiVideoPris"></span></button><button class="knapp kontur liten" type="button" id="aiEgetKlipp" title="T.ex. ett klipp du gjort i DeeVid">📂 Eget klipp (DeeVid m.fl.)</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter.</span></div>
+      <span id="aiVideoPlats" hidden></span>
       <div id="aiVideoKlar" hidden style="display:grid;gap:10px">
-        <video id="aiVideoSpelare" controls playsinline style="max-width:100%;max-height:60vh;border-radius:10px;background:#000"></video>
+        <video id="aiVideoSpelare" controls playsinline style="max-width:100%;max-height:42vh;justify-self:start;border-radius:10px;background:#000"></video>
         <div class="ai-del">
           <div class="inlagg-rad"><b>🎞 Vilken del av videon?</b><span class="hjalp" id="aiVidText"></span></div>
           <canvas class="vagform" id="aiVidVag" style="height:80px"></canvas>
@@ -610,7 +611,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028135653";
+    const VERSION = "v20261028140325";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -2300,6 +2301,11 @@ ${poster.slice(0, 20).map(p => `<item>
       $("aiModell").innerHTML = AI_MODELLER[s].map(([id, n]) => `<option value="${id}">${n}</option>`).join("") + `<option value="__egen">Annan modell (skriv id)…</option>`;
       if (AI_MODELLER[s].some(x => x[0] === v)) $("aiModell").value = v;
       document.querySelectorAll('[data-flik-del="ai"] [data-ai-for]').forEach(x => x.hidden = !x.dataset.aiFor.split(" ").includes(s));
+      // 📼-lägena: videon och dess gula ruta direkt under "Video att göra om", annars längst ner
+      const kalla = $("aiValjKalla").closest(".inlagg-rad");
+      if (s === "lappar" || s === "stil") { if (kalla.nextElementSibling !== $("aiVideoKlar")) kalla.after($("aiVideoKlar")); }
+      else if ($("aiVideoPlats").nextElementSibling !== $("aiVideoKlar")) $("aiVideoPlats").after($("aiVideoKlar"));
+      ritaVidVag();
       fyllLangd();
     }
     document.querySelectorAll('[name="aiSlag"]').forEach(r => r.addEventListener("change", aiSlagByt));
