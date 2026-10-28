@@ -72,6 +72,8 @@
     .inlagg-post p { font-size: .9rem; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     .inlagg-post small { color: var(--dampad); }
     .ai-pris { font: 600 .78em system-ui, sans-serif; letter-spacing: 0; text-transform: none; opacity: .85; }
+    .ai-del { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--kant); border-radius: 10px; }
+    .ai-del input[type=range] { width: 100%; accent-color: var(--guld); }
     .ai-manad { margin-top: 8px; padding: 10px 14px; border: 1px solid var(--kant); border-radius: 10px; background: var(--yta); font-size: .95rem; }
     .ai-manad b { color: var(--guld); }
     .inlagg-redigera { grid-column: 1 / -1; display: grid; gap: 10px; background: #1a1610; border: 1px solid var(--guld); border-radius: 10px; padding: 12px; }
@@ -471,9 +473,17 @@
       <input type="file" id="aiKlippFil" accept="video/mp4,video/webm,video/quicktime,.mp4,.mov,.webm" hidden>
       <div data-ai-for="text bild"><label>Beskriv klippet (engelska blir bäst)<textarea id="aiPrompt" rows="3"></textarea></label>
         <button class="knapp kontur liten" type="button" id="aiForslag" style="margin-top:6px">💡 Förslag</button></div>
-      <div class="rutnat">
-        <label>Låten från (sekunder)<input type="number" id="aiStart" min="0" step="1" value="0"></label>
-        <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="60" step="1" value="15"></label>
+      <div class="ai-del">
+        <div class="inlagg-rad"><b>🎵 Vilken del av låten?</b><span class="hjalp" id="aiDelText"></span></div>
+        <div class="klipp-yta"><canvas class="vagform" id="aiVag"></canvas><div class="klipp-laddar" id="aiVagLaddar">Laddar ljudgrafen…</div></div>
+        <small class="hjalp">Dra den gula rutan dit du vill – dra i kanterna för att göra den längre eller kortare.</small>
+        <input type="range" id="aiStartRad" min="0" max="240" step="1" value="0" aria-label="Var i låten">
+        <div class="rutnat">
+          <label>Från (sekunder)<input type="number" id="aiStart" min="0" step="1" value="0"></label>
+          <label>Så här många sekunder<input type="number" id="aiSek" min="3" max="60" step="1" value="15"></label>
+        </div>
+        <div class="inlagg-rad"><button class="knapp kontur liten" type="button" id="aiLyssna">▶ Lyssna på delen</button>
+          <button class="knapp kontur liten" type="button" id="aiKlippet" title="Samma del som låtens smakprov på hemsidan">↺ Låtens klipp</button></div>
       </div>
       <p class="hjalp" data-ai-for="sjung">Bilden ska visa ett ansikte (t.ex. ett foto på Ingvar eller bandet). Delen av låten skickas med, och personen sjunger den.</p>
       <div class="inlagg-rad"><button class="knapp" type="button" id="aiVideoKor">🎬 Gör klippet <span class="ai-pris" id="aiVideoPris"></span></button><button class="knapp kontur liten" type="button" id="aiEgetKlipp" title="T.ex. ett klipp du gjort i DeeVid">📂 Eget klipp (DeeVid m.fl.)</button><span class="hjalp" id="aiVideoStatus">Tar oftast 1–5 minuter.</span></div>
@@ -555,7 +565,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028132541";
+    const VERSION = "v20261028133026";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -1054,10 +1064,16 @@
       klippAc.resume();
       const start = l.klipp ?? 0;
       klippKalla = klippAc.createBufferSource(); klippKalla.buffer = d.buffer; klippKalla.connect(klippAc.destination);
-      klippKalla.start(0, start, langd(l)); klippStart = klippAc.currentTime - start; klippSpelar = l;
+      // spelar fritt och stannar vid rutans slut – flyttar du rutan spelar låten vidare
+      klippKalla.start(0, start); klippStart = klippAc.currentTime - start; klippSpelar = l;
       klippKalla.onended = () => { if (klippSpelar === l) stoppaKlipp(); };
       const b = kortFor(l)?.querySelector("[data-klipp-lyssna]"); if (b) b.textContent = "■ Stoppa";
-      const animera = () => { if (klippSpelar !== l) return; ritaVagform(l, klippAc.currentTime - klippStart); requestAnimationFrame(animera); };
+      const animera = () => {
+        if (klippSpelar !== l) return;
+        const pos = klippAc.currentTime - klippStart;
+        if (!dra && pos >= (l.klipp ?? 0) + langd(l)) return stoppaKlipp();
+        ritaVagform(l, pos); requestAnimationFrame(animera);
+      };
       requestAnimationFrame(animera);
     }
     // öppna/stäng rutan (toggle bubblar inte, därför capture)
@@ -1103,7 +1119,12 @@
       const r = cv.getBoundingClientRect(), dur = d.buffer.duration, t = (e.clientX - r.left) / r.width * dur, kant = dur * 10 / r.width;
       cv.style.cursor = Math.abs(t - l.klipp) <= kant || Math.abs(t - l.klipp - langd(l)) <= kant ? "ew-resize" : "grab";
     });
-    const slapp = () => { if (!dra) return; const l = dra.l; dra = null; andrat(); if (klippSpelar === l) lyssnaKlipp(l), lyssnaKlipp(l); };
+    const slapp = () => {
+      if (!dra) return; const l = dra.l; dra = null; andrat();
+      if (klippSpelar !== l) return;
+      const pos = klippAc.currentTime - klippStart, a = l.klipp ?? 0;
+      if (pos < a || pos >= a + langd(l)) lyssnaKlipp(l), lyssnaKlipp(l);   // utanför rutan: hoppa till början, annars spela vidare
+    };
     $("adminVy").addEventListener("pointerup", slapp);
     $("adminVy").addEventListener("pointercancel", slapp);
 
@@ -2115,7 +2136,7 @@ ${poster.slice(0, 20).map(p => `<item>
       const latar = data.latar.filter(l => l.fil && l.titel && !l.dold);
       const v = $("aiLat").value;
       $("aiLat").innerHTML = latar.map(l => `<option value="${esc(l.fil)}">${esc(ren(l.titel))}</option>`).join("");
-      if (v && latar.some(l => l.fil === v)) $("aiLat").value = v; else aiLatVald();
+      if (v && latar.some(l => l.fil === v)) { $("aiLat").value = v; aiLatLangd(); } else aiLatVald();
       const a = $("aiArtist").value;
       $("aiArtist").innerHTML = ["De Evigt Unga å Vackra", ...data.artister.map(x => ren(x.namn)).filter(Boolean)].map(n => `<option>${esc(n)}</option>`).join("");
       if (a) $("aiArtist").value = a; else { const l = aiLatObj(); if (l) $("aiArtist").value = artistFor(l); }
@@ -2124,9 +2145,107 @@ ${poster.slice(0, 20).map(p => `<item>
     const aiLatObj = () => data.latar.find(l => l.fil === $("aiLat").value);
     function aiLatVald() {
       const l = aiLatObj(); if (!l) return;
+      aiLyssnaStopp();
       $("aiStart").value = Math.round(l.klipp || 0); $("aiSek").value = Math.min(15, l.klippLangd || 30);
       if ([...$("aiArtist").options].some(o => o.value === artistFor(l))) $("aiArtist").value = artistFor(l);
+      aiLatLangd();
     }
+    // --- välj del av låten: vågform med gul ruta (som 30 s-klippen) + reglage + lyssna ---
+    async function aiLatLangd() {
+      const l = aiLatObj(); if (!l) return;
+      visaAiDel();
+      $("aiVagLaddar").hidden = false; $("aiVagLaddar").textContent = "Laddar ljudgrafen…";
+      try {
+        const d = await laddaVagform(l); if (aiLatObj() !== l) return;
+        $("aiStartRad").max = Math.floor(d.buffer.duration); $("aiVagLaddar").hidden = true; visaAiDel();
+      } catch (e) { $("aiVagLaddar").textContent = "Kunde inte läsa ljudfilen: " + e.message; }
+    }
+    const aiDel = () => ({ start: Math.max(0, +$("aiStart").value || 0), sek: Math.max(3, +$("aiSek").value || 15) });
+    function ritaAiVag(spelhuvud) {
+      const l = aiLatObj(), d = l && ljudData[l.fil], cv = $("aiVag"); if (!d || !cv.clientWidth) return;
+      const dpr = window.devicePixelRatio || 1, B = cv.clientWidth, H = cv.clientHeight;
+      if (cv.width !== B * dpr) { cv.width = B * dpr; cv.height = H * dpr; }
+      const cx = cv.getContext("2d"); cx.setTransform(dpr, 0, 0, dpr, 0, 0); cx.clearRect(0, 0, B, H);
+      const dur = d.buffer.duration, x = t => t / dur * B, { start, sek } = aiDel(), ax = x(start), bx = x(Math.min(dur, start + sek));
+      for (let px = 0; px < B; px++) {
+        const v = d.toppar[Math.floor(px / B * d.toppar.length)], h = Math.max(1, v * (H - 6));
+        cx.fillStyle = px >= ax && px <= bx ? "#ffe27a" : "#6b5a2e"; cx.fillRect(px, (H - h) / 2, 1, h);
+      }
+      cx.fillStyle = "rgba(245,197,24,.18)"; cx.fillRect(ax, 0, bx - ax, H);
+      cx.strokeStyle = "#f5c518"; cx.lineWidth = 2; cx.strokeRect(ax + 1, 1, bx - ax - 2, H - 2);
+      cx.fillStyle = "#f5c518"; cx.fillRect(ax, 0, 6, H); cx.fillRect(bx - 6, 0, 6, H);
+      cx.font = "bold 12px Inter, sans-serif"; cx.textBaseline = "top";
+      const etikett = `${sek} s`, tw = cx.measureText(etikett).width;
+      cx.fillRect((ax + bx) / 2 - tw / 2 - 6, 4, tw + 12, 18); cx.fillStyle = "#0b0b0b"; cx.fillText(etikett, (ax + bx) / 2 - tw / 2, 7);
+      if (spelhuvud != null) { cx.fillStyle = "#fff"; cx.fillRect(x(spelhuvud), 0, 2, H); }
+    }
+    function visaAiDel() {
+      const max = +$("aiStartRad").max, { start, sek } = aiDel();
+      $("aiStartRad").value = Math.min(start, max);
+      $("aiDelText").textContent = `${mmss(start)} – ${mmss(Math.min(start + sek, max))} av ${mmss(max)}`;
+      ritaAiVag(aiSpel ? klippAc.currentTime - aiSpel.t0 : null);
+    }
+    let aiSpel = null, aiDra = null;
+    function aiLyssnaStopp() {
+      if (aiSpel) { const k = aiSpel.kalla; aiSpel = null; try { k.stop(); } catch {} }
+      $("aiLyssna").textContent = "▶ Lyssna på delen"; ritaAiVag();
+    }
+    async function aiLyssna() {
+      aiLyssnaStopp();
+      const l = aiLatObj(); if (!l) return;
+      const d = ljudData[l.fil] || await laddaVagform(l); klippAc.resume();
+      // spelar fritt från rutans början och stannar vid rutans slut – flyttar du rutan spelar den vidare
+      const { start } = aiDel(), k = klippAc.createBufferSource();
+      k.buffer = d.buffer; k.connect(klippAc.destination); k.start(0, start);
+      aiSpel = { kalla: k, t0: klippAc.currentTime - start };
+      k.onended = () => { if (aiSpel && aiSpel.kalla === k) aiLyssnaStopp(); };
+      $("aiLyssna").textContent = "⏹ Stoppa";
+      const animera = () => {
+        if (!aiSpel || aiSpel.kalla !== k) return;
+        const pos = klippAc.currentTime - aiSpel.t0, { start, sek } = aiDel();
+        if (!aiDra && pos >= start + sek) return aiLyssnaStopp();
+        ritaAiVag(pos); requestAnimationFrame(animera);
+      };
+      requestAnimationFrame(animera);
+    }
+    $("aiLyssna").onclick = () => aiSpel ? aiLyssnaStopp() : aiLyssna();
+    $("aiStartRad").addEventListener("input", () => { $("aiStart").value = $("aiStartRad").value; visaAiDel(); });
+    // spelar det redan: fortsätt om spelhuvudet är inne i rutan, annars hoppa till rutans början
+    function aiFortsatt() {
+      if (!aiSpel) return;
+      const pos = klippAc.currentTime - aiSpel.t0, { start, sek } = aiDel();
+      if (pos < start || pos >= start + sek) aiLyssna();
+    }
+    $("aiStartRad").addEventListener("change", aiFortsatt);
+    $("aiStart").addEventListener("input", visaAiDel); $("aiSek").addEventListener("input", visaAiDel);
+    $("aiKlippet").onclick = () => { const l = aiLatObj(); if (!l) return; $("aiStart").value = Math.round(l.klipp || 0); visaAiDel(); };
+    // dra rutan (flytta) eller dess kanter (ändra längden)
+    $("aiVag").addEventListener("pointerdown", e => {
+      const l = aiLatObj(), d = l && ljudData[l.fil]; if (!d) return;
+      const r = $("aiVag").getBoundingClientRect(), dur = d.buffer.duration, t = (e.clientX - r.left) / r.width * dur;
+      const { start, sek } = aiDel(), kant = dur * 10 / r.width;
+      aiDra = Math.abs(t - (start + sek)) <= kant ? { dur, kant: "hoger" } : Math.abs(t - start) <= kant ? { dur, kant: "vanster", slut: start + sek }
+        : { dur, grepp: t >= start && t <= start + sek ? t - start : sek / 2 };
+      $("aiVag").setPointerCapture(e.pointerId); aiFlytta(e); e.preventDefault();
+    });
+    function aiFlytta(e) {
+      const cv = $("aiVag"), r = cv.getBoundingClientRect();
+      if (!aiDra) {   // ↔ vid kanterna
+        const l = aiLatObj(), d = l && ljudData[l.fil]; if (!d) return;
+        const dur = d.buffer.duration, t = (e.clientX - r.left) / r.width * dur, { start, sek } = aiDel(), kant = dur * 10 / r.width;
+        cv.style.cursor = Math.abs(t - start) <= kant || Math.abs(t - start - sek) <= kant ? "ew-resize" : "grab"; return;
+      }
+      const { dur, grepp } = aiDra, t = Math.max(0, Math.min(dur, (e.clientX - r.left) / r.width * dur)), { start, sek } = aiDel();
+      const satt = x => Math.round(Math.max(3, Math.min(aiMaxSek(), x)));
+      if (aiDra.kant === "hoger") $("aiSek").value = satt(Math.min(dur - start, t - start));
+      else if (aiDra.kant === "vanster") { const ny = satt(aiDra.slut - t); $("aiStart").value = Math.round(Math.max(0, aiDra.slut - ny)); $("aiSek").value = Math.round(aiDra.slut - +$("aiStart").value); }
+      else $("aiStart").value = Math.round(Math.max(0, Math.min(dur - sek, t - grepp)));
+      visaAiDel();
+    }
+    $("aiVag").addEventListener("pointermove", aiFlytta);
+    const aiSlapp = () => { if (!aiDra) return; aiDra = null; aiFortsatt(); };
+    $("aiVag").addEventListener("pointerup", aiSlapp); $("aiVag").addEventListener("pointercancel", aiSlapp);
+    addEventListener("resize", () => ritaAiVag());
     function aiSlagByt() {
       const s = aiSlag(), v = $("aiModell").value;
       $("aiModell").innerHTML = AI_MODELLER[s].map(([id, n]) => `<option value="${id}">${n}</option>`).join("") + `<option value="__egen">Annan modell (skriv id)…</option>`;
@@ -2306,7 +2425,7 @@ ${poster.slice(0, 20).map(p => `<item>
       try { localStorage.setItem("deu-admin-flik", n); } catch {}
       if (n === "latar" && data) setTimeout(ritaAllaVagformer);
       if (n === "valv") ritaValv();
-      if (n === "ai" && data) ritaAi();
+      if (n === "ai" && data) ritaAi(); else if (typeof aiLyssnaStopp === "function" && data) aiLyssnaStopp();
     }
     $("flikar").onclick = e => { const b = e.target.closest("[data-flik]"); if (b) { visaFlik(b.dataset.flik); scrollTo({ top: 0 }); } };
 
