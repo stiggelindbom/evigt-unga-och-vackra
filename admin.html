@@ -627,7 +627,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261029065258";
+    const VERSION = "v20261029065906";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -3281,11 +3281,29 @@ ${poster.slice(0, 20).map(p => `<item>
           <div style="display:grid;gap:6px">
             ${p.typ === "paminnelse" ? "" : `<button class="knapp kontur liten" type="button" data-inlagg-igen="${k}" title="Skicka inlägget till Make nu">${p.vantar ? "📣 Skicka nu" : "↻ Skicka igen"}</button>`}
             ${p.skickad && !p.ute && !kvitton[p.id] && p.typ !== "paminnelse" && (p.kanaler || [1]).length ? `<button class="knapp kontur liten" type="button" data-inlagg-ute="${k}" title="För inlägg som ligger ute men saknar kvitto från Make">✓ Markera som ute</button>` : ""}
+            ${p.typ !== "paminnelse" ? `<button class="knapp kontur liten" type="button" data-inlagg-dela="${k}" title="Dela till din privata profil, WhatsApp m.fl.">📤 Dela</button>` : ""}
             <button class="knapp kontur liten" type="button" data-inlagg-andra="${k}">✏️ Redigera</button>
             <button class="knapp kontur liten" type="button" data-inlagg-bort="${k}">Ta bort</button>
           </div>
           ${redigerar === p.id ? redigeraForm(p) : ""}
+          ${delar === p.id ? delaRad(p) : ""}
         </div>`).join("") : "";
+    }
+    // 📤 Dela: till den privata profilen (Facebook tillåter inte automatisk delning dit), WhatsApp, telefonens delning eller kopiera
+    let delar = null;
+    const delaLank = p => { const kv = kvitton[p.id]?.lankar || {}; return kv.facebook || kv.youtube || kv.instagram || p.lank || SIDA; };
+    const delaText = p => String(p.text || "").split("\n").filter(r => r.trim() && !/^#/.test(r.trim())).slice(0, 3).join("\n");
+    function delaRad(p) {
+      const url = delaLank(p), text = delaText(p);
+      return `<div class="inlagg-redigera" style="gap:8px">
+        <div class="inlagg-rad">
+          <a class="knapp liten" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}" target="_blank" rel="noopener">📘 Dela på Facebook</a>
+          <a class="knapp kontur liten" href="https://wa.me/?text=${encodeURIComponent(text + "\n" + url)}" target="_blank" rel="noopener">💬 WhatsApp</a>
+          ${navigator.share ? `<button class="knapp kontur liten" type="button" data-dela-mobil>📱 Dela från telefonen</button>` : ""}
+          <button class="knapp kontur liten" type="button" data-dela-kopiera>📋 Kopiera text och länk</button>
+        </div>
+        <small class="hjalp">Länken som delas: ${esc(url)}${url === (p.lank || SIDA) ? " (hemsidan – när Make skickar med länkarna i kvittot delas själva inlägget)" : ""}. Instagram: dela inlägget som story i appen, eller använd samarbetsinlägg.</small>
+      </div>`;
     }
     // ✏️ Redigera: öppnar inlägget direkt i listan (text med radbrytningar, tid och kanaler)
     let redigerar = null;
@@ -3379,6 +3397,15 @@ ${poster.slice(0, 20).map(p => `<item>
         if (kryss.length) p.kanaler = [...kryss].filter(c => c.checked).map(c => c.dataset.redKanal);
         redigerar = null; ritaInlagg(); andrat(); await $("spara").onclick();
         if (!osparat) status("✏️ Inlägget är ändrat och sparat.", "ok");
+        return;
+      }
+      const dela = e.target.closest("[data-inlagg-dela]");
+      if (dela) { const p = data.inlagg[+dela.dataset.inlaggDela]; delar = delar === p.id ? null : p.id; return ritaInlagg(); }
+      if (e.target.closest("[data-dela-kopiera]") || e.target.closest("[data-dela-mobil]")) {
+        const p = data.inlagg.find(x => x.id === delar); if (!p) return;
+        const url = delaLank(p), text = delaText(p);
+        if (e.target.closest("[data-dela-mobil]")) { try { await navigator.share({ title: text.split("\n")[0], text, url }); } catch {} return; }
+        try { await navigator.clipboard.writeText(text + "\n" + url); status("📋 Text och länk kopierade – klistra in där du vill dela.", "ok"); } catch { status("Kunde inte kopiera – markera texten i inlägget i stället.", "fel"); }
         return;
       }
       const ute = e.target.closest("[data-inlagg-ute]");
