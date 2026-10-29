@@ -289,6 +289,10 @@
     <div>
       <h2>📊 Statistik</h2>
     </div>
+    <div class="kort" style="display:grid;gap:12px">
+      <h3>🔗 Kontona</h3>
+      <div id="kontoLankar" style="display:grid;gap:10px"></div>
+    </div>
     <div class="kort stat-kort" id="statKort">
       <div class="inlagg-rad">
         <button class="knapp kontur liten" type="button" data-stat-dagar="1">Idag</button>
@@ -623,7 +627,7 @@
 
   <script>
     // ===== Version: uppdateras automatiskt vid varje commit (git-hook) =====
-    const VERSION = "v20261028214808";
+    const VERSION = "v20261029065258";
     // Har en nyare version av backoffice publicerats medan sidan är öppen? Visa en uppmaning att ladda om.
     async function kollaVersion() {
       try {
@@ -953,6 +957,7 @@
       ritaArtister();
       ritaJinglar();
       ritaInlagg();
+      ritaKonton();
       if (!statVisad) { statVisad = true; visaStatistik(); visaFilmer(); }
       ritaEngangsDel();
       setTimeout(ritaAllaVagformer);
@@ -3115,6 +3120,25 @@ ${poster.slice(0, 20).map(p => `<item>
         return c && Date.now() - c.tid < STAT_CACHE_MIN * 60000 ? c : null;
       } catch { return null; }
     }
+    // ===== 🔗 Kontona: direktlänkar till sociala medier (från Länkar och Artister) och verktygen där man lägger ut och ser statistik =====
+    const KONTO_FALT = [["youtube", "▶️ YouTube"], ["instagram", "📸 Instagram"], ["facebook", "📘 Facebook"], ["tiktok", "🎵 TikTok"], ["spotify", "🟢 Spotify"], ["soundcloud", "☁️ SoundCloud"], ["webb", "🌐 Webb"]];
+    function ritaKonton() {
+      const knapp = (url, text) => `<a class="knapp kontur liten" href="${esc(url)}" target="_blank" rel="noopener">${text}</a>`;
+      const rad = (namn, k) => {
+        const finns = KONTO_FALT.filter(([f]) => /^https?:/.test(k[f] || ""));
+        return `<div class="inlagg-rad"><b style="min-width:150px">${esc(namn)}</b>${finns.map(([f, t]) => knapp(k[f], t)).join("")}
+          ${finns.length < 4 ? `<button class="knapp kontur liten" type="button" data-konto-saknas>+ Lägg in länkar</button>` : ""}</div>`;
+      };
+      const gc = statKod();
+      $("kontoLankar").innerHTML = rad("De Evigt Unga å Vackra", data.lankar)
+        + data.artister.filter(a => ren(a.namn)).map(a => rad(ren(a.namn), a)).join("")
+        + `<div class="inlagg-rad"><b style="min-width:150px">Verktyg</b>
+          ${knapp("https://studio.youtube.com", "▶️ YouTube Studio")}${knapp("https://business.facebook.com", "📘📸 Meta Business Suite")}
+          ${knapp("https://artists.spotify.com", "🟢 Spotify for Artists")}${knapp("https://soundcloud.com/you/insights", "☁️ SoundCloud statistik")}
+          ${knapp("https://eu1.make.com/organization/9419232/dashboard", "⚙️ Make")}${knapp("https://fal.ai/dashboard/billing", "✨ fal.ai")}
+          ${knapp(gc ? `https://${gc}.goatcounter.com` : "https://www.goatcounter.com", "📊 GoatCounter")}</div>`;
+    }
+    $("kontoLankar").addEventListener("click", e => { if (e.target.closest("[data-konto-saknas]")) { visaFlik("artister"); scrollTo({ top: 0 }); } });
     // ===== 🎬 Filmerna: YouTube direkt (API-nyckel i valvet), Facebook/Instagram från Make (statistik/sociala.json) =====
     const FILM_CACHE = "deu-film-cache", FILM_FORRA = "deu-film-forra";
     const ytHandtag = url => (String(url || "").match(/youtube\.com\/(@[\w.-]+)/i) || [])[1];
