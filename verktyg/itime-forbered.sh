@@ -32,7 +32,8 @@ EOF
 fi
 chmod 600 /root/.ssh/config
 
-if ! ssh -T github-itime 2>&1 | grep -q "successfully authenticated"; then
+SVAR="$(ssh -T github-itime 2>&1 || true)"   # ssh -T avslutar alltid med kod 1 mot GitHub
+if ! grep -q "successfully authenticated" <<<"$SVAR"; then
   echo
   echo "================ LÄGG IN DEN HÄR NYCKELN PÅ GITHUB ================"
   echo "github.com/stiggelindbom/itime -> Settings -> Deploy keys -> Add deploy key"
