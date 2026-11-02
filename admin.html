@@ -2886,7 +2886,8 @@ ${poster.slice(0, 20).map(p => `<item>
       ["masterchannel", "Masterchannel API-nyckel", "Mastring (när den kopplas)", "https://masterchannel.ai/"],
       ["elevenlabs", "ElevenLabs API-nyckel", "Valfri – bara om du har eget ElevenLabs-konto (annars går rösterna via fal.ai)", "https://elevenlabs.io/app/settings/api-keys"],
       ["youtube", "YouTube API-nyckel", "Visningar och likes för filmerna under 📊 Översikt (gratis nyckel från Google Cloud)", "https://console.cloud.google.com/apis/library/youtube.googleapis.com"],
-      ["fal", "fal.ai API-nyckel", "Videoklipp, röster och jinglar i ✨ AI-studio (betala per användning)", "https://fal.ai/dashboard/keys"]
+      ["fal", "fal.ai API-nyckel", "Videoklipp, röster och jinglar i ✨ AI-studio (betala per användning)", "https://fal.ai/dashboard/keys"],
+      ["anthropic", "Claude API-nyckel", "Claude i Stigge Studio (REAPER) och backoffice – nyckeln \"Stigge Studio\" (börjar med sk-ant-)", "https://platform.claude.com/settings/keys"]
     ];
     let valv = null, valvKey = null, valvSalt = null, valvTimer = null, valvVisa = new Set();
     const tillB64 = u8 => bytesTillBase64(u8), franB64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
