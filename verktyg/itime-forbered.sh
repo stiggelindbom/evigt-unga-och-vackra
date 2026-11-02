@@ -46,10 +46,21 @@ if ! ssh -T github-itime 2>&1 | grep -q "successfully authenticated"; then
   echo "Fingeravtryck (ska stå samma på GitHub efteråt):"
   ssh-keygen -lf "$K.pub"
   echo "==================================================================="
+  # Visa den publika nyckeln (inte hemlig) på en tillfällig adress, så att den kan kopieras exakt.
+  if [ -d /etc/caddy/sites ]; then
+    IP4="$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<=NF;i++) if($i=="src") print $(i+1)}')"
+    cat > /etc/caddy/sites/itime-nyckel.caddy <<EOF
+http://nyckel.${IP4//./-}.nip.io {
+	respond "$(cat "$K.pub")"
+}
+EOF
+    systemctl reload caddy && echo "Nyckeln visas också på:  http://nyckel.${IP4//./-}.nip.io"
+  fi
   echo "Kör sedan:  bash t.sh  igen."
   exit 0
 fi
 echo "Läsnyckeln fungerar mot GitHub."
+if [ -f /etc/caddy/sites/itime-nyckel.caddy ]; then rm -f /etc/caddy/sites/itime-nyckel.caddy; systemctl reload caddy; fi
 
 if [ ! -f /opt/itime/server/server.js ]; then
   rm -rf /opt/itime
